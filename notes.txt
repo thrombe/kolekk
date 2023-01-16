@@ -1,0 +1,8 @@
+
+
+
+- [initial setup](https://tauri.app/v1/guides/getting-started/setup/sveltekit/):
+  - npm create svelte@latest
+  - npm install --save-dev @sveltejs/adapter-static@next
+  - cargo tauri init
+  - cargo tauri dev
