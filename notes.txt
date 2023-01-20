@@ -1,8 +1,37 @@
 
 
+- [tauri audioplayback issue](https://github.com/tauri-apps/tauri/issues/3478)
+  - new Audio(svelte::convertFileSrc(localpath_or_songuri)).play().then(() => {})
+
 
 - [initial setup](https://tauri.app/v1/guides/getting-started/setup/sveltekit/):
   - npm create svelte@latest
   - npm install --save-dev @sveltejs/adapter-static@next
   - cargo tauri init
   - cargo tauri dev
+
+- bindgen stuff
+  - [ts-rs](https://crates.io/crates/ts-rs)
+  - [typescript-definitions](https://crates.io/crates/typescript-definitions)
+  - [tauri issue for code gen](https://github.com/tauri-apps/tauri/issues/1514)
+  - [tauri bindgen](https://github.com/tauri-apps/tauri-bindgen)
+  - [tauri-specta](https://github.com/oscartbeaumont/tauri-specta)
+
+- links
+  - https://svelte.dev/docs#run-time-client-side-component-api
+  - https://svelte.dev/tutorial/await-blocks
+  - https://kit.svelte.dev/docs/load
+  - https://tauri.app/v1/guides/getting-started/setup/sveltekit
+  - https://tauri.app/v1/guides/features/command
+  - https://tauri.app/v1/references/architecture/inter-process-communication/
+
+- projects
+  - [pretty big tauri app](https://github.com/kkoomen/pointless)
+  - [good svelte, big](https://github.com/iohzrd/identia)
+  - [nice ffi](https://github.com/zhanglun/lettura)
+  - [nice ffi. svelte](https://github.com/probablykasper/mr-tagger)
+  - [nice ffi. svelte, tauri::State](https://github.com/probablykasper/remind-me-again)
+  - [nice ffi. svelte, macos. tauri::State](https://github.com/probablykasper/time-machine-inspector)
+  - [massive virtual fs app (partly tauri)](https://github.com/spacedriveapp/spacedrive)
+  - [music player svelte tauri](https://github.com/basharovV/musicat)
+    - [blog tut](https://vyacheslavbasharov.com/blog/building-music-player-tauri-svelte)
