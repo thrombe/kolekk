@@ -2,6 +2,7 @@
 
 - [tauri audioplayback issue](https://github.com/tauri-apps/tauri/issues/3478)
   - new Audio(svelte::convertFileSrc(localpath_or_songuri)).play().then(() => {})
+  - [how to Audio + <input type=range>](https://medium.com/@tommarren/create-a-custom-audio-progress-bar-using-javascript-51b358811abd)
 
 
 - [initial setup](https://tauri.app/v1/guides/getting-started/setup/sveltekit/):
@@ -35,3 +36,25 @@
   - [massive virtual fs app (partly tauri)](https://github.com/spacedriveapp/spacedrive)
   - [music player svelte tauri](https://github.com/basharovV/musicat)
     - [blog tut](https://vyacheslavbasharov.com/blog/building-music-player-tauri-svelte)
+  - [chat gpt tauri app (big-ish)](https://github.com/lencx/ChatGPT)
+
+
+- api stuff
+  - imdb (does not provide a search api apparently)
+    - [cinemagoer: popular, in-use, provides all info, python, (slow?)](https://github.com/cinemagoer/cinemagoer)
+    - [seach into imdb provided databases](https://crates.io/crates/imdb-async)
+    - [tvrank. ''](https://crates.io/crates/tvrank)
+    - [fast offline index](https://docs.rs/imdb-index/latest/imdb_index/)
+  - mal
+    - [lib-mal](https://crates.io/crates/lib-mal)
+    - [myanimelist-rs](https://crates.io/crates/myanimelist-rs)
+    - [mal official api refs](https://myanimelist.net/clubs.php?cid=13727)
+    - [mal official api v2 examples](https://myanimelist.net/apiconfig/references/api/v2)
+    - [mal manage api keys settings page](https://myanimelist.net/apiconfig)
+  
+
+- svelte/js stuff
+  - lazy loading
+    - [modern browsers + simple svelte](https://dev.to/collardeau/lazy-loading-images-in-svelte-1mk6)
+    - [online repl + simple + svelte](https://svelte.dev/repl/adb8dc564044415f8ffbbd240a39d68d?version=3.44.2)
+    - [modern + old browsers svelte](https://css-tricks.com/lazy-loading-images-in-svelte/)

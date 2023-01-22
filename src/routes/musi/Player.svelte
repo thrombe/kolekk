@@ -10,6 +10,7 @@
             invoke("play_song", {path: $playing}).then(() => {
                 console.log("now playing song: ", $playing)
             })
+            paused.set(false)
         }
     }
 
