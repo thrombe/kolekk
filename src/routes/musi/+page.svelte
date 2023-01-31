@@ -21,7 +21,6 @@
     <Player></Player>
 </dw>
 
-
 <dw>
     <cl>
         <input type="text" bind:value={path}/>

@@ -73,10 +73,6 @@ pub async fn mal_auth(auth_data: MalAuthData, mal: State<'_, MalClient>) -> Resu
     // this stuff is not safe, tho idk any other way to do this
     let a = std::sync::Arc::as_ptr(&mal.0);
     let a = unsafe { &mut *(a as *mut MALClient) };
-    tauri::async_runtime::block_on(a.auth(
-        redirect,
-        &auth_data.challenge,
-        &auth_data.state,
-    ))?;
+    tauri::async_runtime::block_on(a.auth(redirect, &auth_data.challenge, &auth_data.state))?;
     Ok(())
 }

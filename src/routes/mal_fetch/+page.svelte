@@ -54,7 +54,7 @@
 <!-- <button disabled={auth_data == null} on:click={mal_auth}>authenticate</button> -->
 <button on:click={seasonal_anime_fetch}>Fetch Seasonal Anime</button>
 
-<cl style="grid: auto-flow / {'1fr '.repeat(calculated_width)}">
+<cl style="grid: auto-flow / {'1fr '.repeat(4)}">
 <!-- <cl style=""> -->
     {#each seasonal_anime as anime}
         <div style="">

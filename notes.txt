@@ -47,14 +47,39 @@
     - [fast offline index](https://docs.rs/imdb-index/latest/imdb_index/)
   - mal
     - [lib-mal](https://crates.io/crates/lib-mal)
+      - [smol bug](https://github.com/AnActualEmerald/lib-mal/blob/8dac0b18535d776b861da4bee8d700e424ed1017/src/client.rs#L635)
     - [myanimelist-rs](https://crates.io/crates/myanimelist-rs)
     - [mal official api refs](https://myanimelist.net/clubs.php?cid=13727)
     - [mal official api v2 examples](https://myanimelist.net/apiconfig/references/api/v2)
     - [mal manage api keys settings page](https://myanimelist.net/apiconfig)
-  
+  - tachiyomi/tachidesk extensions
+    - [tachiyomiorg](https://github.com/tachiyomiorg)
+    - [tachiyomi-extensions](https://github.com/tachiyomiorg/tachiyomi-extensions)
+    - [Tachidesk-Server](https://github.com/Suwayomi/Tachidesk-Server)
+    - [Tachidesk-WebUI](https://github.com/Suwayomi/Tachidesk-WebUI)
+    - [Tachidesk-Sorayomi](https://github.com/Suwayomi/Tachidesk-Sorayomi)
+  - selenium
+    - [thirtyfour](https://github.com/stevepryde/thirtyfour)
+    - [selenium-rs](https://github.com/saresend/selenium-rs)
+
+- tauri stuff
+  - [tauri js api](https://tauri.app/v1/api/js/)
+  - drag and drop
+    - [files into](https://github.com/tauri-apps/tauri/issues/2768#issuecomment-997169108)
+    - [files out](https://github.com/tauri-apps/tauri/issues/2593)
+  - clipboard
+    - [arboard](https://docs.rs/arboard)
+    - xclip -selection clipboard -t image/png <path>
+    - [tauri-plugin-clipboard](https://crates.io/crates/tauri-plugin-clipboard)
+  - [tauri splashscreen example](https://github.com/tauri-apps/tauri/blob/dev/examples/splashscreen/main.rs)
 
 - svelte/js stuff
+  - drag and drop
+    - [mdn html drag and drop api](https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API)
   - lazy loading
     - [modern browsers + simple svelte](https://dev.to/collardeau/lazy-loading-images-in-svelte-1mk6)
     - [online repl + simple + svelte](https://svelte.dev/repl/adb8dc564044415f8ffbbd240a39d68d?version=3.44.2)
     - [modern + old browsers svelte](https://css-tricks.com/lazy-loading-images-in-svelte/)
+
+- ui stuff
+  - [color pallet gen](https://coolors.co/bac1b8-58a4b0-0c7c59-2b303a-d64933)
