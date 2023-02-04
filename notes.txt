@@ -106,6 +106,7 @@
     - [fzy's algorithm.md](https://github.com/jhawthorn/fzy/blob/master/ALGORITHM.md)
 
 - svelte/js stuff
+  - [generate typescript types from rust](https://dev.to/alexeagleson/how-to-build-a-rust-cli-tool-to-generate-typescript-types-from-rust-20cm)
   - [synchronizing ts and rs types](https://imfeld.dev/writing/generating_typescript_types_from_rust)
     - in build.rs?
       - can move all the required types in a seperate crate and then use that in build.rs with some crate to convert the type to ts

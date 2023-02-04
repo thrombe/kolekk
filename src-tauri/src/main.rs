@@ -8,12 +8,11 @@ mod orm;
 mod player;
 
 use mal::{mal_init, MalClient};
-use orm::setup_sea_orm;
 use player::Player;
 
 fn main() {
     let client = tauri::async_runtime::block_on(mal_init()).unwrap();
-    let db = tauri::async_runtime::block_on(setup_sea_orm()).unwrap();
+    let db = tauri::async_runtime::block_on(orm::setup_sea_orm()).unwrap();
 
     tauri::Builder::default()
         .manage(Player(std::sync::Mutex::new(

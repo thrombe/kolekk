@@ -11,3 +11,4 @@ vite.config.ts.timestamp-*
 
 
 cache/
+src/rs_bindings.ts
