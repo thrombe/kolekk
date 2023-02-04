@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { listen } from '@tauri-apps/api/event';
-    listen("tauri://file-drop", (e) => {console.log(e)})
-    const print = (e: any) => {
+    
+    export let file_drop = (e: any) => {
+        console.log(e);
+    };
+    export let on_paste = (e: any) => {
         let data;
         if (e.dataTransfer) {
             data = e.dataTransfer
@@ -14,11 +17,13 @@
         console.log(data.getData("text/uri-list"))
         console.log(data.files)
         console.log(data.files[0])
-    }
+    };
+
+    listen("tauri://file-drop", file_drop);
 </script>
 
 <svelte:window
     on:dragover|preventDefault
-    on:drop|preventDefault={print}
-    on:paste|preventDefault={print}
+    on:drop|preventDefault={on_paste}
+    on:paste|preventDefault={on_paste}
 ></svelte:window>
