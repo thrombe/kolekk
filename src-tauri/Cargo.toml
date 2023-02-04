@@ -19,6 +19,7 @@ tauri-specta = "0.0.2"
 # lib-mal = "0.5.1"
 lib-mal = { path="./crates/lib-mal" } # has a super stupid bug
 tokio = { version = "1", features = ["full"] }
+sea-orm = { version = "0.10.7", features = [ "sqlx-sqlite", "runtime-tokio-native-tls", "macros" ] }
 
 [dependencies.musiplayer]
 # version = "0.1"
