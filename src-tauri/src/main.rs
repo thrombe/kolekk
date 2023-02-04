@@ -4,31 +4,38 @@
 )]
 
 mod mal;
+mod orm;
 mod player;
 
 use mal::{mal_init, MalClient};
-use player::{get_folder, get_song_progress, play_song, seek_perc, set_stat, stop_song, Player};
-
-use crate::mal::{get_seasonal_anime, mal_auth, mal_auth_needed};
+use orm::setup_sea_orm;
+use player::Player;
 
 fn main() {
     let client = tauri::async_runtime::block_on(mal_init()).unwrap();
+    let db = tauri::async_runtime::block_on(setup_sea_orm()).unwrap();
 
     tauri::Builder::default()
         .manage(Player(std::sync::Mutex::new(
             musiplayer::Player::new().unwrap(),
         )))
         .manage(MalClient(std::sync::Arc::new(client)))
+        .manage(db)
         .invoke_handler(tauri::generate_handler![
-            get_folder,
-            play_song,
-            get_song_progress,
-            seek_perc,
-            set_stat,
-            stop_song,
-            get_seasonal_anime,
-            mal_auth_needed,
-            mal_auth,
+            player::get_folder,
+            player::play_song,
+            player::get_song_progress,
+            player::seek_perc,
+            player::set_stat,
+            player::stop_song,
+            mal::get_seasonal_anime,
+            mal::mal_auth_needed,
+            mal::mal_auth,
+            orm::add_image_from_path,
+            orm::get_images,
+            orm::create_image_from_bytes,
+            orm::add_tag_to_image,
+            orm::remove_tag_from_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
