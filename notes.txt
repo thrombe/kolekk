@@ -1,8 +1,10 @@
 
 
-- [tauri audioplayback issue](https://github.com/tauri-apps/tauri/issues/3478)
-  - new Audio(svelte::convertFileSrc(localpath_or_songuri)).play().then(() => {})
-  - [how to Audio + <input type=range>](https://medium.com/@tommarren/create-a-custom-audio-progress-bar-using-javascript-51b358811abd)
+- issues
+  - [tauri no audioplayback](https://github.com/tauri-apps/tauri/issues/3478)
+    - new Audio(svelte::convertFileSrc(localpath_or_songuri)).play().then(() => {})
+    - [how to Audio + <input type=range>](https://medium.com/@tommarren/create-a-custom-audio-progress-bar-using-javascript-51b358811abd)
+  - [page flicker on resize](https://github.com/tauri-apps/tauri/issues/1564)
 
 
 - [initial setup](https://tauri.app/v1/guides/getting-started/setup/sveltekit/):
@@ -64,6 +66,7 @@
 
 - tauri stuff
   - [tauri js api](https://tauri.app/v1/api/js/)
+  - [gh discussions](https://github.com/tauri-apps/tauri/discussions)
   - drag and drop
     - [files into](https://github.com/tauri-apps/tauri/issues/2768#issuecomment-997169108)
     - [files out](https://github.com/tauri-apps/tauri/issues/2593)
@@ -73,13 +76,56 @@
     - [tauri-plugin-clipboard](https://crates.io/crates/tauri-plugin-clipboard)
   - [tauri splashscreen example](https://github.com/tauri-apps/tauri/blob/dev/examples/splashscreen/main.rs)
 
+- backend stuff
+  - [database normalisation wiki](https://en.wikipedia.org/wiki/Database_normalization)
+  - [seaorm entity structure docs](https://www.sea-ql.org/SeaORM/docs/generate-entity/entity-structure/)
+  - db
+    - [lib.rs database-implementations](https://lib.rs/database-implementations)
+    - [lib.rs database](https://lib.rs/database)
+    - [sled](https://sled.rs/introduction.html)
+    - rdbms
+      - [sqlx compile time checking](https://lib.rs/crates/sqlx)
+      - [postgres](https://rust-lang-nursery.github.io/rust-cookbook/database/postgres.html)
+      - [rusqlite sqlite wrapper](https://lib.rs/crates/rusqlite)
+    - orm (object-relational mapping)
+      - [sea-orm sqlx+orm](https://github.com/SeaQL/sea-orm)
+        - [docs tuts cookbook](https://www.sea-ql.org/SeaORM/docs/index/)
+      - [rbatis](https://lib.rs/crates/rbatis)
+      - [diesel](https://lib.rs/crates/diesel)
+      - [ormx sqlx+lightweight orm](https://lib.rs/crates/ormx)
+  - search engine
+    - [tantivy](https://lib.rs/crates/tantivy)
+    - [meilisearch](https://lib.rs/gh/meilisearch/meilisearch/meilisearch-types)
+      - [docs](https://docs.meilisearch.com/learn/getting_started/quick_start.html#securing-meilisearch)
+  - [fuzzy string stuff](https://lib.rs/search?q=fuzzy)
+    - [skim](https://lib.rs/crates/skim)
+    - [fzyr](https://crates.io/crates/fzyr)
+    - [C fzy](https://github.com/jhawthorn/fzy)
+    - [scout](https://crates.io/crates/scout)
+    - [Go fzf](https://github.com/junegunn/fzf)
+    - [fzy's algorithm.md](https://github.com/jhawthorn/fzy/blob/master/ALGORITHM.md)
+
 - svelte/js stuff
+  - [synchronizing ts and rs types](https://imfeld.dev/writing/generating_typescript_types_from_rust)
+    - in build.rs?
+      - can move all the required types in a seperate crate and then use that in build.rs with some crate to convert the type to ts
+        - ts_rs has the required functions in the trait TS
+      /- maybe modify some of this in [ts_rs](https://github.com/Aleph-Alpha/ts-rs/blob/b4ba8b81fd8833296e99285eae7608864c52e51e/macros/src/lib.rs#L41)
+        /- remove the #[test] stuff and use the generated function in build.rs to output the types to another directory
   - drag and drop
     - [mdn html drag and drop api](https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API)
   - lazy loading
     - [modern browsers + simple svelte](https://dev.to/collardeau/lazy-loading-images-in-svelte-1mk6)
     - [online repl + simple + svelte](https://svelte.dev/repl/adb8dc564044415f8ffbbd240a39d68d?version=3.44.2)
     - [modern + old browsers svelte](https://css-tricks.com/lazy-loading-images-in-svelte/)
+  - CORS
+    - [mdn CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
+    - CORS proxy
+      - [how it be](https://httptoolkit.com/blog/cors-proxies/)
+      - [gh gist of proxies](https://gist.github.com/jimmywarting/ac1be6ea0297c16c477e17f8fbe51347)
+      - [cloudflare cors proxy demo gh](https://github.com/Zibri/cloudflare-cors-anywhere)
+      - [cors-anywhere herokuapp](https://cors-anywhere.herokuapp.com/)
+      - [cloudflare cors headers something](https://developers.cloudflare.com/workers/examples/cors-header-proxy)
 
 - ui stuff
   - [color pallet gen](https://coolors.co/bac1b8-58a4b0-0c7c59-2b303a-d64933)

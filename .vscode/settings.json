@@ -1,0 +1,7 @@
+{
+    "rust-analyzer.checkOnSave": false,
+    "rust-analyzer.lru.capacity": 64,
+    "rust-analyzer.cache.warmup": false,
+    "rust-analyzer.cachePriming.enable": false,
+    "workspaceKeybindings.tauriWorkspace.enabled": true, // enables rustanalyser shourcuts for this workspace
+}
