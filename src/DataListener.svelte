@@ -1,38 +1,38 @@
 <script lang="ts">
-	import { listen } from '@tauri-apps/api/event';
+    import { listen } from '@tauri-apps/api/event';
 
-	interface DragDropPaste {
-    // priority in the same order
-    file_uris: [string] | null; // "http://" "ftp://" "smb://" "/home/"
-    text: string | null; // anything. links, just text, whatever
-    text_html: string | null; // <img href=""> <span>
-    files: [File] | null;
+    interface DragDropPaste {
+        // priority in the same order
+        file_uris: [string] | null; // "http://" "ftp://" "smb://" "/home/"
+        text: string | null; // anything. links, just text, whatever
+        text_html: string | null; // <img href=""> <span>
+        files: [File] | null;
 
-    uri_list: string | null; // link drops. (link is also available in self.text)
-  };
+        uri_list: string | null; // link drops. (link is also available in self.text)
+    }
 
-	export let file_drop = (e: any) => {
-		console.log(e);
-		console.log(e.payload);
-	};
-	export let on_paste = (e: any) => {
-		let data: DataTransfer;
-		if (e.dataTransfer) {
-		  // when text is dropped on the screen
-			data = e.dataTransfer;
-		} else {
-		  // when stuff is pasted using ctrl-v
-			data = e.clipboardData;
-		}
-		console.log(data);
-		console.log(data.getData('text/plain'));
-		console.log(data.getData('text/html'));
-		console.log(data.getData('text/uri-list'));
-		console.log(data.files);
-		console.log(data.files[0]);
-	};
+    export let file_drop = (e: any) => {
+        console.log(e);
+        console.log(e.payload);
+    };
+    export let on_paste = (e: any) => {
+        let data: DataTransfer;
+        if (e.dataTransfer) {
+            // when text is dropped on the screen
+            data = e.dataTransfer;
+        } else {
+            // when stuff is pasted using ctrl-v
+            data = e.clipboardData;
+        }
+        console.log(data);
+        console.log(data.getData('text/plain'));
+        console.log(data.getData('text/html'));
+        console.log(data.getData('text/uri-list'));
+        console.log(data.files);
+        console.log(data.files[0]);
+    };
 
-	listen('tauri://file-drop', file_drop);
+    listen('tauri://file-drop', file_drop);
 </script>
 
 <!--
@@ -60,7 +60,7 @@ events:
 -->
 
 <svelte:window
-	on:dragover|preventDefault
-	on:drop|preventDefault={on_paste}
-	on:paste|preventDefault={on_paste}
+    on:dragover|preventDefault
+    on:drop|preventDefault={on_paste}
+    on:paste|preventDefault={on_paste}
 />

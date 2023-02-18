@@ -14,18 +14,14 @@
     <a href="/hoard/wallpapers">Hoard em Wallpapers</a>
 </h>
 
-<script lang="ts">
-    import DataListener from "../DataListener.svelte";
-</script>
-
-<DataListener/>
+<DataListener />
 
 <style>
     h {
         display: flex;
         flex-direction: column;
     }
-    
+
     a {
         color: #aaa;
         text-decoration: none;
@@ -39,4 +35,3 @@
         height: 100%;
     }
 </style>
-

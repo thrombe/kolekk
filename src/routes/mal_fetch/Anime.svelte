@@ -1,15 +1,15 @@
 <script lang="ts">
-    export let title = "None"
-    export let img_source = ""
-    export let lazy = false
+    export let title = 'None';
+    export let img_source = '';
+    export let lazy = false;
 
-    let lazy_img_src = ""
-    let observer: any = null
+    let lazy_img_src = '';
+    let observer: any = null;
 
     if (lazy) {
-        observer = new IntersectionObserver(onIntersect, {rootMargin: '200px'});
+        observer = new IntersectionObserver(onIntersect, { rootMargin: '200px' });
     } else {
-        lazy_img_src = img_source
+        lazy_img_src = img_source;
     }
 
     function onIntersect(entries: any) {
@@ -22,22 +22,20 @@
         observer && observer.observe(node);
         return {
             destroy() {
-                observer && observer.unobserve(node)
+                observer && observer.unobserve(node);
             }
-        }
+        };
     }
 </script>
 
-
 <card-div draggable="true">
     <image-div use:lazyLoad>
-        <img alt="cover image of: {title}" src={lazy_img_src}>
+        <img alt="cover image of: {title}" src={lazy_img_src} />
     </image-div>
     <span class="title">
         {title}
     </span>
 </card-div>
-
 
 <style>
     image-div {
@@ -46,7 +44,7 @@
         height: calc(100% - 2.7ch);
         overflow: hidden;
     }
-    
+
     image-div img {
         margin-left: 6px;
         margin-right: 6px;
@@ -67,14 +65,14 @@
         height: 2.7ch;
 
         text-align: center;
-        
+
         text-overflow: ellipsis;
         overflow: hidden;
         white-space: nowrap;
     }
 
     card-div {
-        display:flex;
+        display: flex;
         flex-direction: column;
         align-items: center;
         color: rgb(179, 179, 179);
