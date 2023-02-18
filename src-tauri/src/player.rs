@@ -48,9 +48,7 @@ pub fn stop_song(player: tauri::State<'_, Player>) {
 #[tauri::command]
 pub fn set_stat(pause: bool, player: tauri::State<'_, Player>) {
     let mut player = player.0.lock().unwrap();
-    if player.is_paused().unwrap() && !pause {
-        player.toggle_pause().unwrap();
-    } else if !player.is_paused().unwrap() && pause {
+    if (player.is_paused().unwrap() && !pause) || (!player.is_paused().unwrap() && pause) {
         player.toggle_pause().unwrap();
     }
 }

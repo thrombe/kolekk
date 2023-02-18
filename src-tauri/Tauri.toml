@@ -1,0 +1,96 @@
+
+[build]
+before-build-command = "npm run build"
+# before-dev-command = "npm run dev"
+dev-path = "http://localhost:5173"
+dist-dir = "../build"
+# runner = "cargo"
+
+[package]
+product-name = "kolekk"
+version = "0.1.0"
+
+[tauri.allowlist]
+all = true
+
+[tauri.allowlist.shell]
+# https://tauri.app/v1/api/js/shell#restricting-access-to-the-open-api
+all = true
+# open = true
+# open = "^https?://"
+open = "^[a-z]"
+
+[tauri.allowlist.clipboard]
+all = true
+writeText = true
+readText = true
+
+[tauri.allowlist.http]
+all = true
+request = true
+scope = ["http://**", "https://**"]
+
+[tauri.allowlist.fs]
+all = true
+readFile = true
+writeFile = true
+readDir = true
+copyFile = true
+createDir = true
+removeDir = true
+removeFile = true
+renameFile = true
+exists = true
+scope = ["**"]
+
+[tauri.allowlist.protocol]
+asset = true
+assetScope = ["**"]
+
+[tauri.security]
+# https://tauri.app/v1/api/config/#csp
+# https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP
+csp = "" # no null for toml
+
+[tauri.updater]
+active = false
+
+[tauri.bundle]
+active = false
+identifier = "com.thrombe.kolekk"
+category = "Productivity"
+shortDescription = ""
+longDescription = ""
+externalBin = []
+icon = [
+    "icons/32x32.png",
+    "icons/128x128.png",
+    "icons/128x128@2x.png",
+    "icons/icon.icns",
+    "icons/icon.ico",
+]
+resources = []
+targets = "all"
+
+[tauri.bundle.appimage]
+bundleMediaFramework = false
+
+[tauri.bundle.windows]
+# certificateThumbprint = null
+digestAlgorithm = "sha256"
+timestampUrl = ""
+
+[tauri.bundle.deb]
+depends = []
+
+[tauri.bundle.macOS]
+# entitlements = null
+exceptionDomain = ""
+frameworks = []
+# providerShortName = null
+# signingIdentity = null
+
+[tauri]
+windows = [
+    { fullscreen = false, height = 600, resizable = true, title = "kolekk", width = 800 }
+]

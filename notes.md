@@ -74,7 +74,9 @@
     - [arboard](https://docs.rs/arboard)
     - xclip -selection clipboard -t image/png <path>
     - [tauri-plugin-clipboard](https://crates.io/crates/tauri-plugin-clipboard)
-  - [tauri splashscreen example](https://github.com/tauri-apps/tauri/blob/dev/examples/splashscreen/main.rs)
+  - splashscreen
+    - [tauri splashscreen example](https://github.com/tauri-apps/tauri/blob/dev/examples/splashscreen/main.rs)
+    - [Splashscreen](https://tauri.app/v1/guides/features/splashscreen/)
 
 - backend stuff
   - [database normalisation wiki](https://en.wikipedia.org/wiki/Database_normalization)
@@ -130,3 +132,26 @@
 
 - ui stuff
   - [color pallet gen](https://coolors.co/bac1b8-58a4b0-0c7c59-2b303a-d64933)
+
+- custom uri scheme
+  - create on for this app
+    - [Create a custom URL Protocol Handler](https://unix.stackexchange.com/questions/497146/create-a-custom-url-protocol-handler)
+    - [issue: Custom URI scheme support tauri](https://github.com/tauri-apps/tauri/issues/323)
+    - [.desktop file template](https://github.com/tauri-apps/tauri/issues/5176)
+    - [tauri deep link plugin](https://github.com/FabianLars/tauri-plugin-deep-link)
+  - open other apps
+    - [Anchor tag does not open link in default browser](https://github.com/tauri-apps/tauri/issues/4756)
+      - no worky ```<a href="stremio:///detail/series/kitsu:43806/" target="_blank" rel="noreferrer" >stremio</a>```
+      - [temp solution](https://github.com/tauri-apps/tauri/issues/4756#issuecomment-1200745849)
+
+- ideas
+  - do something like the ddg images. when a card is selected, display it in a new row and display
+    a lof of the info that is available for it.
+  - open stremio from app
+    - [stremio src/deep_links/mod.rs](https://github.com/Stremio/stremio-core/blob/development/src/deep_links/mod.rs)
+    - stremio:///detail/series/kitsu:43806
+      - that number is the kitsu id
+    - stremio:///detail/movie/tt1630029 stremio:///detail/series/tt13616990
+      - that tt<number> is imdb id
+    - [run stremio on browser](https://app.strem.io/shell-v4.4)
+    - [run stremio on browser.dev](https://stremio-pwa.pages.dev/#/)

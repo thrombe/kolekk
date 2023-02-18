@@ -33,7 +33,7 @@ fn main() {
 
     remove_dir(cache_dir).unwrap();
 
-    let mut output = File::create(&output_file).unwrap();
+    let mut output = File::create(output_file).unwrap();
     write!(output, "{contents}").unwrap();
 
     tauri_build::build()

@@ -20,7 +20,7 @@ pub async fn add_image_from_path(db: DB<'_>, path: String, title: String) -> Res
 }
 
 #[tauri::command]
-pub fn create_image_from_bytes(img: &[u8]) {}
+pub fn create_image_from_bytes(_img: &[u8]) {}
 
 #[tauri::command]
 pub async fn get_images(db: DB<'_>) -> Result<Vec<Image>, ()> {
