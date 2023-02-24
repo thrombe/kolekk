@@ -1,0 +1,11 @@
+
+[workspace]
+members = [
+  "src-tauri",
+  "src-tauri/crates/*",
+]
+
+default-members = [
+  "src-tauri"
+]
+

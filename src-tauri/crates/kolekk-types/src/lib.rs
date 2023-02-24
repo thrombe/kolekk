@@ -2,7 +2,25 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 pub use ts_rs::TS;
+use std::fmt::Debug;
 
+
+#[derive(Serialize, Deserialize, TS, Debug)]
+pub struct ByteArrayFile {
+    name: String,
+    data: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, TS, Debug)]
+pub struct DragDropPaste<F: Debug> {
+    // priority in the same order
+    file_uris: Option<Vec<String>>, // "http://" "ftp://" "smb://" "/home/"
+    text: Option<String>, // anything. links, just text, whatever
+    text_html: Option<String>, // <img href=""> <span>
+    files: Option<Vec<F>>, // File data as name, bytes
+    
+    uri_list: Option<String>, // link drops. (link is also available in self.text)    
+}
 
 
 #[derive(Serialize, Deserialize, TS)]
@@ -319,4 +337,3 @@ mod metadata {
 }
 
 */
-

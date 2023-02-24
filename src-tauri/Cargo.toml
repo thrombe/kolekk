@@ -1,8 +1,7 @@
 [package]
-name = "kolekk"
+name = "src-tauri"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.59"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -20,7 +19,7 @@ tauri-specta = "0.0.2"
 # lib-mal = "0.5.1"
 lib-mal = { path="./crates/lib-mal" } # has a super stupid bug
 tokio = { version = "1", features = ["full"] }
-sea-orm = { version = "0.10.7", features = [ "sqlx-sqlite", "runtime-tokio-native-tls", "macros" ] }
+sea-orm = { version = "0.11", features = [ "sqlx-sqlite", "runtime-tokio-native-tls", "macros" ] }
 kolekk-types = { path = "./crates/kolekk-types" }
 
 [dependencies.musiplayer]

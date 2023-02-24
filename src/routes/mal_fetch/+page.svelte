@@ -20,14 +20,16 @@
         console.log(data);
         return data;
     };
-    const mal_auth = async (data = auth_data) => {
-        await invoke('mal_auth', data);
+    const mal_auth = async (data: any) => {
+        console.log(data);
+        await invoke('mal_auth', { authData: data });
     };
 
     let auth_data: any = null;
     let seasonal_anime = new Array();
 
     mal_auth_needed().then((data) => {
+        console.log(data);
         if (data == null) {
             seasonal_anime_fetch();
         } else {

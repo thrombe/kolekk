@@ -1,19 +1,17 @@
 <script lang="ts">
     import { convertFileSrc, invoke } from '@tauri-apps/api/tauri';
-    import type { Image } from '../../../rs_bindings';
-    import DataListener from '../../../DataListener.svelte';
+    import type { DragDropPaste, Image } from 'types';
+    import DataListener from '$lib/DataListener.svelte';
 
     let images = new Array<Image>();
 
-    const file_drop = async (e: any) => {
+    const file_drop = async (e: DragDropPaste<File>) => {
         console.log(e);
-        for (let path of e.payload) {
-            console.log(e.payload);
-            console.log(path);
+        e.file_uris?.forEach(async (path: string) => {
             console.log(convertFileSrc(path));
             await invoke('add_image_from_path', { path: path, title: 'this one' });
             await get_images();
-        }
+        });
     };
 
     const get_images = async () => {
@@ -41,7 +39,7 @@
     };
 </script>
 
-<DataListener {file_drop} />
+<DataListener on_receive={file_drop} />
 
 <button on:click={get_images}>refresh</button>
 

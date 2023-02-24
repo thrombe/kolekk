@@ -63,6 +63,10 @@ pub fn mal_auth_needed(mal: State<'_, MalClient>) -> Option<MalAuthData> {
     }
 }
 
+// this just won't work nicely. forking lib_mal seems more convinient
+//  - lib_mal::client::MalClient::auth uses tiny_http sync Server. so no async there even when the function auth is marked async
+//  - it stores it's own client. which is kinda meh
+//  - to be able to do anything useful with it, (without the unsafe stuff below) internal mutability is probably required. fn auth(&self)
 #[tauri::command]
 pub async fn mal_auth(auth_data: MalAuthData, mal: State<'_, MalClient>) -> Result<(), MALError> {
     if std::sync::Arc::strong_count(&mal.0) + std::sync::Arc::weak_count(&mal.0) > 1 {
@@ -73,6 +77,7 @@ pub async fn mal_auth(auth_data: MalAuthData, mal: State<'_, MalClient>) -> Resu
     // this stuff is not safe, tho idk any other way to do this
     let a = std::sync::Arc::as_ptr(&mal.0);
     let a = unsafe { &mut *(a as *mut MALClient) };
-    tauri::async_runtime::block_on(a.auth(redirect, &auth_data.challenge, &auth_data.state))?;
+    dbg!("trying to listen on: {}", redirect);
+    // a.auth(redirect, &auth_data.challenge, &auth_data.state).await?;
     Ok(())
 }

@@ -8,7 +8,10 @@ const config = {
     preprocess: vitePreprocess(),
 
     kit: {
-        adapter: adapter()
+        adapter: adapter(),
+        alias: {
+            types: 'src/rs_bindings.ts'
+        }
     }
 };
 

@@ -155,3 +155,6 @@
       - that tt<number> is imdb id
     - [run stremio on browser](https://app.strem.io/shell-v4.4)
     - [run stremio on browser.dev](https://stremio-pwa.pages.dev/#/)
+  - add lazy fetching to image loading from db. maybe have some item that is just an id+type that can be fetched and stored in
+    the frontend all at once, and can be queried as needed lazily
+  - maybe yeet sea_orm and just use sqlx

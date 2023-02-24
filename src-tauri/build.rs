@@ -4,7 +4,7 @@ use std::{
     path::Path,
 };
 
-use kolekk_types::{Bookmark, Image, TS};
+use kolekk_types::{Bookmark, Image, TS, DragDropPaste, ByteArrayFile};
 
 fn main() {
     println!("cargo:rerun-if-changed=./crates/kolekk-types/src/lib.rs");
@@ -29,7 +29,7 @@ fn main() {
         };
     }
 
-    export!(Bookmark, Image);
+    export!(Bookmark, Image, DragDropPaste<i32>, ByteArrayFile);
 
     remove_dir(cache_dir).unwrap();
 

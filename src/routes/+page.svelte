@@ -14,7 +14,6 @@
     <a href="/hoard/wallpapers">Hoard em Wallpapers</a>
 </h>
 
-<DataListener />
 
 <style>
     h {
