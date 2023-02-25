@@ -1,13 +1,16 @@
 
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use derivative::Derivative;
 pub use ts_rs::TS;
 use std::fmt::Debug;
 
 
-#[derive(Serialize, Deserialize, TS, Debug)]
+#[derive(Serialize, Deserialize, TS, Derivative)]
+#[derivative(Debug)]
 pub struct ByteArrayFile {
     pub name: String,
+    #[derivative(Debug = "ignore")]
     pub data: Vec<u8>,
 }
 
