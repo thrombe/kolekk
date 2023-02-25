@@ -1210,6 +1210,7 @@ checksum = "13e2792b0ff0340399d58445b88fd9770e3489eff258a4cbc1523418f12abf84"
 dependencies = [
  "futures-channel",
  "futures-core",
+ "futures-executor",
  "futures-io",
  "futures-sink",
  "futures-task",
@@ -4430,6 +4431,7 @@ name = "src-tauri"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "futures",
  "kolekk-types",
  "lib-mal",
  "musiplayer",
@@ -4439,8 +4441,10 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-specta",
+ "thiserror",
  "tokio",
  "ts-rs",
+ "uuid 1.3.0",
 ]
 
 [[package]]
@@ -5509,6 +5513,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1674845326ee10d37ca60470760d4288a6f80f304007d92e5c53bab78c9cfd79"
 dependencies = [
  "getrandom 0.2.8",
+ "rand 0.8.5",
  "serde",
 ]
 

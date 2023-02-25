@@ -7,33 +7,34 @@ use std::fmt::Debug;
 
 #[derive(Serialize, Deserialize, TS, Debug)]
 pub struct ByteArrayFile {
-    name: String,
-    data: Vec<u8>,
+    pub name: String,
+    pub data: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, TS, Debug)]
 pub struct DragDropPaste<F: Debug> {
     // priority in the same order
-    file_uris: Option<Vec<String>>, // "http://" "ftp://" "smb://" "/home/"
-    text: Option<String>, // anything. links, just text, whatever
-    text_html: Option<String>, // <img href=""> <span>
-    files: Option<Vec<F>>, // File data as name, bytes
+    pub file_uris: Option<Vec<String>>, // "http://" "ftp://" "smb://" "/home/"
+    pub text: Option<String>, // anything. links, just text, whatever
+    pub text_html: Option<String>, // <img href=""> <span>
+    pub files: Option<Vec<F>>, // File data
     
-    uri_list: Option<String>, // link drops. (link is also available in self.text)    
+    pub uri_list: Option<String>, // link drops. (link is also available in self.text)    
 }
 
-
-#[derive(Serialize, Deserialize, TS)]
+#[derive(Serialize, Deserialize, TS, Debug)]
 pub struct Image {
     pub id: u32,
     pub title: String,
-    pub path: String,
+    pub src_path: String,
+    pub db_path: String,
+    pub chksum: String,
     pub urls: Vec<String>,
     pub tags: Vec<String>,
     // pub metadata: metadata::Model,
 }
 
-#[derive(Serialize, Deserialize, TS)]
+#[derive(Serialize, Deserialize, TS, Debug)]
 pub struct Bookmark {
     pub id: u32,
     pub title: String,
@@ -51,7 +52,9 @@ impl Image {
             let e = Self {
                 id: e.id,
                 title: e.title,
-                path: e.path,
+                src_path: e.src_path,
+                db_path: e.db_path,
+                chksum: e.chksum,
                 urls: urls::Entity::find_by_id(e.id)
                     .all(db)
                     .await
@@ -136,9 +139,11 @@ pub mod images {
         pub id: u32,
         // #[sea_orm(primary_key)]
         // #[sea_orm(unique)]
-        // pub md5_or_somethin: String,
+        pub chksum: String,
+        pub size: u32,
         pub title: String,
-        pub path: String,
+        pub src_path: String,
+        pub db_path: String,
     }
 
     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -337,3 +342,4 @@ mod metadata {
 }
 
 */
+

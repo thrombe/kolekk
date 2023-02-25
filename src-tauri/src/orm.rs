@@ -10,7 +10,7 @@ type DB<'a> = tauri::State<'a, sea_orm::DatabaseConnection>;
 #[tauri::command]
 pub async fn add_image_from_path(db: DB<'_>, path: String, title: String) -> Result<(), ()> {
     let img = images::ActiveModel {
-        path: sea_orm::Set(path),
+        src_path: sea_orm::Set(path),
         title: sea_orm::Set(title),
         ..Default::default()
     };

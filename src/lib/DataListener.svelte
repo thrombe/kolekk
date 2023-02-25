@@ -37,7 +37,7 @@
             }
         });
 
-        // this func can only be called when this script is being initialised. so can't put it in .then() of listen()
+        // this func can only be called when this script is being initialised. so can't put it in listen().then()
         onDestroy(() => {
             unlisten();
         });

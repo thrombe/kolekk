@@ -21,6 +21,9 @@ lib-mal = { path="./crates/lib-mal" } # has a super stupid bug
 tokio = { version = "1", features = ["full"] }
 sea-orm = { version = "0.11", features = [ "sqlx-sqlite", "runtime-tokio-native-tls", "macros" ] }
 kolekk-types = { path = "./crates/kolekk-types" }
+uuid = { version = "1.3.0", features = ["v4", "fast-rng"] }
+futures = "0.3.26"
+thiserror = "1.0.38"
 
 [dependencies.musiplayer]
 # version = "0.1"

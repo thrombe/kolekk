@@ -3,12 +3,34 @@
     windows_subsystem = "windows"
 )]
 
+mod bad_error;
+mod filesystem;
 mod mal;
 mod orm;
 mod player;
 
+use std::path::PathBuf;
+
+use bad_error::Error;
 use mal::{mal_init, MalClient};
 use player::Player;
+use tauri::Manager;
+
+#[derive(Debug)]
+pub struct AppConfig {
+    pub app_data_dir: PathBuf,
+    pub app_config_dir: PathBuf,
+    pub app_cache_dir: PathBuf,
+    pub app_log_dir: PathBuf,
+    pub home_dir: PathBuf,
+}
+
+impl AppConfig {
+    pub fn create_dirs(&self) -> Result<(), Error> {
+        dbg!(self);
+        Ok(())
+    }
+}
 
 fn main() {
     let client = tauri::async_runtime::block_on(mal_init()).unwrap();
@@ -36,6 +58,20 @@ fn main() {
             orm::add_tag_to_image,
             orm::remove_tag_from_image,
         ])
+        .setup(|app| {
+            let path_res = app.path_resolver();
+            dbg!(path_res.resource_dir());
+            let conf = AppConfig {
+                app_data_dir: path_res.app_data_dir().unwrap(),
+                app_config_dir: path_res.app_config_dir().unwrap(),
+                app_cache_dir: path_res.app_cache_dir().unwrap(),
+                app_log_dir: path_res.app_log_dir().unwrap(),
+                home_dir: tauri::api::path::home_dir().unwrap(),
+            };
+            conf.create_dirs()?;
+            app.handle().manage(conf);
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
