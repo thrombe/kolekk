@@ -1,3 +1,6 @@
+#[allow(unused_imports)]
+use crate::{dbg, debug, error};
+
 use kolekk_types::{ByteArrayFile, DragDropPaste};
 use std::{
     collections::HashSet,
@@ -14,7 +17,7 @@ use tauri::{
 };
 
 use crate::{
-    bad_error::{Error, InferBadError},
+    bad_error::{Error, InferBadError, Inspectable},
     AppConfig,
 };
 
@@ -25,14 +28,16 @@ pub async fn save_images<'a, F: Debug + Filable>(
     let mut data_dir = data_dir.into();
     data_dir.push("images");
     if !data_dir.exists() {
-        std::fs::create_dir(&data_dir).dbg().infer_err()?;
+        std::fs::create_dir(&data_dir)
+            .look(|e| dbg!(e))
+            .infer_err()?;
     }
 
     let client = ClientBuilder::new()
         .max_redirections(5)
         .connect_timeout(Duration::new(5, 0))
         .build()
-        .dbg()
+        .look(|e| dbg!(e))
         .infer_err()?;
 
     let mut image_paths = data
@@ -41,7 +46,7 @@ pub async fn save_images<'a, F: Debug + Filable>(
         .map(|v| &v[..])
         .unwrap_or(&[])
         .iter()
-        .filter_map(|f| f.save_in_dir(&data_dir).dbg().ok())
+        .filter_map(|f| f.save_in_dir(&data_dir).look(|e| dbg!(e)).ok())
         .collect::<Vec<_>>();
     let potential_links: HashSet<_> = data
         .file_uris
@@ -66,18 +71,18 @@ pub async fn save_images<'a, F: Debug + Filable>(
     //     // .chain(data.uri_list.iter()) // donno if including this does any good
     //     .collect::<HashSet<_>>();
     async fn get_resp(uri: &str, client: &Client) -> Result<Vec<u8>, Error> {
-        let u = Uri::from_str(uri).dbg().infer_err()?;
+        let u = Uri::from_str(uri).look(|e| dbg!(e)).infer_err()?;
         let req = HttpRequestBuilder::new("GET", u.to_string())
-            .dbg()
+            .look(|e| dbg!(e))
             .infer_err()?;
         let bytes = client
             .send(req)
             .await
-            .dbg()
+            .look(|e| dbg!(e))
             .infer_err()?
             .bytes()
             .await
-            .dbg()
+            .look(|e| dbg!(e))
             .infer_err()?
             .data;
         Ok(bytes)
@@ -85,11 +90,15 @@ pub async fn save_images<'a, F: Debug + Filable>(
 
     let mut reqs = vec![];
     for u in potential_links {
-        if let Some(p) = PathBuf::from_str(u).dbg().ok().filter(|p| p.is_file()) {
+        if let Some(p) = PathBuf::from_str(u)
+            .look(|e| dbg!(e))
+            .ok()
+            .filter(|p| p.is_file())
+        {
             let _ = p
                 .as_path()
                 .save_in_dir(&data_dir)
-                .dbg()
+                .look(|e| dbg!(e))
                 .ok()
                 .map(|pb| image_paths.push(pb));
         } else {
@@ -99,14 +108,14 @@ pub async fn save_images<'a, F: Debug + Filable>(
     futures::future::join_all(reqs)
         .await
         .into_iter()
-        .filter_map(|e| e.dbg().ok())
+        .filter_map(|e| e.look(|e| dbg!(e)).ok())
         .filter_map(|bytes| {
             ByteArrayFile {
                 name: "".into(),
                 data: bytes,
             }
             .save_in_dir(&data_dir)
-            .dbg()
+            .look(|e| dbg!(e))
             .ok()
         })
         .for_each(|pb| image_paths.push(pb));
@@ -123,8 +132,9 @@ impl Filable for ByteArrayFile {
         let buf = id.hyphenated().to_string();
         let mut path = dir.to_path_buf();
         path.push(buf);
-        let mut file = std::io::BufWriter::new(std::fs::File::create(&path).dbg().infer_err()?);
-        file.write(&self.data).dbg().infer_err()?;
+        let mut file =
+            std::io::BufWriter::new(std::fs::File::create(&path).look(|e| dbg!(e)).infer_err()?);
+        file.write(&self.data).look(|e| dbg!(e)).infer_err()?;
         Ok(path)
     }
 }
@@ -136,7 +146,7 @@ impl Filable for &Path {
             let buf = id.hyphenated().to_string();
             let mut path = dir.to_path_buf();
             path.push(buf);
-            let _num_bytes_copied = std::fs::copy(self, &path).dbg().infer_err()?;
+            let _num_bytes_copied = std::fs::copy(self, &path).look(|e| dbg!(e)).infer_err()?;
             Ok(path)
         } else {
             Err(Error::new("the path is not a file"))

@@ -24,6 +24,8 @@ kolekk-types = { path = "./crates/kolekk-types" }
 uuid = { version = "1.3.0", features = ["v4", "fast-rng"] }
 futures = "0.3.26"
 thiserror = "1.0.38"
+fern = "0.6.1"
+log = "0.4.17"
 
 [dependencies.musiplayer]
 # version = "0.1"

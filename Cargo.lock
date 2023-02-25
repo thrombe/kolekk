@@ -1101,6 +1101,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fern"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bdd7b0849075e79ee9a1836df22c717d1eba30451796fdc631b04565dd11e2a"
+dependencies = [
+ "log 0.4.17",
+]
+
+[[package]]
 name = "field-offset"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4431,9 +4440,11 @@ name = "src-tauri"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "fern",
  "futures",
  "kolekk-types",
  "lib-mal",
+ "log 0.4.17",
  "musiplayer",
  "sea-orm",
  "serde",

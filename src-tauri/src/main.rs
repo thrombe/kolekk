@@ -5,6 +5,7 @@
 
 mod bad_error;
 mod filesystem;
+mod logg;
 mod mal;
 mod orm;
 mod player;
@@ -12,9 +13,14 @@ mod player;
 use std::path::PathBuf;
 
 use bad_error::Error;
+use logg::init_logger;
 use mal::{mal_init, MalClient};
 use player::Player;
 use tauri::Manager;
+
+pub use logg::{debug, error};
+
+use crate::bad_error::InferBadError;
 
 #[derive(Debug)]
 pub struct AppConfig {
@@ -27,7 +33,16 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub fn create_dirs(&self) -> Result<(), Error> {
-        dbg!(self);
+        for dir in [
+            &self.app_data_dir,
+            &self.app_config_dir,
+            &self.app_cache_dir,
+            &self.app_log_dir,
+        ] {
+            if !dir.exists() {
+                std::fs::create_dir_all(dir).infer_err()?;
+            }
+        }
         Ok(())
     }
 }
@@ -69,6 +84,9 @@ fn main() {
                 home_dir: tauri::api::path::home_dir().unwrap(),
             };
             conf.create_dirs()?;
+            init_logger(&conf.app_log_dir).unwrap();
+
+            dbg!(&conf);
             app.handle().manage(conf);
             Ok(())
         })

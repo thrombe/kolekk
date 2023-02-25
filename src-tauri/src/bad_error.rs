@@ -1,4 +1,7 @@
-use std::{borrow::Cow, fmt::Display};
+#[allow(unused_imports)]
+use crate::{dbg, debug, error};
+
+use std::{borrow::Cow, fmt::{Display, Debug}};
 
 use serde::Serialize;
 
@@ -52,7 +55,60 @@ where
 
     fn dbg(self) -> Self {
         if let Err(e) = &self {
-            println!("{}", e);
+            error!("{}", e);
+        }
+        self
+    }
+}
+
+
+
+
+pub trait Inspectable<R> {
+    fn look(self, f: impl FnOnce(&Self) -> R) -> Self;
+}
+
+impl<T, R> Inspectable<R> for T
+where
+    T: Debug
+{
+    fn look(self, f: impl FnOnce(&Self) -> R) -> Self {
+        let _r = f(&self);
+        self
+    }
+}
+
+pub trait Loggable {
+    fn log(self) -> Self;
+}
+
+pub trait LoggableResult {
+    fn log_r(self) -> Self;
+}
+
+impl<T> Loggable for T
+where
+    T: Debug,
+{
+    fn log(self) -> Self {
+        dbg!(&self);
+        self
+    }
+}
+
+impl<R, E> LoggableResult for Result<R, E>
+where
+    E: Display,
+    R: Debug,
+{
+    fn log_r(self) -> Self {
+        match &self {
+            Ok(r) => {
+                dbg!(r);
+            }
+            Err(e) => {
+                error!("{}", e);
+            }
         }
         self
     }
