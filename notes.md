@@ -4,6 +4,7 @@
   - [tauri no audioplayback](https://github.com/tauri-apps/tauri/issues/3478)
     - new Audio(svelte::convertFileSrc(localpath_or_songuri)).play().then(() => {})
     - [how to Audio + <input type=range>](https://medium.com/@tommarren/create-a-custom-audio-progress-bar-using-javascript-51b358811abd)
+    - [playing sound works? glitch](https://github.com/tauri-apps/tauri/discussions/5687)
   - [page flicker on resize](https://github.com/tauri-apps/tauri/issues/1564)
 
 
@@ -67,6 +68,8 @@
 - tauri stuff
   - [tauri js api](https://tauri.app/v1/api/js/)
   - [gh discussions](https://github.com/tauri-apps/tauri/discussions)
+  - [no serialise ipc data transfer](https://github.com/JonasKruckenberg/pisano/blob/main/src-tauri/src/main.rs)
+  - [tauri + wasm gui](https://github.com/tauri-apps/tauri/discussions/5231)
   - drag and drop
     - [files into](https://github.com/tauri-apps/tauri/issues/2768#issuecomment-997169108)
     - [files out](https://github.com/tauri-apps/tauri/issues/2593)

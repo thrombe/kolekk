@@ -41,29 +41,40 @@
 
 <DataListener on_receive={file_drop} />
 
-<button on:click={get_images}>refresh</button>
-
-<input bind:value={tag_name} />
-<button on:click={add_tag}>add tag</button>
-<button on:click={remove_tag}>remove tag</button>
+<svelte:window bind:innerWidth={width}></svelte:window>
 
 <cl>
+    <buttons>
+        <button on:click={get_images}>refresh</button>
+        
+        <input bind:value={tag_name} />
+        <button on:click={add_tag}>add tag</button>
+        <button on:click={remove_tag}>remove tag</button>
+    </buttons>
     {#each images as img}
         <!-- <rw> -->
-        <card-div draggable="true" on:dragstart={print}>
-            <image-div>
-                <img src={convertFileSrc(img.path)} alt="" />
-            </image-div>
-            <span class="title">
-                {img.title}
-            </span>
-            <tags-div>
-                <!-- <cl> -->
-                {#each img.tags as tag}
-                    <button>{tag}</button>
-                {/each}
-                <!-- </cl> -->
-            </tags-div>
+        <card-div draggable="true" style="height:{width/5}px; width: {width/5}px" on:dragstart={dragging_started}>
+            <card-insides draggable="true">
+                <image-div>
+                    <img draggable="false" src={convertFileSrc(img.path)} alt="" />
+                </image-div>
+                {#if img.title.length > 0}
+                <span class="title">
+                    {img.title}
+                </span>
+                {/if}
+                {#if img.tags.length > 0}
+                <tags-div>
+                    <tag-padding>{"a"}</tag-padding>
+                    <!-- <cl> -->
+                    {#each img.tags as tag}
+                        <tag>{tag}</tag>
+                    {/each}
+                    <!-- <tag-padding>{"a"}</tag-padding> -->
+                    <!-- </cl> -->
+                </tags-div>
+                {/if}
+            </card-insides>
         </card-div>
         <!-- </rw> -->
     {/each}
@@ -73,75 +84,137 @@
     image-div {
         width: 100%;
         /* height: 100%; */
-        height: calc(100% - 2.7ch);
+        max-height: 100%;
+        height: calc(100%);
         overflow: hidden;
     }
 
     image-div img {
-        margin-left: 6px;
-        margin-right: 6px;
-        margin-top: 6px;
-        border-radius: 15px;
+        /* border-radius: 15px; */
+        /* border-bottom-left-radius: 0px; */
+        /* border-bottom-right-radius: 0px; */
 
-        /* contain image */
-        width: calc(100% - 12px);
-        /* width: calc(100% - padding-left - padding-right); */
-        height: calc(100% - 10px);
+        width: calc(100%);
+        height: calc(100%);
         object-fit: cover;
     }
 
     .title {
-        padding-left: 8px;
-        padding-right: 8px;
-        width: calc(100% - 16px);
-        height: 2.7ch;
+        font-size: 1.17ch;
+        padding-bottom: 0.556ch;
+        font-weight: 500;
+        width: calc(100%);
+        height: min-content;
 
         text-align: center;
-
         text-overflow: ellipsis;
         overflow: hidden;
         white-space: nowrap;
+
+        color: aquamarine;
+        /* background-color: blue; */
     }
 
     card-div {
+        overflow: hidden;
+    }
+    
+    card-insides {
+        /* width: 100%; */
+        /* height: calc(100% - 2px - 6px); */
+        height: calc(100% - 0px - 5px);
+
         display: flex;
         flex-direction: column;
         align-items: center;
         color: rgb(179, 179, 179);
-        /* overflow:scroll; */
-        margin-left: 10px;
-        margin-top: 10px;
+        margin-left: 3px;
+        margin-right: 3px;
+        margin-top: 3px;
+        margin-bottom: 3px;
 
-        /* - 2px for border */
-        width: calc(25vw - 14px);
-        /* height: 40vw; */
-        aspect-ratio: 0.6;
         background-color: blueviolet;
 
         border: 1px solid;
         border-radius: 15px;
         border-color: red;
+
+        overflow: hidden;
     }
 
     card-div + card-div {
     }
 
     tags-div {
-        /* display:flex; */
-        /* flex-direction: column; */
+        display: flex;
+        width: calc(100%);
+        height: min-content;
+        /* overflow-x: auto; */
+        /* overflow-y: hidden; */
+
+        padding: 0;
+        margin: 0;
+        background-color: #FFFFFF;
+        height: min-content;
+
+        /* flex-wrap: wrap; */
+        /* overflow: hidden; */
+        /* justify-content:space-evenly; */
+    }
+
+    tags-div::-webkit-scrollbar {
+        /* background-color: #630424; */
+        /* display: none; */
+        width: 0;
+        background: transparent;
+        height: 0;
+    }
+
+    tags-div tag {
+        font-size: 1.17ch;
+        font-weight: 700;
+        /* height: 3.0ch; */
+        
+        padding-left: 3.0px;
+        padding-right: 3.0px;
+        padding-bottom: 0.57ch;
+
+        background-color: #5b931b;
+        color: #630424;
+        border-radius: 3px;
+        width: min-content;
+    }
+    
+    tags-div tag + tag {
+        margin-left: 1.5%;
+    }
+
+    buttons {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
         width: 100%;
-        height: 100%;
+        height: 33px;
+    }
+
+    tag-padding {
+        /* width: 12px; */
+        height: 1px;
+        /* height: 3.0ch; */
+        color: transparent;
     }
 
     cl {
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
+        overflow: auto;
         width: 100%;
-        /* margin: 10px; */
+        /* height: 100%; */
     }
     rw {
         display: flex;
         flex-direction: column;
+        width: 100%;
     }
 </style>
