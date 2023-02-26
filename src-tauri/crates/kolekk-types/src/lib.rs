@@ -46,6 +46,11 @@ pub struct Bookmark {
     // pub metadata: metadata::Model,
 }
 
+#[derive(Serialize, Deserialize, TS, Debug, PartialEq, Eq)]
+pub struct FileMetadata {
+    pub chksum: [u8; 16],
+    pub size: u64,
+}
 
 impl Image {
     pub async fn all_from_db(db: &DatabaseConnection) -> Vec<Self> {

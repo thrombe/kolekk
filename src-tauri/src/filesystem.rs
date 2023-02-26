@@ -1,11 +1,12 @@
 #[allow(unused_imports)]
 use crate::{dbg, debug, error};
 
-use kolekk_types::{ByteArrayFile, DragDropPaste};
+use kolekk_types::{ByteArrayFile, DragDropPaste, FileMetadata};
 use std::{
     collections::HashSet,
     fmt::Debug,
-    io::Write,
+    fs::File,
+    io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
     str::FromStr,
     time::Duration,
@@ -17,7 +18,7 @@ use tauri::{
 };
 
 use crate::{
-    bad_error::{Error, InferBadError, Inspectable},
+    bad_error::{BadError, Error, InferBadError, Inspectable},
     AppConfig,
 };
 
@@ -72,6 +73,8 @@ pub async fn save_images<'a, F: Debug + Filable>(
     //     .collect::<HashSet<_>>();
     async fn get_resp(uri: &str, client: &Client) -> Result<Vec<u8>, Error> {
         let u = Uri::from_str(uri).look(|e| dbg!(e)).infer_err()?;
+        // TODO: check content-type in headers before downloading the file
+        // TODO: ckeck how big the file is before downloading
         let req = HttpRequestBuilder::new("GET", u.to_string())
             .look(|e| dbg!(e))
             .infer_err()?;
@@ -82,7 +85,7 @@ pub async fn save_images<'a, F: Debug + Filable>(
             .infer_err()?
             .bytes()
             .await
-            .look(|e| dbg!(e))
+            // .look(|e| dbg!(e))
             .infer_err()?
             .data;
         Ok(bytes)
@@ -95,12 +98,14 @@ pub async fn save_images<'a, F: Debug + Filable>(
             .ok()
             .filter(|p| p.is_file())
         {
-            let _ = p
-                .as_path()
-                .save_in_dir(&data_dir)
-                .look(|e| dbg!(e))
-                .ok()
-                .map(|pb| image_paths.push(pb));
+            if path_is_in_dir(&p, &data_dir).unwrap_or(false) {
+                let _ = p
+                    .as_path()
+                    .save_in_dir(&data_dir)
+                    .look(|e| dbg!(e))
+                    .ok()
+                    .map(|pb| image_paths.push(pb));
+            }
         } else {
             reqs.push(get_resp(u, &client));
         };
@@ -108,7 +113,7 @@ pub async fn save_images<'a, F: Debug + Filable>(
     futures::future::join_all(reqs)
         .await
         .into_iter()
-        .filter_map(|e| e.look(|e| dbg!(e)).ok())
+        .filter_map(|e| e.ok())
         .filter_map(|bytes| {
             ByteArrayFile {
                 name: "".into(),
@@ -130,8 +135,7 @@ impl Filable for ByteArrayFile {
     fn save_in_dir(&self, dir: &Path) -> Result<PathBuf, Error> {
         let id = uuid::Uuid::new_v4();
         let buf = id.hyphenated().to_string();
-        let mut path = dir.to_path_buf();
-        path.push(buf);
+        let path = dir.join(buf);
         let mut file =
             std::io::BufWriter::new(std::fs::File::create(&path).look(|e| dbg!(e)).infer_err()?);
         file.write(&self.data).look(|e| dbg!(e)).infer_err()?;
@@ -144,12 +148,57 @@ impl Filable for &Path {
         if self.is_file() {
             let id = uuid::Uuid::new_v4();
             let buf = id.hyphenated().to_string();
-            let mut path = dir.to_path_buf();
-            path.push(buf);
+            let path = dir.join(buf);
             let _num_bytes_copied = std::fs::copy(self, &path).look(|e| dbg!(e)).infer_err()?;
             Ok(path)
         } else {
             Err(Error::new("the path is not a file"))
         }
     }
+}
+
+pub fn path_is_in_dir(path: impl Into<PathBuf>, dir: impl Into<PathBuf>) -> Result<bool, Error> {
+    let path = path.into().canonicalize().look(|e| dbg!(e)).infer_err()?;
+    let parent = if path.is_file() {
+        path.parent().bad_err("no parent")?.into()
+    } else {
+        path.clone()
+    };
+    let dir = dir.into().canonicalize().look(|e| dbg!(e)).infer_err()?;
+    debug!(
+        "skipping file {} as it is already in data path",
+        path.display()
+    );
+    Ok(parent.starts_with(dir))
+}
+
+pub fn file_mdata(path: impl AsRef<Path>) -> Result<FileMetadata, Error> {
+    let mut ctx = md5::Context::new();
+    let f = File::open(path.as_ref()).infer_err()?;
+    let len = f.metadata().unwrap().len();
+    let buf_len = len.min(1_000_000) as usize;
+    let mut buf = BufReader::with_capacity(buf_len, f);
+    loop {
+        let part = buf.fill_buf().infer_err()?;
+        if part.is_empty() {
+            break;
+        }
+        ctx.consume(part);
+        let part_len = part.len();
+        buf.consume(part_len);
+    }
+    let digest = ctx.compute();
+    Ok(FileMetadata {
+        chksum: digest.0,
+        size: len,
+    })
+}
+
+// Some() if different, None if same
+pub fn is_file_same(
+    new_file: impl AsRef<Path>,
+    data: &FileMetadata,
+) -> Result<Option<FileMetadata>, Error> {
+    let fd = file_mdata(new_file.as_ref())?;
+    Ok(Some(fd).filter(|fd| *fd != *data))
 }

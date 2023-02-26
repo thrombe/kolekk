@@ -26,6 +26,7 @@ futures = "0.3.26"
 thiserror = "1.0.38"
 fern = "0.6.1"
 log = "0.4.17"
+md5 = "0.7.0"
 
 [dependencies.musiplayer]
 # version = "0.1"
