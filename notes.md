@@ -147,6 +147,23 @@
       - no worky ```<a href="stremio:///detail/series/kitsu:43806/" target="_blank" rel="noreferrer" >stremio</a>```
       - [temp solution](https://github.com/tauri-apps/tauri/issues/4756#issuecomment-1200745849)
 
+- search engine stuff:
+  - tantivity
+    - use in memory databases and retrieve all info from there and do not bother db
+      - if in-memory stuff is not enough, can easily switch to temp dirs or something
+    - use db only when storing/indexing
+    - use tauri events or whatever to listen for commits when searching.
+      - will be useful when indexing filesystem or sometihing
+        - [maybe index fs like this??](https://github.com/quickwit-oss/tantivy/blob/6761237ec71b4e25ee4b5661e794b4755c6c5e56/examples/faceted_search.rs)
+    - [warmer?](https://github.com/quickwit-oss/tantivy/blob/6761237ec71b4e25ee4b5661e794b4755c6c5e56/examples/warmer.rs)
+    - fuzzy search
+      - [It is reasonably simple however to split a query into several tokens, map these tokens into
+        FuzzyTermQuery and combine those into a BooleanQuery.](https://github.com/quickwit-oss/tantivy/issues/947#issuecomment-734054824)
+    - [pagination](https://docs.rs/tantivy/latest/tantivy/collector/struct.TopDocs.html#method.and_offset)
+    - indexing multiple kinds of things using
+      - [facet](https://docs.rs/tantivy/latest/tantivy/schema/struct.Facet.html)
+      - [facet collector](https://docs.rs/tantivy/latest/tantivy/collector/struct.FacetCollector.html)
+
 - ideas
   - do something like the ddg images. when a card is selected, display it in a new row and display
     a lof of the info that is available for it.
@@ -161,3 +178,4 @@
   - add lazy fetching to image loading from db. maybe have some item that is just an id+type that can be fetched and stored in
     the frontend all at once, and can be queried as needed lazily
   - maybe yeet sea_orm and just use sqlx
+

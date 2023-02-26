@@ -1,6 +1,5 @@
-use std::path::Path;
 
-use sea_orm::{entity::prelude::*, ConnectionTrait, Database};
+use sea_orm::entity::prelude::*;
 
 use kolekk_types::Image;
 pub use kolekk_types::{images, tags, urls, metadata};
@@ -26,31 +25,6 @@ pub fn create_image_from_bytes(_img: &[u8]) {}
 pub async fn get_images(db: DB<'_>) -> Result<Vec<Image>, ()> {
     let imgs = Image::all_from_db(db.inner()).await;
     Ok(imgs)
-}
-
-pub async fn setup_sea_orm() -> anyhow::Result<sea_orm::DatabaseConnection> {
-    // - [create new db file sea-orm](https://github.com/SeaQL/sea-orm/discussions/283#discussioncomment-1564939)
-    let db_path = "/home/issac/0Git/kolekk/cache/kolekdb.db";
-    let db_url = format!("sqlite://{db_path}?mode=rwc");
-    let new_db = !Path::new(db_path).exists();
-    // let db_url = "sqlite::memory:";
-    let db = Database::connect(db_url).await?;
-
-    if new_db {
-        let backend = db.get_database_backend();
-        let schema = sea_orm::Schema::new(backend);
-        // dbg!(backend.build(&table).to_string());
-        let table = schema.create_table_from_entity(images::Entity);
-        let _ = db.execute(backend.build(&table)).await.unwrap();
-        let table = schema.create_table_from_entity(tags::Entity);
-        let _ = db.execute(backend.build(&table)).await.unwrap();
-        let table = schema.create_table_from_entity(urls::Entity);
-        let _ = db.execute(backend.build(&table)).await.unwrap();
-        let table = schema.create_table_from_entity(metadata::Entity);
-        let _ = db.execute(backend.build(&table)).await.unwrap();
-    }
-
-    Ok(db)
 }
 
 #[tauri::command]

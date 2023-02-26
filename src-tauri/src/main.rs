@@ -9,8 +9,8 @@ mod logg;
 mod mal;
 mod orm;
 mod player;
-
-use std::path::PathBuf;
+mod database;
+mod config;
 
 use bad_error::Error;
 use logg::init_logger;
@@ -20,43 +20,19 @@ use tauri::Manager;
 
 pub use logg::{debug, error};
 
-use crate::bad_error::InferBadError;
+use crate::{bad_error::InferBadError, database::AppDatabase};
 
-#[derive(Debug)]
-pub struct AppConfig {
-    pub app_data_dir: PathBuf,
-    pub app_config_dir: PathBuf,
-    pub app_cache_dir: PathBuf,
-    pub app_log_dir: PathBuf,
-    pub home_dir: PathBuf,
-}
-
-impl AppConfig {
-    pub fn create_dirs(&self) -> Result<(), Error> {
-        for dir in [
-            &self.app_data_dir,
-            &self.app_config_dir,
-            &self.app_cache_dir,
-            &self.app_log_dir,
-        ] {
-            if !dir.exists() {
-                std::fs::create_dir_all(dir).infer_err()?;
-            }
-        }
-        Ok(())
-    }
+#[derive(PartialEq, Eq)]
+pub enum AppInitialisationStatus {
+    Uninitialised,
+    Initialised,
 }
 
 fn main() {
-    let client = tauri::async_runtime::block_on(mal_init()).unwrap();
-    let db = tauri::async_runtime::block_on(orm::setup_sea_orm()).unwrap();
-
     tauri::Builder::default()
-        .manage(Player(std::sync::Mutex::new(
-            musiplayer::Player::new().unwrap(),
-        )))
-        .manage(MalClient(std::sync::Arc::new(client)))
-        .manage(db)
+        .manage(std::sync::Mutex::new(
+            AppInitialisationStatus::Uninitialised,
+        ))
         .invoke_handler(tauri::generate_handler![
             player::get_folder,
             player::play_song,
@@ -72,24 +48,46 @@ fn main() {
             orm::create_image_from_bytes,
             orm::add_tag_to_image,
             orm::remove_tag_from_image,
+            initialise_app,
         ])
         .setup(|app| {
-            let path_res = app.path_resolver();
-            dbg!(path_res.resource_dir());
-            let conf = AppConfig {
-                app_data_dir: path_res.app_data_dir().unwrap(),
-                app_config_dir: path_res.app_config_dir().unwrap(),
-                app_cache_dir: path_res.app_cache_dir().unwrap(),
-                app_log_dir: path_res.app_log_dir().unwrap(),
-                home_dir: tauri::api::path::home_dir().unwrap(),
-            };
-            conf.create_dirs()?;
-            init_logger(&conf.app_log_dir).unwrap();
-
-            dbg!(&conf);
-            app.handle().manage(conf);
+            app.handle().manage(app.handle());
             Ok(())
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+async fn initialise_app(
+    status: tauri::State<'_, std::sync::Mutex<AppInitialisationStatus>>,
+    app: tauri::State<'_, tauri::AppHandle>,
+) -> Result<(), Error> {
+    if *status.inner().lock().unwrap() == AppInitialisationStatus::Initialised {
+        return Ok(());
+    }
+    *status.inner().lock().unwrap() = AppInitialisationStatus::Initialised;
+
+    println!("trying to initialise app!");
+
+    setup(app.inner()).await?;
+    Ok(())
+}
+
+async fn setup(app_handle: &tauri::AppHandle) -> Result<(), Error> {
+    let path_res = app_handle.path_resolver();
+    let conf = config::AppConfig::new(&path_res);
+    conf.create_dirs()?;
+    println!("{:?}", &conf);
+    init_logger(&conf.app_log_dir).unwrap();
+
+    let client = mal_init().await.infer_err()?;
+
+    app_handle.manage(MalClient(std::sync::Arc::new(client)));
+    app_handle.manage(AppDatabase::new(&conf).await?);
+    app_handle.manage(Player(std::sync::Mutex::new(
+        musiplayer::Player::new().unwrap(),
+    )));
+    app_handle.manage(conf);
+    Ok(())
 }

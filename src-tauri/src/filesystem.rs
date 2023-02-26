@@ -19,7 +19,7 @@ use tauri::{
 
 use crate::{
     bad_error::{BadError, Error, InferBadError, Inspectable},
-    AppConfig,
+    config::AppConfig,
 };
 
 pub async fn save_images<'a, F: Debug + Filable>(
@@ -28,6 +28,7 @@ pub async fn save_images<'a, F: Debug + Filable>(
 ) -> Result<Vec<PathBuf>, Error> {
     let mut data_dir = data_dir.into();
     data_dir.push("images");
+
     if !data_dir.exists() {
         std::fs::create_dir(&data_dir)
             .look(|e| dbg!(e))

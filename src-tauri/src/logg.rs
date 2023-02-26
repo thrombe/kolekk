@@ -52,8 +52,8 @@ pub fn init_logger(log_dir: impl Into<PathBuf>) -> Result<()> {
             out.finish(format_args!(
                 "[{}] [{}:{}] [{}] {}",
                 record.level(),
-                record.file().unwrap(),
-                record.line().unwrap(),
+                record.file().unwrap_or("no file"),
+                record.line().unwrap_or(0),
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()

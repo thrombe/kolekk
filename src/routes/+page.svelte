@@ -1,3 +1,9 @@
+<script lang="ts">
+    import { invoke } from "@tauri-apps/api/tauri";
+
+    invoke("initialise_app")
+</script>
+
 <h>
     <a href="/musi">Local Music Player</a>
 </h>
