@@ -2,20 +2,23 @@
     import { convertFileSrc, invoke } from '@tauri-apps/api/tauri';
     import type { DragDropPaste, Image } from 'types';
     import DataListener from '$lib/DataListener.svelte';
+    import { files_to_bytearrays } from '$lib/data_listener';
 
     let images = new Array<Image>();
 
     const file_drop = async (e: DragDropPaste<File>) => {
         console.log(e);
-        e.file_uris?.forEach(async (path: string) => {
-            console.log(convertFileSrc(path));
-            await invoke('add_image_from_path', { path: path, title: 'this one' });
-            await get_images();
-        });
+        // e.file_uris?.forEach(async (path: string) => {
+        //     console.log(convertFileSrc(path));
+        //     await invoke('add_image_from_path', { path: path, title: 'test' });
+        //     await get_images();
+        // });
+        await invoke('save_images_in_appdir', { data: await files_to_bytearrays(e) });
+        await get_images();
     };
 
     const get_images = async () => {
-        let list: [Image] = await invoke('get_images');
+        let list: [Image] = await invoke('search_images', { query: "que ry", limit: 50, offset: 0 });
         console.log(list);
         images = list;
     };
@@ -37,6 +40,8 @@
         await invoke('remove_tag_from_image', { img: images[0], tag: tag_name });
         get_images();
     };
+
+    let width = 100;
 </script>
 
 <DataListener on_receive={file_drop} />
@@ -53,10 +58,10 @@
     </buttons>
     {#each images as img}
         <!-- <rw> -->
-        <card-div draggable="true" style="height:{width/5}px; width: {width/5}px" on:dragstart={dragging_started}>
+        <card-div draggable="true" style="height:{width/5}px; width: {width/5}px">
             <card-insides draggable="true">
                 <image-div>
-                    <img draggable="false" src={convertFileSrc(img.path)} alt="" />
+                    <img draggable="false" src={convertFileSrc(img.db_path)} alt="" />
                 </image-div>
                 {#if img.title.length > 0}
                 <span class="title">

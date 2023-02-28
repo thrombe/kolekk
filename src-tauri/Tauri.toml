@@ -44,6 +44,7 @@ exists = true
 scope = ["**"]
 
 [tauri.allowlist.protocol]
+all = true
 asset = true
 assetScope = ["**"]
 

@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use crate::{dbg, debug, error};
 
-use kolekk_types::{ByteArrayFile, DragDropPaste, FileMetadata};
+use kolekk_types::{ByteArrayFile, DragDropPaste, FileMetadata, Image};
 use std::{
     collections::HashSet,
     fmt::Debug,
@@ -20,6 +20,7 @@ use tauri::{
 use crate::{
     bad_error::{BadError, Error, InferBadError, Inspectable},
     config::AppConfig,
+    database::AppDatabase,
 };
 
 pub async fn save_images<'a, F: Debug + Filable>(
@@ -99,7 +100,7 @@ pub async fn save_images<'a, F: Debug + Filable>(
             .ok()
             .filter(|p| p.is_file())
         {
-            if path_is_in_dir(&p, &data_dir).unwrap_or(false) {
+            if !path_is_in_dir(&p, &data_dir).unwrap_or(false) {
                 let _ = p
                     .as_path()
                     .save_in_dir(&data_dir)
@@ -166,11 +167,11 @@ pub fn path_is_in_dir(path: impl Into<PathBuf>, dir: impl Into<PathBuf>) -> Resu
         path.clone()
     };
     let dir = dir.into().canonicalize().look(|e| dbg!(e)).infer_err()?;
-    debug!(
-        "skipping file {} as it is already in data path",
-        path.display()
-    );
-    Ok(parent.starts_with(dir))
+    // debug!(
+    //     "skipping file {} as it is already in data path",
+    //     path.display()
+    // );
+    Ok(parent.starts_with(dir).look(|e| dbg!(e)))
 }
 
 pub fn file_mdata(path: impl AsRef<Path>) -> Result<FileMetadata, Error> {
@@ -202,4 +203,50 @@ pub fn is_file_same(
 ) -> Result<Option<FileMetadata>, Error> {
     let fd = file_mdata(new_file.as_ref())?;
     Ok(Some(fd).filter(|fd| *fd != *data))
+}
+
+#[tauri::command]
+pub async fn save_images_in_appdir(
+    data: DragDropPaste<ByteArrayFile>,
+    config: State<'_, AppConfig>,
+    db: State<'_, AppDatabase>,
+) -> Result<(), Error> {
+    let res = save_images(&data, &config.app_data_dir)
+        .await
+        .look(|e| dbg!(e))?;
+
+    let futs = res
+        .into_iter()
+        .map(|db_path| -> Result<Image, Error> {
+            let mdata = file_mdata(&db_path)?;
+            let img = Image {
+                id: 0,
+                src_path: "".into(),
+                title: "".into(),
+                urls: vec![],
+                tags: vec![],
+                db_path: db_path.to_string_lossy().to_string(),
+                chksum: mdata.chksum.into(),
+            };
+            Ok(img)
+        })
+        .map(Result::unwrap) // TODO: ?
+        .map(|img| crate::database::add_image(db.inner(), img))
+        .collect::<Vec<_>>();
+
+    futures::future::join_all(futs)
+        .await
+        .into_iter()
+        .collect::<Result<_, Error>>()?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn search_images(
+    db: State<'_, AppDatabase>,
+    query: String,
+    limit: usize,
+    offset: usize,
+) -> Result<Vec<Image>, Error> {
+    crate::database::search_images(db.inner(), query, limit, offset)
 }

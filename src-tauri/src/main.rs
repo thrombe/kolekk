@@ -4,13 +4,13 @@
 )]
 
 mod bad_error;
+mod config;
+mod database;
 mod filesystem;
 mod logg;
 mod mal;
 mod orm;
 mod player;
-mod database;
-mod config;
 
 use bad_error::Error;
 use logg::init_logger;
@@ -34,6 +34,7 @@ fn main() {
             AppInitialisationStatus::Uninitialised,
         ))
         .invoke_handler(tauri::generate_handler![
+            initialise_app,
             player::get_folder,
             player::play_song,
             player::get_song_progress,
@@ -48,7 +49,8 @@ fn main() {
             orm::create_image_from_bytes,
             orm::add_tag_to_image,
             orm::remove_tag_from_image,
-            initialise_app,
+            filesystem::search_images,
+            filesystem::save_images_in_appdir,
         ])
         .setup(|app| {
             app.handle().manage(app.handle());

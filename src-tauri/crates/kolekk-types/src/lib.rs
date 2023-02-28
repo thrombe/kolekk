@@ -31,7 +31,7 @@ pub struct Image {
     pub title: String,
     pub src_path: String,
     pub db_path: String,
-    pub chksum: String,
+    pub chksum: Vec<u8>,
     pub urls: Vec<String>,
     pub tags: Vec<String>,
     // pub metadata: metadata::Model,
@@ -44,6 +44,19 @@ pub struct Bookmark {
     pub url: String,
     pub tags: Vec<String>,
     // pub metadata: metadata::Model,
+}
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+pub enum FilderKind {
+    File,
+    Folder,
+}
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+pub struct Filder {
+    pub name: String,
+    pub files: Option<Vec<Filder>>,
+    pub kind: FilderKind,
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, PartialEq, Eq)]
@@ -147,7 +160,7 @@ pub mod images {
         pub id: u32,
         // #[sea_orm(primary_key)]
         // #[sea_orm(unique)]
-        pub chksum: String,
+        pub chksum: Vec<u8>,
         pub size: u32,
         pub title: String,
         pub src_path: String,

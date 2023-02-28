@@ -78,6 +78,20 @@ where
     }
 }
 
+pub trait InspectableErr<T> {
+    fn look_err(self, f: impl FnOnce(&Self) -> T) -> Self;
+}
+
+impl<R, E, T> InspectableErr<T> for Result<R, E>
+where
+    E: Debug
+{
+    fn look_err(self, f: impl FnOnce(&Self) -> T) -> Self {
+        let _r = f(&self);
+        self
+    }
+}
+
 pub trait Loggable {
     fn log(self) -> Self;
 }

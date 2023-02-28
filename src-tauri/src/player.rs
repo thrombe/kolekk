@@ -1,21 +1,4 @@
-// use ts_rs::TS;
-use serde::Serialize;
-use std::fs;
-
-// #[derive(Serialize, TS)]
-// #[ts(export, export_to = "../bindings/FOrDir.ts")]
-#[derive(Serialize, Debug, Clone)]
-pub enum FilderKind {
-    File,
-    Folder,
-}
-
-#[derive(Serialize, Debug, Clone)]
-pub struct Filder {
-    name: String,
-    files: Option<Vec<Filder>>,
-    kind: FilderKind,
-}
+use kolekk_types::{Filder, FilderKind};
 
 pub struct Player(pub std::sync::Mutex<musiplayer::Player>);
 
@@ -55,7 +38,7 @@ pub fn set_stat(pause: bool, player: tauri::State<'_, Player>) {
 
 #[tauri::command]
 pub fn get_folder(path: &str) -> Option<Filder> {
-    let files = fs::read_dir(path)
+    let files = std::fs::read_dir(path)
         .ok()?
         .filter_map(|e| {
             let e = e.ok()?;

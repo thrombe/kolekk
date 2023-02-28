@@ -6,6 +6,7 @@
     - [how to Audio + <input type=range>](https://medium.com/@tommarren/create-a-custom-audio-progress-bar-using-javascript-51b358811abd)
     - [playing sound works? glitch](https://github.com/tauri-apps/tauri/discussions/5687)
   - [page flicker on resize](https://github.com/tauri-apps/tauri/issues/1564)
+  - [`assetScope` suddenly no longer working?](https://github.com/tauri-apps/tauri/issues/6158)
 
 
 - [initial setup](https://tauri.app/v1/guides/getting-started/setup/sveltekit/):
@@ -177,5 +178,8 @@
     - [run stremio on browser.dev](https://stremio-pwa.pages.dev/#/)
   - add lazy fetching to image loading from db. maybe have some item that is just an id+type that can be fetched and stored in
     the frontend all at once, and can be queried as needed lazily
+    - tantivy already has DocAddress stuff. so should be pretty ez
   - maybe yeet sea_orm and just use sqlx
-
+  - an ez way to handle passimg stuff to js could be to just store objects as Json or something after serialising (or as serde
+    Value if supported by tantivy) and not even bothering to convert them back to rust types when sending data.
+    and stuff can be indexed with whatever stuff required seperately.
