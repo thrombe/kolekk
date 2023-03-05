@@ -52,25 +52,6 @@ pub async fn save_images<'a, F: Debug + Filable>(
         // .or(data.uri_list.as_ref().map(|u| todo!())) // donno if including this does any good
         .unwrap_or_default();
 
-    async fn get_resp(uri: &str, client: &Client) -> Result<Vec<u8>, Error> {
-        let _u = Uri::from_str(uri).look(|e| dbg!(e)).infer_err()?;
-        // TODO: check content-type in headers before downloading the file
-        // TODO: ckeck how big the file is before downloading
-        let req = HttpRequestBuilder::new("GET", uri)
-            .look(|e| dbg!(e))
-            .infer_err()?;
-        let bytes = client
-            .send(req)
-            .await
-            .look(|e| dbg!(e))
-            .infer_err()?
-            .bytes()
-            .await
-            .infer_err()?
-            .data;
-        Ok(bytes)
-    }
-
     let client = ClientBuilder::new()
         .max_redirections(5)
         .connect_timeout(Duration::new(5, 0))
@@ -176,10 +157,6 @@ pub struct FilableUri<'a> {
 
 impl FilableUri<'_> {
     async fn save_in_dir(self, dir: &Path) -> Result<FiledResult, Error> {
-        let id = uuid::Uuid::new_v4();
-        let buf = id.hyphenated().to_string();
-        let path = dir.join(buf);
-
         // TODO: check content-type in headers before downloading the file
         // TODO: ckeck how big the file is before downloading
         let req = HttpRequestBuilder::new("GET", self.src.to_string())
@@ -196,7 +173,7 @@ impl FilableUri<'_> {
             .infer_err()?
             .data;
 
-        let _res = ByteArrayFile {
+        let res = ByteArrayFile {
             name: "".into(),
             data: bytes,
         }
@@ -205,7 +182,7 @@ impl FilableUri<'_> {
         Ok(FiledResult {
             title: self.title,
             src: FileSource::Uri(self.src),
-            dest_path: path,
+            dest_path: res.dest_path,
         })
     }
 }
@@ -267,7 +244,7 @@ pub async fn save_images_in_appdir(
     let futs = res
         .into_iter()
         .map(|file| -> Result<Image, Error> {
-            let mdata = file_mdata(&file.dest_path)?;
+            let mdata = file_mdata(&file.dest_path).look(|e| dbg!(e))?;
             let (src_path, uri) = match file.src {
                 FileSource::Path(p) => (Some(p), None),
                 FileSource::Uri(u) => (None, Some(u)),
