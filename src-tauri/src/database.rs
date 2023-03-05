@@ -7,7 +7,7 @@ use kolekk_types::{images, metadata, tags, urls, Image};
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection};
 use tantivy::{
     collector::TopDocs,
-    query::{BooleanQuery, FuzzyTermQuery, Occur, PhraseQuery, TermQuery, AllQuery},
+    query::{AllQuery, BooleanQuery, EmptyQuery, FuzzyTermQuery, Occur, PhraseQuery, TermQuery},
     schema::{Facet, FacetOptions, Field, IndexRecordOption, STORED, TEXT},
     Document, Index, IndexReader, IndexWriter, Term,
 };
@@ -25,6 +25,7 @@ pub async fn add_image(db: &AppDatabase, img: Image) -> Result<(), Error> {
     doc.add_text(db.get_field(&Fields::SrcPath), img.src_path);
     doc.add_text(db.get_field(&Fields::DbPath), img.db_path);
     doc.add_bytes(db.get_field(&Fields::Chksum), img.chksum);
+    doc.add_u64(db.get_field(&Fields::Size), img.size as _);
     img.tags
         .into_iter()
         .for_each(|t| doc.add_text(db.get_field(&Fields::Tag), t));
@@ -62,14 +63,19 @@ pub fn search_images(
         IndexRecordOption::Basic,
     ));
 
-    let title_phrase_query = Box::new(PhraseQuery::new(
-        // TODO: if just 1 term, must create a TermQuery, or just leave this query out. as phrase query does not
-        // support less than 2 terms
-        query
-            .split_whitespace()
-            .map(|t| Term::from_field_text(db.get_field(&Fields::Title), t))
-            .collect(),
-    ));
+    let phrase_query_terms = query
+        .split_whitespace()
+        .map(|t| Term::from_field_text(db.get_field(&Fields::Title), t))
+        .collect::<Vec<_>>();
+    let title_query = if phrase_query_terms.len() < 2 {
+        // PhraseQuery does not support less than 2 terms
+        Box::new(TermQuery::new(
+            Term::from_field_text(db.get_field(&Fields::Title), &query),
+            IndexRecordOption::Basic,
+        )) as _
+    } else {
+        Box::new(PhraseQuery::new(phrase_query_terms)) as _
+    };
 
     let tag_query = Box::new(BooleanQuery::new(
         query
@@ -106,7 +112,7 @@ pub fn search_images(
 
     let search_query = Box::new(BooleanQuery::new(vec![
         // TODO: the priority stuff
-        (Occur::Should, title_phrase_query),
+        (Occur::Should, title_query),
         (Occur::Should, tag_query),
         (Occur::Should, title_fuzzy_query),
     ]));
@@ -156,6 +162,11 @@ pub fn search_images(
                     .as_bytes()
                     .unwrap()
                     .to_owned(),
+                size: doc
+                    .get_first(db.get_field(&Fields::Size))
+                    .bad_err("no size")?
+                    .as_u64()
+                    .unwrap() as _,
                 urls: doc
                     .get_all(db.get_field(&Fields::Url))
                     .map(|u| u.as_text().unwrap().to_owned())
@@ -230,6 +241,8 @@ impl AppDatabase {
         let _ = fields.insert(&Fields::ObjectType, object_type);
         let chksum = schema_builder.add_bytes_field(&Fields::Chksum, STORED);
         let _ = fields.insert(&Fields::Chksum, chksum);
+        let size = schema_builder.add_u64_field(&Fields::Size, STORED);
+        let _ = fields.insert(&Fields::Size, size);
 
         let schema = schema_builder.build();
         let index = Index::create_in_ram(schema);
@@ -247,7 +260,11 @@ impl AppDatabase {
     }
 
     pub fn get_field(&self, ident: &str) -> Field {
-        *self.fields.get(ident.look(|e| dbg!(e))).look(|e| dbg!(e)).unwrap()
+        *self
+            .fields
+            .get(ident.look(|e| dbg!(e)))
+            .look(|e| dbg!(e))
+            .unwrap()
     }
 
     pub fn get_searcher(&self) -> Searcher {
@@ -264,6 +281,7 @@ pub enum Fields {
     Tag,
     ObjectType,
     Chksum,
+    Size,
 }
 
 impl Deref for Fields {
@@ -279,6 +297,7 @@ impl Deref for Fields {
             Self::DbPath => "db_path",
             Self::Url => "url",
             Self::Chksum => "chksum",
+            Self::Size => "size",
         }
     }
 }

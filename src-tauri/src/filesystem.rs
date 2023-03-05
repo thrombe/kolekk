@@ -26,7 +26,7 @@ use crate::{
 pub async fn save_images<'a, F: Debug + Filable>(
     data: &DragDropPaste<F>,
     data_dir: impl Into<PathBuf>,
-) -> Result<Vec<PathBuf>, Error> {
+) -> Result<Vec<FiledResult>, Error> {
     let data_dir = data_dir.into().join("images");
 
     if !data_dir.exists() {
@@ -35,7 +35,7 @@ pub async fn save_images<'a, F: Debug + Filable>(
             .infer_err()?;
     }
 
-    let mut image_paths = data
+    let mut saved_files = data
         .files
         .as_ref()
         .map(|v| &v[..])
@@ -51,6 +51,7 @@ pub async fn save_images<'a, F: Debug + Filable>(
         .or_else(|| data.text_html.as_ref().map(|h| todo!())) // parse all potential urls if the text does not exist
         // .or(data.uri_list.as_ref().map(|u| todo!())) // donno if including this does any good
         .unwrap_or_default();
+
     async fn get_resp(uri: &str, client: &Client) -> Result<Vec<u8>, Error> {
         let _u = Uri::from_str(uri).look(|e| dbg!(e)).infer_err()?;
         // TODO: check content-type in headers before downloading the file
@@ -65,7 +66,6 @@ pub async fn save_images<'a, F: Debug + Filable>(
             .infer_err()?
             .bytes()
             .await
-            // .look(|e| dbg!(e))
             .infer_err()?
             .data;
         Ok(bytes)
@@ -91,56 +91,122 @@ pub async fn save_images<'a, F: Debug + Filable>(
                     .save_in_dir(&data_dir)
                     .look(|e| dbg!(e))
                     .ok()
-                    .map(|pb| image_paths.push(pb));
+                    .map(|pb| saved_files.push(pb));
             }
         } else {
-            reqs.push(get_resp(u, &client));
+            reqs.push(
+                FilableUri {
+                    title: "".into(),
+                    src: Uri::from_str(u).look(|e| dbg!(e)).infer_err()?,
+                    client: &client,
+                }
+                .save_in_dir(&data_dir),
+            );
         };
     }
     futures::future::join_all(reqs)
         .await
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter_map(|bytes| {
-            ByteArrayFile {
-                name: "".into(),
-                data: bytes,
-            }
-            .save_in_dir(&data_dir)
-            .look(|e| dbg!(e))
-            .ok()
-        })
-        .for_each(|pb| image_paths.push(pb));
-    Ok(image_paths)
+        .for_each(|pb| saved_files.push(pb));
+    Ok(saved_files)
 }
 
 pub trait Filable {
-    fn save_in_dir(&self, dir: &Path) -> Result<PathBuf, Error>;
+    fn save_in_dir(&self, dir: &Path) -> Result<FiledResult, Error>;
+}
+
+#[derive(Clone, Debug)]
+pub struct FiledResult {
+    pub title: String,
+    pub src: FileSource,
+    pub dest_path: PathBuf,
+}
+
+#[derive(Clone, Debug)]
+pub enum FileSource {
+    Path(PathBuf),
+    Uri(Uri),
+    ByteArray,
 }
 
 impl Filable for ByteArrayFile {
-    fn save_in_dir(&self, dir: &Path) -> Result<PathBuf, Error> {
+    fn save_in_dir(&self, dir: &Path) -> Result<FiledResult, Error> {
         let id = uuid::Uuid::new_v4();
         let buf = id.hyphenated().to_string();
         let path = dir.join(buf);
         let mut file =
             std::io::BufWriter::new(std::fs::File::create(&path).look(|e| dbg!(e)).infer_err()?);
         file.write(&self.data).look(|e| dbg!(e)).infer_err()?;
-        Ok(path)
+        Ok(FiledResult {
+            src: FileSource::ByteArray,
+            title: self.name.clone(),
+            dest_path: path,
+        })
     }
 }
 
 impl Filable for &Path {
-    fn save_in_dir(&self, dir: &Path) -> Result<PathBuf, Error> {
+    fn save_in_dir(&self, dir: &Path) -> Result<FiledResult, Error> {
         if self.is_file() {
             let id = uuid::Uuid::new_v4();
             let buf = id.hyphenated().to_string();
             let path = dir.join(buf);
             let _num_bytes_copied = std::fs::copy(self, &path).look(|e| dbg!(e)).infer_err()?;
-            Ok(path)
+            Ok(FiledResult {
+                title: self
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string(),
+                src: FileSource::Path(self.to_path_buf()),
+                dest_path: path,
+            })
         } else {
             Err(Error::new("the path is not a file"))
         }
+    }
+}
+
+pub struct FilableUri<'a> {
+    pub title: String,
+    pub src: Uri,
+    pub client: &'a Client,
+}
+
+impl FilableUri<'_> {
+    async fn save_in_dir(self, dir: &Path) -> Result<FiledResult, Error> {
+        let id = uuid::Uuid::new_v4();
+        let buf = id.hyphenated().to_string();
+        let path = dir.join(buf);
+
+        // TODO: check content-type in headers before downloading the file
+        // TODO: ckeck how big the file is before downloading
+        let req = HttpRequestBuilder::new("GET", self.src.to_string())
+            .look(|e| dbg!(e))
+            .infer_err()?;
+        let bytes = self
+            .client
+            .send(req)
+            .await
+            .look(|e| dbg!(e))
+            .infer_err()?
+            .bytes()
+            .await
+            .infer_err()?
+            .data;
+
+        let _res = ByteArrayFile {
+            name: "".into(),
+            data: bytes,
+        }
+        .save_in_dir(dir)?;
+
+        Ok(FiledResult {
+            title: self.title,
+            src: FileSource::Uri(self.src),
+            dest_path: path,
+        })
     }
 }
 
@@ -200,16 +266,22 @@ pub async fn save_images_in_appdir(
 
     let futs = res
         .into_iter()
-        .map(|db_path| -> Result<Image, Error> {
-            let mdata = file_mdata(&db_path)?;
+        .map(|file| -> Result<Image, Error> {
+            let mdata = file_mdata(&file.dest_path)?;
+            let (src_path, uri) = match file.src {
+                FileSource::Path(p) => (Some(p), None),
+                FileSource::Uri(u) => (None, Some(u)),
+                FileSource::ByteArray => (None, None),
+            };
             let img = Image {
                 id: 0,
-                src_path: "".into(),
-                title: "".into(),
-                urls: vec![],
+                src_path: src_path.unwrap_or_default().to_string_lossy().to_string(),
+                title: file.title,
+                urls: uri.into_iter().map(|e| e.to_string()).collect(),
                 tags: vec![],
-                db_path: db_path.to_string_lossy().to_string(),
+                db_path: file.dest_path.to_string_lossy().to_string(),
                 chksum: mdata.chksum.into(),
+                size: mdata.size as _,
             };
             Ok(img)
         })

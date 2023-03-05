@@ -32,6 +32,7 @@ pub struct Image {
     pub src_path: String,
     pub db_path: String,
     pub chksum: Vec<u8>,
+    pub size: usize,
     pub urls: Vec<String>,
     pub tags: Vec<String>,
 }
@@ -74,6 +75,7 @@ impl Image {
                 src_path: e.src_path,
                 db_path: e.db_path,
                 chksum: e.chksum,
+                size: e.size as _,
                 urls: urls::Entity::find_by_id(e.id)
                     .all(db)
                     .await

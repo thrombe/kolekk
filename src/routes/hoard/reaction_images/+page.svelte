@@ -14,16 +14,17 @@
         //     await get_images();
         // });
         await invoke('save_images_in_appdir', { data: await files_to_bytearrays(e) });
-        await get_images();
+        await search_images();
     };
 
-    const get_images = async () => {
-        let list: [Image] = await invoke('search_images', { query: "que ry", limit: 50, offset: 0 });
+    let query = "";
+    const search_images = async () => {
+        let list: [Image] = await invoke('search_images', { query: query, limit: 50, offset: 0 });
         console.log(list);
         images = list;
     };
 
-    get_images();
+    search_images();
 
     let tag_name = '';
     const add_tag = async () => {
@@ -31,14 +32,14 @@
             return;
         }
         await invoke('add_tag_to_image', { img: images[0], tag: tag_name });
-        get_images();
+        search_images();
     };
     const remove_tag = async () => {
         if (tag_name == '') {
             return;
         }
         await invoke('remove_tag_from_image', { img: images[0], tag: tag_name });
-        get_images();
+        search_images();
     };
 
     let width = 100;
@@ -50,7 +51,8 @@
 
 <cl>
     <buttons>
-        <button on:click={get_images}>refresh</button>
+        <input bind:value={query} on:input={search_images} />
+        <button on:click={search_images}>refresh</button>
         
         <input bind:value={tag_name} />
         <button on:click={add_tag}>add tag</button>
