@@ -34,7 +34,6 @@ pub struct Image {
     pub chksum: Vec<u8>,
     pub urls: Vec<String>,
     pub tags: Vec<String>,
-    // pub metadata: metadata::Model,
 }
 
 #[derive(Serialize, Deserialize, TS, Debug)]
@@ -43,7 +42,6 @@ pub struct Bookmark {
     pub title: String,
     pub url: String,
     pub tags: Vec<String>,
-    // pub metadata: metadata::Model,
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
@@ -91,11 +89,6 @@ impl Image {
                     .into_iter()
                     .map(|e| e.tag)
                     .collect(),
-                // metadata: metadata::Entity::find_by_id(e.id)
-                //     .one(db)
-                //     .await
-                //     .unwrap()
-                //     .unwrap(),
             };
             images.push(e);
         }
@@ -226,141 +219,4 @@ pub mod metadata {
 
     impl ActiveModelBehavior for ActiveModel {}
 }
-
-/* too much boilerplate for the relations man. maybe i'll do it once everything db is finalised
-
-mod images {
-    use super::*;
-
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-    #[sea_orm(table_name = "images")]
-    pub struct Model {
-        #[sea_orm(primary_key)]
-        id: u32,
-        // #[sea_orm(primary_key)]
-        // #[sea_orm(unique)]
-        // md5_or_somethin: String,
-        path: String,
-    }
-
-    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-    pub enum Relation {
-        #[sea_orm(has_one = "super::urls::Entity")]
-        URLs,
-        #[sea_orm(has_one = "super::tags::Entity")]
-        Tags,
-        #[sea_orm(has_one = "super::metadata::Entity")]
-        Metadata,
-    }
-
-    impl Related<super::urls::Entity> for Entity {
-        fn to() -> RelationDef {
-            Relation::URLs.def()
-        }
-    }
-    impl Related<super::tags::Entity> for Entity {
-        fn to() -> RelationDef {
-            Relation::Tags.def()
-        }
-    }
-    impl Related<super::metadata::Entity> for Entity {
-        fn to() -> RelationDef {
-            Relation::Metadata.def()
-        }
-    }
-
-    impl ActiveModelBehavior for ActiveModel {}
-}
-
-mod tags {
-    use super::*;
-
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-    #[sea_orm(table_name = "tags")]
-    pub struct Model {
-        #[sea_orm(primary_key)]
-        id: u32,
-        #[sea_orm(primary_key)]
-        tag: String,
-    }
-
-    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-    pub enum Relation {
-        #[sea_orm(
-            belongs_to = "super::images::Entity",
-            from = "Column::Id",
-            to = "super::images::Column::Id",
-        )]
-        Image,
-    }
-    impl Related<super::images::Entity> for Entity {
-        fn to() -> RelationDef {
-            Relation::Image.def()
-        }
-    }
-
-    impl ActiveModelBehavior for ActiveModel {}
-}
-
-mod urls {
-    use super::*;
-
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-    #[sea_orm(table_name = "urls")]
-    pub struct Model {
-        #[sea_orm(primary_key)]
-        id: u32,
-        #[sea_orm(primary_key)]
-        url: String,
-    }
-
-    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-    pub enum Relation {
-        #[sea_orm(
-            belongs_to = "super::images::Entity",
-            from = "Column::Id",
-            to = "super::images::Column::Id",
-        )]
-        Image,
-    }
-    impl Related<super::images::Entity> for Entity {
-        fn to() -> RelationDef {
-            Relation::Image.def()
-        }
-    }
-
-    impl ActiveModelBehavior for ActiveModel {}
-}
-
-mod metadata {
-    use super::*;
-
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-    #[sea_orm(table_name = "metadata")]
-    pub struct Model {
-        #[sea_orm(primary_key)]
-        id: u32,
-        // added_ts: datetime?,
-        // last_edit: ts?,
-    }
-
-    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-    pub enum Relation {
-        #[sea_orm(
-            belongs_to = "super::images::Entity",
-            from = "Column::Id",
-            to = "super::images::Column::Id",
-        )]
-        Image,
-    }
-    impl Related<super::images::Entity> for Entity {
-        fn to() -> RelationDef {
-            Relation::Image.def()
-        }
-    }
-
-    impl ActiveModelBehavior for ActiveModel {}
-}
-
-*/
 

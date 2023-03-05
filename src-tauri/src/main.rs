@@ -46,7 +46,6 @@ fn main() {
             mal::mal_auth,
             orm::add_image_from_path,
             orm::get_images,
-            orm::create_image_from_bytes,
             orm::add_tag_to_image,
             orm::remove_tag_from_image,
             filesystem::search_images,

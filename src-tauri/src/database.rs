@@ -17,9 +17,6 @@ use crate::{
     config::AppConfig,
 };
 
-
-
-
 pub async fn add_image(db: &AppDatabase, img: Image) -> Result<(), Error> {
     let mut doc = Document::new();
     doc.add_facet(db.get_field(&Fields::ObjectType), ObjectType::Image);

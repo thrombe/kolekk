@@ -68,7 +68,7 @@ pub fn mal_auth_needed(mal: State<'_, MalClient>) -> Option<MalAuthData> {
 //  - it stores it's own client. which is kinda meh
 //  - to be able to do anything useful with it, (without the unsafe stuff below) internal mutability is probably required. fn auth(&self)
 #[tauri::command]
-pub async fn mal_auth(auth_data: MalAuthData, mal: State<'_, MalClient>) -> Result<(), MALError> {
+pub async fn mal_auth(_auth_data: MalAuthData, mal: State<'_, MalClient>) -> Result<(), MALError> {
     if std::sync::Arc::strong_count(&mal.0) + std::sync::Arc::weak_count(&mal.0) > 1 {
         return Err(MALError::new("refcount is not 1", "None", None));
     }
@@ -76,7 +76,7 @@ pub async fn mal_auth(auth_data: MalAuthData, mal: State<'_, MalClient>) -> Resu
 
     // this stuff is not safe, tho idk any other way to do this
     let a = std::sync::Arc::as_ptr(&mal.0);
-    let a = unsafe { &mut *(a as *mut MALClient) };
+    let _a = unsafe { &mut *(a as *mut MALClient) };
     dbg!("trying to listen on: {}", redirect);
     // a.auth(redirect, &auth_data.challenge, &auth_data.state).await?;
     Ok(())

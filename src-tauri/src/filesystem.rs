@@ -27,21 +27,13 @@ pub async fn save_images<'a, F: Debug + Filable>(
     data: &DragDropPaste<F>,
     data_dir: impl Into<PathBuf>,
 ) -> Result<Vec<PathBuf>, Error> {
-    let mut data_dir = data_dir.into();
-    data_dir.push("images");
+    let data_dir = data_dir.into().join("images");
 
     if !data_dir.exists() {
         std::fs::create_dir(&data_dir)
             .look(|e| dbg!(e))
             .infer_err()?;
     }
-
-    let client = ClientBuilder::new()
-        .max_redirections(5)
-        .connect_timeout(Duration::new(5, 0))
-        .build()
-        .look(|e| dbg!(e))
-        .infer_err()?;
 
     let mut image_paths = data
         .files
@@ -59,25 +51,11 @@ pub async fn save_images<'a, F: Debug + Filable>(
         .or_else(|| data.text_html.as_ref().map(|h| todo!())) // parse all potential urls if the text does not exist
         // .or(data.uri_list.as_ref().map(|u| todo!())) // donno if including this does any good
         .unwrap_or_default();
-    // let potential_links = data
-    //     .file_uris
-    //     .iter()
-    //     .flatten()
-    //     .map(String::as_str)
-    //     .chain(
-    //         data.text
-    //             .iter()
-    //             .map(|t| t.lines().collect::<Vec<_>>())
-    //             .flatten(),
-    //     )
-    //     .chain(data.text_html.iter().map(String::as_str)) // parse all potential urls if the text does not exist
-    //     // .chain(data.uri_list.iter()) // donno if including this does any good
-    //     .collect::<HashSet<_>>();
     async fn get_resp(uri: &str, client: &Client) -> Result<Vec<u8>, Error> {
-        let u = Uri::from_str(uri).look(|e| dbg!(e)).infer_err()?;
+        let _u = Uri::from_str(uri).look(|e| dbg!(e)).infer_err()?;
         // TODO: check content-type in headers before downloading the file
         // TODO: ckeck how big the file is before downloading
-        let req = HttpRequestBuilder::new("GET", u.to_string())
+        let req = HttpRequestBuilder::new("GET", uri)
             .look(|e| dbg!(e))
             .infer_err()?;
         let bytes = client
@@ -92,6 +70,13 @@ pub async fn save_images<'a, F: Debug + Filable>(
             .data;
         Ok(bytes)
     }
+
+    let client = ClientBuilder::new()
+        .max_redirections(5)
+        .connect_timeout(Duration::new(5, 0))
+        .build()
+        .look(|e| dbg!(e))
+        .infer_err()?;
 
     let mut reqs = vec![];
     for u in potential_links {
@@ -164,13 +149,9 @@ pub fn path_is_in_dir(path: impl Into<PathBuf>, dir: impl Into<PathBuf>) -> Resu
     let parent = if path.is_file() {
         path.parent().bad_err("no parent")?.into()
     } else {
-        path.clone()
+        path
     };
     let dir = dir.into().canonicalize().look(|e| dbg!(e)).infer_err()?;
-    // debug!(
-    //     "skipping file {} as it is already in data path",
-    //     path.display()
-    // );
     Ok(parent.starts_with(dir).look(|e| dbg!(e)))
 }
 
@@ -214,6 +195,8 @@ pub async fn save_images_in_appdir(
     let res = save_images(&data, &config.app_data_dir)
         .await
         .look(|e| dbg!(e))?;
+
+    // TODO: if file is already in database, then remove the file that was just saved
 
     let futs = res
         .into_iter()
