@@ -1,26 +1,12 @@
 <script lang="ts">
     import { invoke } from '@tauri-apps/api/tauri';
     import type { ExternalIDs, ListResults, MultiSearchResult } from 'types';
-    import { search_results, search_query, include_adult, curr_page } from './media';
+    import { search_results, search_query, include_adult } from './media';
     const hasAPI = 'IntersectionObserver' in window;
     import { open } from '@tauri-apps/api/shell';
     import Observer from '$lib/Observer.svelte';
     import ImageCard from '$lib/ImageCard.svelte';
     import { tick } from 'svelte';
-
-    const search_tmdb_multi = async () => {
-        $curr_page = 1;
-        let res: ListResults<MultiSearchResult> = await invoke('search_tmdb_multi', {
-            query: $search_query,
-            page: $curr_page,
-            includeAdult: $include_adult
-        });
-        $search_results = res;
-
-        id_set = new Set();
-
-        await end_reached();
-    };
 
     const open_in_stremio = async (id: number | null, media_type: string) => {
         if (!id) {
@@ -40,29 +26,49 @@
         }
     };
 
+    const search_tmdb_multi = async (query: string, page: number, include_adult: Boolean): Promise<ListResults<MultiSearchResult>> => {
+        console.log('searched for page', page, 'with query', query);
+        return await invoke('search_tmdb_multi', {
+            query: query,
+            page: page,
+            includeAdult: include_adult
+        })
+    };
+
+    const search = async () => {
+        if ($search_query == "") {
+            $search_results.results.length = 0;
+            $search_results.page = null;
+        } else {
+            $search_results = await search_tmdb_multi($search_query, 1, $include_adult);
+
+            await end_reached();
+        }
+    };
+
     let id_set = new Set();
     const end_reached = async () => {
         await tick();
+
+        if (!$search_results.page) {
+            id_set = new Set();
+            return;
+        }
         if (!end_is_visible) {
             return;
         }
 
         if ($search_results.page! < $search_results.total_pages!) {
-            $curr_page = $curr_page + 1;
-            console.log('searched for page', $curr_page);
-            let res: ListResults<MultiSearchResult> = await invoke('search_tmdb_multi', {
-                query: $search_query,
-                page: $curr_page,
-                includeAdult: $include_adult
-            });
+            let old_res = $search_results;
+            let new_res = await search_tmdb_multi($search_query, $search_results.page! + 1, $include_adult);
 
             // tmdb returns duplicates for some reason :(
-            $search_results.results.map((item) => id_set.add(item.id));
-            res.results = res.results.filter((item) => !id_set.has(item.id));
+            old_res.results.map((item) => id_set.add(item.id));
+            new_res.results = new_res.results.filter((item) => !id_set.has(item.id));
 
-            // $search_results.results = [...$search_results.results, ...res.results];
-            $search_results.results.push(...res.results);
-            $search_results = $search_results;
+            old_res.results.push(...new_res.results);
+            new_res.results = old_res.results;
+            $search_results = new_res;
 
             await end_reached();
         }
@@ -73,11 +79,11 @@
     let window_height = 100;
 </script>
 
-<input bind:value={$search_query} on:input={search_tmdb_multi} />
+<input bind:value={$search_query} on:input={search} />
 <button
     on:click={() => {
         $include_adult = !$include_adult;
-        search_tmdb_multi();
+        search();
     }}>Search</button
 >
 

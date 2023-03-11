@@ -9,4 +9,3 @@ export let search_results: Writable<ListResults<MultiSearchResult>> = writable({
 });
 export let search_query = writable('');
 export let include_adult = writable(false);
-export let curr_page = writable(1);
