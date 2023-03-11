@@ -44,24 +44,71 @@
 
 
 - api stuff
-  - imdb (does not provide a search api apparently)
-    - [cinemagoer: popular, in-use, provides all info, python, (slow?)](https://github.com/cinemagoer/cinemagoer)
-    - [seach into imdb provided databases](https://crates.io/crates/imdb-async)
-    - [tvrank. ''](https://crates.io/crates/tvrank)
-    - [fast offline index](https://docs.rs/imdb-index/latest/imdb_index/)
+  - imdb
+    - does not provide a search api apparently
+    - crates and libs
+      - [cinemagoer: popular, in-use, provides all info, python, (slow?)](https://github.com/cinemagoer/cinemagoer)
+      - [seach into imdb provided databases](https://crates.io/crates/imdb-async)
+      - [tvrank](https://crates.io/crates/tvrank)
+      - [fast offline index](https://docs.rs/imdb-index/latest/imdb_index/)
   - mal
-    - [lib-mal](https://crates.io/crates/lib-mal)
-      - [smol bug](https://github.com/AnActualEmerald/lib-mal/blob/8dac0b18535d776b861da4bee8d700e424ed1017/src/client.rs#L635)
-    - [myanimelist-rs](https://crates.io/crates/myanimelist-rs)
-    - [mal official api refs](https://myanimelist.net/clubs.php?cid=13727)
-    - [mal official api v2 examples](https://myanimelist.net/apiconfig/references/api/v2)
-    - [mal manage api keys settings page](https://myanimelist.net/apiconfig)
+    - api
+      - [mal official api v2 examples](https://myanimelist.net/apiconfig/references/api/v2)
+      - [mal manage api keys settings page](https://myanimelist.net/apiconfig)
+      - [mal official api refs](https://myanimelist.net/clubs.php?cid=13727)
+      - [client auth code example](https://myanimelist.net/forum/?topicid=1973077)
+      - [authorization](https://myanimelist.net/apiconfig/references/authorization)
+    - crates
+      - [lib-mal](https://crates.io/crates/lib-mal)
+        - [smol bug](https://github.com/AnActualEmerald/lib-mal/blob/8dac0b18535d776b861da4bee8d700e424ed1017/src/client.rs#L635)
+      - [myanimelist-rs](https://crates.io/crates/myanimelist-rs)
+  - trakt
+    - api
+      - [Track. Discover. Share. - Trakt](https://trakt.tv/)
+      - [Trakt API Blog](https://apiblog.trakt.tv/)
+      - [How to find the best images. Trakt API Blog](https://apiblog.trakt.tv/how-to-find-the-best-images-516045bcc3b6)
+      - [Trakt API · Apiary](https://trakt.docs.apiary.io/#)
+  - tmdb
+    - api
+      - [TMDB Talk — The Movie Database (TMDB)](https://www.themoviedb.org/talk/category/5047958519c29526b50017d6)
+      - [API Overview](https://www.themoviedb.org/documentation/api)
+      - [TMDB Service Status](https://status.themoviedb.org/)
+      - [The Movie Database API](https://developers.themoviedb.org/3/getting-started/request-rate-limiting)
+    - rust code
+      - [lib.rs - source](https://docs.rs/tmdb-async/0.6.2/src/tmdb_async/lib.rs.html)
+  - omdb
+    - api
+      - [OMDb API - The Open Movie Database](https://www.omdbapi.com/)
+  - kitsu
+    - api
+      - [kitsu.io](https://kitsu.io/explore/anime)
+      - [hummingbird-me/api-docs: API documentation for Kitsu](https://github.com/hummingbird-me/api-docs)
+      - [Kitsu API Docs · Apiary](https://kitsu.docs.apiary.io/#introduction/json:api)
+    - crates
+      - [kitsu - Rust](https://docs.rs/kitsu/0.2.0/kitsu/)
+      - [kitsu_rs::model - Rust](https://docs.rs/kitsu-rs/0.1.0/kitsu_rs/model/index.html)
+  - anilist
+    - api
+      - [GitHub - AniList/ApiV2-GraphQL-Docs: AniList API V2 GraphQL Documentation](https://github.com/AniList/ApiV2-GraphQL-Docs)
+      - [Whats Next - AniList APIv2 Docs](https://anilist.gitbook.io/anilist-apiv2-docs/overview/graphql/whats-next)
+      - [anilist.github.io/ApiV2-GraphQL-Docs/](https://anilist.github.io/ApiV2-GraphQL-Docs/)
+      - [anilist.co/graphiql](https://anilist.co/graphiql)
   - tachiyomi/tachidesk extensions
     - [tachiyomiorg](https://github.com/tachiyomiorg)
     - [tachiyomi-extensions](https://github.com/tachiyomiorg/tachiyomi-extensions)
     - [Tachidesk-Server](https://github.com/Suwayomi/Tachidesk-Server)
     - [Tachidesk-WebUI](https://github.com/Suwayomi/Tachidesk-WebUI)
     - [Tachidesk-Sorayomi](https://github.com/Suwayomi/Tachidesk-Sorayomi)
+    - [tachidesk client rust](https://github.com/mahor1221/Tachidesk-GTK/blob/master/src/api.rs)
+    - [tachiyomi-extensions/CONTRIBUTING.md](https://github.com/tachiyomiorg/tachiyomi-extensions/blob/master/CONTRIBUTING.md)
+    - [tachiyomiorg/extensions-lib](https://github.com/tachiyomiorg/extensions-lib)
+    - java/jni stuff
+      - [‘java’ search // Lib.rs](https://lib.rs/search?q=java)
+      - [Search crates for 'jni'](https://crates.io/search?q=jni)
+      - [j4rs crate](https://crates.io/crates/j4rs)
+      - [jni crate](https://crates.io/crates/jni)
+      - [jni_fn crate](https://crates.io/crates/jni_fn)
+      - [jni-utils crate](https://crates.io/crates/jni-utils)
   - selenium
     - [thirtyfour](https://github.com/stevepryde/thirtyfour)
     - [selenium-rs](https://github.com/saresend/selenium-rs)
@@ -134,7 +181,7 @@
       - [cors-anywhere herokuapp](https://cors-anywhere.herokuapp.com/)
       - [cloudflare cors headers something](https://developers.cloudflare.com/workers/examples/cors-header-proxy)
 
-- ui stuff
+- ui design stuff
   - [color pallet gen](https://coolors.co/bac1b8-58a4b0-0c7c59-2b303a-d64933)
 
 - custom uri scheme
@@ -148,26 +195,47 @@
       - no worky ```<a href="stremio:///detail/series/kitsu:43806/" target="_blank" rel="noreferrer" >stremio</a>```
       - [temp solution](https://github.com/tauri-apps/tauri/issues/4756#issuecomment-1200745849)
 
-- search engine stuff:
-  - tantivity
-    - use in memory databases and retrieve all info from there and do not bother db
-      - if in-memory stuff is not enough, can easily switch to temp dirs or something
-    - use db only when storing/indexing
-    - use tauri events or whatever to listen for commits when searching.
-      - will be useful when indexing filesystem or sometihing
-        - [maybe index fs like this??](https://github.com/quickwit-oss/tantivy/blob/6761237ec71b4e25ee4b5661e794b4755c6c5e56/examples/faceted_search.rs)
-    - [warmer?](https://github.com/quickwit-oss/tantivy/blob/6761237ec71b4e25ee4b5661e794b4755c6c5e56/examples/warmer.rs)
-    - fuzzy search
-      - [It is reasonably simple however to split a query into several tokens, map these tokens into
-        FuzzyTermQuery and combine those into a BooleanQuery.](https://github.com/quickwit-oss/tantivy/issues/947#issuecomment-734054824)
-    - [pagination](https://docs.rs/tantivy/latest/tantivy/collector/struct.TopDocs.html#method.and_offset)
-    - indexing multiple kinds of things using
-      - [facet](https://docs.rs/tantivy/latest/tantivy/schema/struct.Facet.html)
-      - [facet collector](https://docs.rs/tantivy/latest/tantivy/collector/struct.FacetCollector.html)
+- html stuff
+  - [‘scraping’ search // Lib.rs](https://lib.rs/search?q=scraping)
+  - [scraper crate](https://crates.io/crates/scraper)
+  - [select crate](https://crates.io/crates/select)
+  - title is saved in a <title> somewhere in the <head>
 
 - ideas
   - do something like the ddg images. when a card is selected, display it in a new row and display
     a lof of the info that is available for it.
+  - for shows and movies
+    - card with the image and title.
+    - smol buttons for
+      - open in stremio imdb, kitsu
+      - open in browser kitsu, imdb, mal, anilist
+      - show info from tmdb, mal, kitsu
+        - tags from here should be easily addable directly in app
+      - hovering on buttons would expand em and show what it does ig?
+    - i could not find any mappings between imdb, tbdb, etc to/from kitsu, mal, anilist
+      - clicking the open buttons would then open a smol search window with the title already pasted
+      - items saved in the db would also cache what ids are chosen for the shows
+    - allow to add additional links
+    - save em in the form of a serde json value in tantivy ig
+      - and any lists that are stored anywhere else would just be a bunch of ids pointing to these
+      - so it would be ez to then just add new types and new sites. + this json value can be sent directly to ts from tauri commands
+  - run tachidesk server as a sidecar and use the apis
+    - run it such that it's stuff is stored within kolekk dir
+  - use reqwests::Client instead of tauri::api::http::Client so that the api code can be used outside of kolekk withoit much change
+  - saving MalClient<A> is not gonna be convinient in tauri::State thing. make an enum of it
+    - enum MalClientWrapper { MainAuth(MalClient<MainAuth>), ClientAuth(MalClient<ClientAuth>) }
+    - and simply match on it and decide what can be done (if auth needed or no). else just call the same
+      method on both. could also create helpers on the wrapper to call the methods on its internal types
+  - cards
+    - hovering on a specific area brings up all the tags associated with it
+    - a settings icon that renders settings in the same space as the card or expands the card area if not enogh, and has options to
+      change stuff
+    - images should be lazy fetched appwide, and the images should be thumbnailed before using.
+      - app gets slow if high quality images are used without the thumbnail stuff
+      - images for tmdb and stuff can either be fetched closest to the requred rez (as per availability), or can just fetch one nice image
+        and then create thumbnails of them as required
+  - tags
+    - save tags seperately appwide (per object type ig), and allow to search through these tags when trying to add em to any objects
   - open stremio from app
     - [stremio src/deep_links/mod.rs](https://github.com/Stremio/stremio-core/blob/development/src/deep_links/mod.rs)
     - stremio:///detail/series/kitsu:43806
@@ -179,7 +247,69 @@
   - add lazy fetching to image loading from db. maybe have some item that is just an id+type that can be fetched and stored in
     the frontend all at once, and can be queried as needed lazily
     - tantivy already has DocAddress stuff. so should be pretty ez
+  - more general image lazy loading
+    - a svelte component LazyImage
+  - thumbnailability
+    - check on each request if the exact size of the requested image is available or not
+    - only create the thumbnails for the required sizes lazily
+    - loading from svelte
+      - can try to use the svelte #await control flow
+      - maybe load/create all thumbnails in a batch just after loading from the api (from the frontend)
+    - all rendered images could be downloaded, thumbnailed and then used
+    - uuid/{size1.png, size2.png, ..}
+    - a limited sized lru datastructure can be used to keep only a small number of thumbnails in cache
+      - it should be a mapping from the raw links of images to the generated uuid
+      - [implement LRU HashMap DLL cache](https://krishankantsinghal.medium.com/my-first-blog-on-medium-583159139237)
+      - [lru crate](https://crates.io/crates/strettoio/crates/lru)
+        - does not impliment serialize. tho it has .iter() which iterates in mru order. so can just convert to a
+          vec or something before serialisation
+      - [stretto crate](https://crates.io/crates/stretto)
+    - thumbnail(uri: PathOrUri) -> Path
+    - if mass thumbnailing is slow and blocking, then a seperate thumbnailing thread can be used. requests are pushed in a channel
+      and the thread waits on requests from the channel, thumbnails the images and saves em in required position.
+      - the path for the file can immediately be returned even if the thumbnails are not ready
+  - search engine stuff:
+    - tantivity
+      - sort by timestamp fastvalue
+      - use in memory databases and retrieve all info from there and do not bother db
+        - if in-memory stuff is not enough, can easily switch to temp dirs or something
+      - use db only when storing/indexing
+      - use tauri events or whatever to listen for commits when searching.
+        - will be useful when indexing filesystem or sometihing
+          - [maybe index fs like this??](https://github.com/quickwit-oss/tantivy/blob/6761237ec71b4e25ee4b5661e794b4755c6c5e56/examples/faceted_search.rs)
+      - [warmer?](https://github.com/quickwit-oss/tantivy/blob/6761237ec71b4e25ee4b5661e794b4755c6c5e56/examples/warmer.rs)
+      - fuzzy search
+        - [It is reasonably simple however to split a query into several tokens, map these tokens into
+          FuzzyTermQuery and combine those into a BooleanQuery.](https://github.com/quickwit-oss/tantivy/issues/947#issuecomment-734054824)
+      - [pagination](https://docs.rs/tantivy/latest/tantivy/collector/struct.TopDocs.html#method.and_offset)
+      - indexing multiple kinds of things using
+        - [facet](https://docs.rs/tantivy/latest/tantivy/schema/struct.Facet.html)
+        - [facet collector](https://docs.rs/tantivy/latest/tantivy/collector/struct.FacetCollector.html)
+      - better searches
+        - [lnx-search/lnx](https://github.com/lnx-search/lnx)
+          - maybe use code from this
+          - maybe use a sidecar of this
+        - melesearch
   - maybe yeet sea_orm and just use sqlx
   - an ez way to handle passimg stuff to js could be to just store objects as Json or something after serialising (or as serde
     Value if supported by tantivy) and not even bothering to convert them back to rust types when sending data.
     and stuff can be indexed with whatever stuff required seperately.
+  - blurry transparent background color maybe?
+  - typescript has this cool feature where the input can change the output of the function.
+    (i think it uses infer keyword or something)
+    - if the input is of type ImageSearchRequest, then function will output ImageSearchResult
+    - this perticular behaviour should be kinda doable in rust using traits with associated types
+  - config file with a base path, then every path goes relative to that path.
+    - all paths in db stored after stripping the base path.
+    - remove com.thrombe stuff from path.
+  - make the paths stored in db more relative. maybe an enum or something
+    - enum
+      - AppDataDir(path)
+      - AppCacheDir(path)
+      - UnknownDir(path)
+  - typesafe invoke calls from js
+    - create a enum that gets mapped to a string enum thing in ts. and have a custom invoke function
+  - the db id in structs like Image should be included as searchable in tantivy, so that the db id can be
+    used to lookup the image in very less time.
+    - saving stuff in the db is better for long term. as sea orm supports mech for shifting from one version of types to another
+    - the ids then will be useful as lists of these ids can be saved in db to create whatever lists.
