@@ -3,7 +3,9 @@
     windows_subsystem = "windows"
 )]
 
+mod api;
 mod bad_error;
+mod bookmarks;
 mod config;
 mod database;
 mod filesystem;
@@ -12,8 +14,6 @@ mod mal;
 mod orm;
 mod player;
 mod search;
-mod bookmarks;
-mod api;
 
 use bad_error::Error;
 use logg::init_logger;
@@ -23,7 +23,7 @@ use tauri::Manager;
 
 pub use logg::{debug, error};
 
-use crate::{bad_error::InferBadError, database::AppDatabase, api::tmdb::TmdbClient};
+use crate::{api::tmdb::TmdbClient, bad_error::InferBadError, database::AppDatabase};
 
 #[derive(PartialEq, Eq)]
 pub enum AppInitialisationStatus {
@@ -91,7 +91,8 @@ async fn setup(app_handle: &tauri::AppHandle) -> Result<(), Error> {
 
     let client = std::sync::Arc::new(reqwest::Client::new());
 
-    app_handle.manage(TmdbClient::new(include_str!("../../cache/tmdb_v3_auth"), client.clone()).await?);
+    app_handle
+        .manage(TmdbClient::new(include_str!("../../cache/tmdb_v3_auth"), client.clone()).await?);
     app_handle.manage(client.clone());
     app_handle.manage(AppDatabase::new(&conf).await?);
     app_handle.manage(Player(std::sync::Mutex::new(

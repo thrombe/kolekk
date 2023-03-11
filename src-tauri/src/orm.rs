@@ -1,8 +1,7 @@
-
 use sea_orm::entity::prelude::*;
 
 use kolekk_types::Image;
-pub use kolekk_types::{images, tags, urls, metadata};
+pub use kolekk_types::{images, metadata, tags, urls};
 
 type DB<'a> = tauri::State<'a, sea_orm::DatabaseConnection>;
 

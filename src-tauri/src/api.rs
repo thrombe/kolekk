@@ -1,11 +1,10 @@
 pub mod commands {
-    use kolekk_types::api::tmdb::{MultiSearchResult, ListResults, ExternalIDs};
+    use kolekk_types::api::tmdb::{ExternalIDs, ListResults, MultiSearchResult};
     use tauri::State;
 
     use crate::bad_error::Error;
 
-    use super::tmdb::{TmdbClient, Id};
-
+    use super::tmdb::{Id, TmdbClient};
 
     #[tauri::command]
     pub async fn search_tmdb_multi(
@@ -18,7 +17,10 @@ pub mod commands {
     }
 
     #[tauri::command]
-    pub async fn tmdb_get_external_ids(tmdb: State<'_, TmdbClient>, id: Id) -> Result<ExternalIDs, Error> {
+    pub async fn tmdb_get_external_ids(
+        tmdb: State<'_, TmdbClient>,
+        id: Id,
+    ) -> Result<ExternalIDs, Error> {
         tmdb.get_external_ids(id).await
     }
 }
@@ -31,7 +33,7 @@ pub mod tmdb {
 
     use kolekk_types::api::tmdb::{
         AltTitles, ExternalIDs, ExternalIdSearchResult, Images, ListResults, Movie,
-        MovieListResult, MultiSearchResult, TvListResult, Tv,
+        MovieListResult, MultiSearchResult, Tv, TvListResult,
     };
     use reqwest::Client;
     use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -42,7 +44,8 @@ pub mod tmdb {
     const IMAGE_BASE_URL: &str = "https://image.tmdb.org/t/p/";
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
-    pub struct AllInfo<T> { // need to clone this type as flatten does not work good with TS macro
+    pub struct AllInfo<T> {
+        // need to clone this type as flatten does not work good with TS macro
         #[serde(flatten)]
         pub t: T,
         pub alternative_titles: AltTitles,
@@ -60,27 +63,27 @@ pub mod tmdb {
             }
         }
     }
-    
+
     #[derive(Serialize, Deserialize, Debug, Clone)]
     #[serde(tag = "media_type")]
     pub enum Id {
         #[serde(rename = "movie")]
-        Movie {id: u32},
+        Movie { id: u32 },
         #[serde(rename = "tv")]
-        Tv {id: u32},
+        Tv { id: u32 },
     }
     impl Id {
         pub fn id_type(&self) -> &'static str {
             match &self {
-                Self::Movie{..} => "movie",
-                Self::Tv{..} => "tv",
+                Self::Movie { .. } => "movie",
+                Self::Tv { .. } => "tv",
             }
         }
 
         pub fn id(&self) -> u32 {
             match &self {
-                Self::Movie{id} => *id,
-                Self::Tv{id} => *id,
+                Self::Movie { id } => *id,
+                Self::Tv { id } => *id,
             }
         }
     }

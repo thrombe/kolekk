@@ -1,7 +1,7 @@
-use kolekk_types::{Image, Bookmark};
+use kolekk_types::{Bookmark, Image};
 use tauri::State;
 
-use crate::{database::AppDatabase, bad_error::Error};
+use crate::{bad_error::Error, database::AppDatabase};
 
 #[tauri::command]
 pub async fn search_images(
@@ -22,4 +22,3 @@ pub async fn search_bookmarks(
 ) -> Result<Vec<Bookmark>, Error> {
     todo!()
 }
-

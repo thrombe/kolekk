@@ -1,7 +1,10 @@
 #[allow(unused_imports)]
 use crate::{dbg, debug, error};
 
-use std::{borrow::Cow, fmt::{Display, Debug}};
+use std::{
+    borrow::Cow,
+    fmt::{Debug, Display},
+};
 
 use serde::Serialize;
 
@@ -61,16 +64,13 @@ where
     }
 }
 
-
-
-
 pub trait Inspectable<R> {
     fn look(self, f: impl FnOnce(&Self) -> R) -> Self;
 }
 
 impl<T, R> Inspectable<R> for T
 where
-    T: Debug
+    T: Debug,
 {
     fn look(self, f: impl FnOnce(&Self) -> R) -> Self {
         let _r = f(&self);
@@ -84,7 +84,7 @@ pub trait InspectableErr<T> {
 
 impl<R, E, T> InspectableErr<T> for Result<R, E>
 where
-    E: Debug
+    E: Debug,
 {
     fn look_err(self, f: impl FnOnce(&Self) -> T) -> Self {
         let _r = f(&self);

@@ -272,4 +272,3 @@ pub async fn save_images_in_appdir(
         .collect::<Result<_, Error>>()?;
     Ok(())
 }
-
