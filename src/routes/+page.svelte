@@ -1,7 +1,7 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/tauri";
 
-    invoke("initialise_app")
+    invoke("initialise_app");
 </script>
 
 <h>
@@ -18,6 +18,9 @@
 </h>
 <h>
     <a href="/hoard/wallpapers">Hoard em Wallpapers</a>
+</h>
+<h>
+    <a href="/watch">Watch stuff</a>
 </h>
 
 

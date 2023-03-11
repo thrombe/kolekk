@@ -5,8 +5,178 @@ use derivative::Derivative;
 pub use ts_rs::TS;
 use std::fmt::Debug;
 
+pub mod api {
+    pub mod tmdb {
+        use serde::{Serialize, Deserialize};
+        use ts_rs::TS;
+        
+        // https://developers.themoviedb.org/3/tv/get-tv-images
+        // https://developers.themoviedb.org/3/movies/get-movie-images
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct Images {
+            pub backdrops: Vec<ImageInfo>,
+            pub posters: Vec<ImageInfo>,
+        }
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct ImageInfo {
+            pub aspect_ratio: Option<f32>, // sort by this
+            pub vote_average: Option<f32>,
+            pub height: Option<u32>,
+            pub width: Option<u32>,
+            pub file_path: Option<String>,
+        }
 
-#[derive(Serialize, Deserialize, TS, Derivative)]
+        // https://developers.themoviedb.org/3/tv/get-tv-details
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct Tv {
+            pub backdrop_path: Option<String>,
+            pub poster_path: Option<String>,
+            pub status: Option<String>, // ongoing/ended/whatever
+            pub genres: Vec<Genre>,
+            pub id: Option<u32>,
+            pub name: Option<String>,
+            pub seasons: Vec<Season>,
+            pub original_name: Option<String>,
+            pub overview: Option<String>, // description of show
+
+            pub number_of_seasons: Option<u32>,
+            pub number_of_episodes: Option<u32>,
+
+            pub popularity: Option<f32>,
+            pub vote_average: Option<f32>,
+            pub vote_count: Option<u32>,
+        }
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct Genre {
+            pub id: Option<u32>,
+            pub name: Option<String>,
+        }
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct Season {
+            pub episode_count: Option<u32>,
+            pub id: Option<u32>,
+            pub name: Option<String>,
+            pub poster_path: Option<String>,
+            pub season_number: Option<u32>,
+        }
+
+        // https://developers.themoviedb.org/3/movies/get-movie-details
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct Movie {
+            pub adult: Option<bool>,
+            pub backdrop_path: Option<String>,
+            pub poster_path: Option<String>,
+            pub status: Option<String>, // ongoing/ended/whatever
+            pub genres: Vec<Genre>,
+            pub id: Option<u32>,
+            pub imdb_id: Option<String>,
+            pub title: Option<String>,
+            pub original_title: Option<String>,
+            pub overview: Option<String>,
+            pub popularity: Option<f32>,
+            pub vote_average: Option<f32>,
+            pub vote_count: Option<u32>,
+            pub runtime: Option<u32>,
+        }
+
+        // https://developers.themoviedb.org/3/tv/get-tv-alternative-titles
+        // https://developers.themoviedb.org/3/movies/get-movie-alternative-titles
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct AltTitles {
+            pub id: Option<u32>,
+            pub results: Vec<Title>,
+        }
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct Title {
+            pub title: Option<String>,
+            pub iso_3166_1: Option<String>,
+        }
+
+        // https://developers.themoviedb.org/3/tv/get-tv-external-ids
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct ExternalIDs {
+            pub id: Option<u32>,
+            pub imdb_id: Option<String>,
+            pub tvdb_id: Option<u32>,
+            pub wikidata_id: Option<String>,
+        }
+
+        // https://developers.themoviedb.org/3/find/find-by-id
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct ExternalIdSearchResult {
+            pub movie_results: Vec<MovieListResult>,
+            pub tv_results: Vec<TvListResult>,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct ListResults<T> {
+            pub page: Option<u32>,
+            pub total_results: Option<u32>,
+            pub total_pages: Option<u32>,
+            pub results: Vec<T>,
+        }
+
+        // https://developers.themoviedb.org/3/tv/get-popular-tv-shows
+        // https://developers.themoviedb.org/3/tv/get-top-rated-tv
+        // https://developers.themoviedb.org/3/search/search-tv-shows
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct TvListResult {
+            pub backdrop_path: Option<String>,
+            pub poster_path: Option<String>,
+            pub genre_ids: Vec<u32>,
+            pub id: Option<u32>,
+            pub name: Option<String>,
+            pub original_name: Option<String>,
+            pub overview: Option<String>,
+            pub popularity: Option<f32>,
+            pub vote_average: Option<f32>,
+            pub vote_count: Option<u32>,
+        }
+
+        // https://developers.themoviedb.org/3/search/search-movies
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct MovieListResult {
+            pub id: Option<u32>,
+            pub adult: Option<bool>,
+            pub backdrop_path: Option<String>,
+            pub poster_path: Option<String>,
+            pub overview: Option<String>,
+            pub popularity: Option<f32>,
+            pub vote_average: Option<f32>,
+            pub vote_count: Option<u32>,
+            pub genre_ids: Vec<u32>,
+            pub title: Option<String>,
+            pub original_title: Option<String>,
+        }
+
+        // https://developers.themoviedb.org/3/search/multi-search
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        #[serde(tag = "media_type")]
+        pub enum MultiSearchResult {
+            #[serde(rename = "movie")]
+            Movie {
+                #[serde(flatten)]
+                result: MovieListResult,
+            },
+            #[serde(rename = "tv")]
+            Tv {
+                #[serde(flatten)]
+                result: TvListResult,
+            },
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct AllInfo<T> {
+            // #[serde(flatten)]
+            pub t: T,
+            pub alternative_titles: AltTitles,
+            pub images: Images,
+            pub external_ids: ExternalIDs,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, TS, Derivative, Clone)]
 #[derivative(Debug)]
 pub struct ByteArrayFile {
     pub name: String,
@@ -14,7 +184,7 @@ pub struct ByteArrayFile {
     pub data: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize, TS, Debug)]
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
 pub struct DragDropPaste<F: Debug> {
     // priority in the same order
     pub file_uris: Option<Vec<String>>, // "http://" "ftp://" "smb://" "/home/"
@@ -25,7 +195,7 @@ pub struct DragDropPaste<F: Debug> {
     pub uri_list: Option<String>, // link drops. (link is also available in self.text)    
 }
 
-#[derive(Serialize, Deserialize, TS, Debug)]
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
 pub struct Image {
     pub id: u32,
     pub title: String,
@@ -37,12 +207,13 @@ pub struct Image {
     pub tags: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, TS, Debug)]
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
 pub struct Bookmark {
     pub id: u32,
     pub title: String,
     pub url: String,
     pub tags: Vec<String>,
+    pub description: String,
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
@@ -58,7 +229,7 @@ pub struct Filder {
     pub kind: FilderKind,
 }
 
-#[derive(Serialize, Deserialize, TS, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, TS, Debug, PartialEq, Eq, Clone)]
 pub struct FileMetadata {
     pub chksum: [u8; 16],
     pub size: u64,

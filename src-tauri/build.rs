@@ -4,7 +4,13 @@ use std::{
     path::Path,
 };
 
-use kolekk_types::{Bookmark, Image, TS, DragDropPaste, ByteArrayFile};
+use kolekk_types::{
+    api::tmdb::{
+        AllInfo, AltTitles, ExternalIDs, ExternalIdSearchResult, Genre, ImageInfo, Images,
+        ListResults, Movie, MovieListResult, MultiSearchResult, Season, Title, Tv, TvListResult,
+    },
+    Bookmark, ByteArrayFile, DragDropPaste, FilderKind, Image, TS,
+};
 
 fn main() {
     println!("cargo:rerun-if-changed=./crates/kolekk-types/src/lib.rs");
@@ -19,17 +25,49 @@ fn main() {
         ($($t:ty), *) => {
             $(
                 let name = format!("{}.ts", stringify!($t));
+                let mut ttype = String::new();
                 let path = cache_dir.to_path_buf().join(name);
                 <$t as TS>::export_to(&path).unwrap();
                 let mut file = File::open(&path).unwrap();
-                file.read_to_string(&mut contents).unwrap();
+                file.read_to_string(&mut ttype).unwrap();
+                for line in ttype.lines() {
+                    if line.starts_with("import") {
+                        contents += &format!("// {}\n", line);
+                    } else {
+                        contents += &format!("{}\n", line);
+                    }
+                }
                 let _ = remove_file(&path);
             )*
 
         };
     }
 
-    export!(Bookmark, Image, DragDropPaste<i32>, ByteArrayFile);
+    // TODO: no 2 types can have the same name T-T
+    export!(
+        Bookmark,
+        Image,
+        DragDropPaste<()>,
+        ByteArrayFile,
+        FilderKind
+    );
+    export!(
+        AllInfo<()>,
+        AltTitles,
+        ExternalIDs,
+        ExternalIdSearchResult,
+        Images,
+        ImageInfo,
+        ListResults<()>,
+        Movie,
+        MovieListResult,
+        MultiSearchResult,
+        TvListResult,
+        Tv,
+        Title,
+        Genre,
+        Season
+    );
 
     remove_dir(cache_dir).unwrap();
 

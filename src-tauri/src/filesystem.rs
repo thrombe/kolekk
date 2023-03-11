@@ -273,12 +273,3 @@ pub async fn save_images_in_appdir(
     Ok(())
 }
 
-#[tauri::command]
-pub async fn search_images(
-    db: State<'_, AppDatabase>,
-    query: String,
-    limit: usize,
-    offset: usize,
-) -> Result<Vec<Image>, Error> {
-    crate::database::search_images(db.inner(), query, limit, offset)
-}

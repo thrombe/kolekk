@@ -11,6 +11,9 @@ mod logg;
 mod mal;
 mod orm;
 mod player;
+mod search;
+mod bookmarks;
+mod api;
 
 use bad_error::Error;
 use logg::init_logger;
@@ -20,7 +23,7 @@ use tauri::Manager;
 
 pub use logg::{debug, error};
 
-use crate::{bad_error::InferBadError, database::AppDatabase};
+use crate::{bad_error::InferBadError, database::AppDatabase, api::tmdb::TmdbClient};
 
 #[derive(PartialEq, Eq)]
 pub enum AppInitialisationStatus {
@@ -48,8 +51,12 @@ fn main() {
             orm::get_images,
             orm::add_tag_to_image,
             orm::remove_tag_from_image,
-            filesystem::search_images,
             filesystem::save_images_in_appdir,
+            bookmarks::save_bookmark,
+            search::search_images,
+            search::search_bookmarks,
+            api::commands::search_tmdb_multi,
+            api::commands::tmdb_get_external_ids,
         ])
         .setup(|app| {
             app.handle().manage(app.handle());
@@ -82,9 +89,10 @@ async fn setup(app_handle: &tauri::AppHandle) -> Result<(), Error> {
     println!("{:?}", &conf);
     init_logger(&conf.app_log_dir).unwrap();
 
-    let client = mal_init().await.infer_err()?;
+    let client = std::sync::Arc::new(reqwest::Client::new());
 
-    app_handle.manage(MalClient(std::sync::Arc::new(client)));
+    app_handle.manage(TmdbClient::new(include_str!("../../cache/tmdb_v3_auth"), client.clone()).await?);
+    app_handle.manage(client.clone());
     app_handle.manage(AppDatabase::new(&conf).await?);
     app_handle.manage(Player(std::sync::Mutex::new(
         musiplayer::Player::new().unwrap(),

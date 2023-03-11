@@ -19,6 +19,8 @@ all = true
 # open = true
 # open = "^https?://"
 open = "^[a-z]"
+execute = true
+sidecar = true
 
 [tauri.allowlist.clipboard]
 all = true
