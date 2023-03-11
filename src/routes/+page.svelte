@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api/tauri";
+    import { invoke } from '@tauri-apps/api/tauri';
 
-    invoke("initialise_app");
+    invoke('initialise_app');
 </script>
 
 <h>
@@ -23,6 +23,20 @@
     <a href="/watch">Watch stuff</a>
 </h>
 
+<h><a>_________________________</a></h>
+
+<h>
+    <a href="/test/css">css test</a>
+</h>
+<h>
+    <a href="/test/audio">audio test</a>
+</h>
+<h>
+    <a href="/test/open_link">open link test</a>
+</h>
+<h>
+    <a href="/test/drag_img_test">drag image test</a>
+</h>
 
 <style>
     h {

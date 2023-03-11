@@ -1,6 +1,6 @@
 <script lang="ts">
-    export let enter_screen: ()=>void | Promise<void> = async () => {};
-    export let leave_screen: ()=>void | Promise<void> = async () => {};
+    export let enter_screen: () => void | Promise<void> = async () => {};
+    export let leave_screen: () => void | Promise<void> = async () => {};
 
     export let visible: Boolean | null = null;
 
@@ -12,7 +12,7 @@
             visible = false;
             await leave_screen();
         }
-    }
+    };
 
     function observe(node: any) {
         observer && observer.observe(node);
@@ -26,4 +26,4 @@
     let observer = new IntersectionObserver(on_intersect, { rootMargin: '200px' });
 </script>
 
-<p use:observe ></p>
+<p use:observe />

@@ -17,7 +17,7 @@
         await search_images();
     };
 
-    let query = "";
+    let query = '';
     const search_images = async () => {
         let list: [Image] = await invoke('search_images', { query: query, limit: 50, offset: 0 });
         console.log(list);
@@ -47,7 +47,7 @@
 
 <DataListener on_receive={file_drop} />
 
-<svelte:window bind:innerWidth={width}></svelte:window>
+<svelte:window bind:innerWidth={width} />
 
 <cl>
     <buttons>
@@ -66,24 +66,20 @@
                     <img draggable="false" src={convertFileSrc(img.db_path)} alt="" />
                 </image-div>
                 {#if img.title.length > 0}
-                <span class="title">
-                    {img.title}
-                </span>
+                    <span class="title">
+                        {img.title}
+                    </span>
                 {/if}
                 {#if img.tags.length > 0}
-                <tags-div>
-                    <tag-padding>{"a"}</tag-padding>
-                    <!-- <cl> -->
-                    {#each img.tags as tag}
-                        <tag>{tag}</tag>
-                    {/each}
-                    <!-- <tag-padding>{"a"}</tag-padding> -->
-                    <!-- </cl> -->
-                </tags-div>
+                    <tags-div>
+                        <tag-padding>{'a'}</tag-padding>
+                        {#each img.tags as tag}
+                            <tag>{tag}</tag>
+                        {/each}
+                    </tags-div>
                 {/if}
             </card-insides>
         </card-div>
-        <!-- </rw> -->
     {/each}
 </cl>
 
@@ -125,7 +121,7 @@
     card-div {
         overflow: hidden;
     }
-    
+
     card-insides {
         /* width: 100%; */
         /* height: calc(100% - 2px - 6px); */
@@ -161,7 +157,7 @@
 
         padding: 0;
         margin: 0;
-        background-color: #FFFFFF;
+        background-color: #ffffff;
         height: min-content;
 
         /* flex-wrap: wrap; */
@@ -181,9 +177,9 @@
         font-size: 1.17ch;
         font-weight: 700;
         /* height: 3.0ch; */
-        
-        padding-left: 3.0px;
-        padding-right: 3.0px;
+
+        padding-left: 3px;
+        padding-right: 3px;
         padding-bottom: 0.57ch;
 
         background-color: #5b931b;
@@ -191,7 +187,7 @@
         border-radius: 3px;
         width: min-content;
     }
-    
+
     tags-div tag + tag {
         margin-left: 1.5%;
     }
