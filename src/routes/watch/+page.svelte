@@ -1,11 +1,11 @@
 <script lang="ts">
     import { invoke } from '@tauri-apps/api/tauri';
     import type { ExternalIDs, ListResults, MultiSearchResult } from 'types';
-    import Anime from '../mal_fetch/Anime.svelte'; // TODO: generalise this component
     import {search_results, search_query, include_adult, curr_page} from "./media";
     const hasAPI = 'IntersectionObserver' in window;
     import { open } from '@tauri-apps/api/shell';
     import Observer from '$lib/Observer.svelte';
+    import ImageCard from '$lib/ImageCard.svelte';
     import { tick } from 'svelte';
 
     const search_tmdb_multi = async () => {
@@ -79,13 +79,15 @@
     }}
 >Search</button>
 
-<cl style="grid: auto-flow / {'1fr '.repeat(4)}">
+<cl style="">
     {#each $search_results.results as media (media.id)}
-            <Anime
-                title={media.media_type == "tv"? media.name:media.title}
         <div on:click={() => {open_in_stremio(media.id, media.media_type)}} >
+            <ImageCard
+                title={media.media_type == "tv"? media.name : media.title}
                 img_source={media.poster_path? "https://image.tmdb.org/t/p/w200/" + media.poster_path:""}
                 lazy={hasAPI}
+                width={window_width/5}
+                aspect_ratio={2/3}
             />
         </div>
     {/each}
@@ -97,15 +99,11 @@
 <svelte:window bind:innerHeight={window_height} bind:innerWidth={window_width} />
 
 <style>
-    dw {
-        display: flex;
-        flex-direction: column;
-    }
     cl {
-        display: grid;
-        /* grid: auto-flow / 1fr 1fr 1fr 1fr; */
-        /* grid-column-start: 2; */
-        /* flex-direction: row; */
-        /* grid-column: 2; */
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        overflow: auto;
+        width: 100%;
     }
 </style>
