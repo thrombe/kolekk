@@ -95,5 +95,5 @@ frameworks = []
 
 [tauri]
 windows = [
-    { fullscreen = false, height = 600, resizable = true, title = "kolekk", width = 800 }
+    { fullscreen = false, height = 600, resizable = true, title = "kolekk", width = 800, transparent = true }
 ]

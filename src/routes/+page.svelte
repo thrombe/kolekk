@@ -23,21 +23,6 @@
     <a href="/watch">Watch stuff</a>
 </h>
 
-<h><a>_________________________</a></h>
-
-<h>
-    <a href="/test/css">css test</a>
-</h>
-<h>
-    <a href="/test/audio">audio test</a>
-</h>
-<h>
-    <a href="/test/open_link">open link test</a>
-</h>
-<h>
-    <a href="/test/drag_img_test">drag image test</a>
-</h>
-
 <style>
     h {
         display: flex;
@@ -51,7 +36,7 @@
 
     :global(html, body) {
         /* background: rgb(15, 24, 49); */
-        background: #101935;
+        background: #28282890;
         margin: 0px;
         width: 100%;
         height: 100%;
