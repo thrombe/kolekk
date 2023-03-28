@@ -31,7 +31,7 @@ pub async fn save_bookmark(
         .map(|s| s.trim_matches(&['.', ' '][..]))
         .map(ToOwned::to_owned)
         .map(|u| async {
-            let id = 0;
+            let id = db.new_id();
             let b = match try_bookmark_from_markdown_url(id, &u) {
                 Some(u) => Some(u),
                 None => try_bookmark_from_url(id, u, client.inner()).await.ok(),

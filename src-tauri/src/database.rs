@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use crate::{dbg, debug, error};
 
-use std::{collections::HashMap, ops::Deref, sync::Mutex};
+use std::{collections::HashMap, ops::Deref, sync::{Mutex, atomic::AtomicU32}};
 
 use kolekk_types::{images, metadata, tags, urls, Bookmark, Image};
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection};
@@ -317,6 +317,7 @@ pub struct AppDatabase {
     index_reader: IndexReader,
     index_writer: Mutex<IndexWriter>,
     fields: HashMap<&'static str, Field>,
+    id_gen: AtomicU32,
 }
 
 impl AppDatabase {
@@ -393,6 +394,7 @@ impl AppDatabase {
             index_writer: Mutex::new(index_writer),
             index,
             fields,
+            id_gen: 0.into(),
         })
     }
 
@@ -406,6 +408,10 @@ impl AppDatabase {
 
     pub fn get_searcher(&self) -> Searcher {
         Searcher(self.index_reader.searcher())
+    }
+
+    pub fn new_id(&self) -> u32 {
+        self.id_gen.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 }
 
