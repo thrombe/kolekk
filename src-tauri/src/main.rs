@@ -10,14 +10,12 @@ mod config;
 mod database;
 mod filesystem;
 mod logg;
-mod mal;
 mod orm;
 mod player;
 mod search;
 
 use bad_error::Error;
 use logg::init_logger;
-use mal::{mal_init, MalClient};
 use player::Player;
 use tauri::Manager;
 
@@ -44,9 +42,6 @@ fn main() {
             player::seek_perc,
             player::set_stat,
             player::stop_song,
-            mal::get_seasonal_anime,
-            mal::mal_auth_needed,
-            mal::mal_auth,
             orm::add_image_from_path,
             orm::get_images,
             orm::add_tag_to_image,

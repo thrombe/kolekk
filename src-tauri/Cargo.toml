@@ -16,8 +16,6 @@ tauri = { version = "1.2.4", features = ["api-all", "config-toml"] }
 anyhow = "1.0.68"
 ts-rs = "6.2.1"
 tauri-specta = "0.0.2"
-# lib-mal = "0.5.1"
-lib-mal = { path="./crates/lib-mal" } # has a super stupid bug
 tokio = { version = "1", features = ["full"] }
 sea-orm = { version = "0.11", features = [ "sqlx-sqlite", "runtime-tokio-native-tls", "macros" ] }
 kolekk-types = { path = "./crates/kolekk-types" }
