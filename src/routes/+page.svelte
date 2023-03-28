@@ -1,7 +1,16 @@
 <script lang="ts">
+</script>
+
+<script lang="ts" context="module">
     import { invoke } from '@tauri-apps/api/tauri';
 
     invoke('initialise_app');
+
+    window.addEventListener("wheel", (e: any) => {
+        // window.scrollBy({ left: 0, top: -e.deltaY, behavior: "auto" });
+        window.scrollBy({ left: 0, top: e.deltaY*3, behavior: "auto" });
+        e.preventDefault();
+    });
 </script>
 
 <h>
