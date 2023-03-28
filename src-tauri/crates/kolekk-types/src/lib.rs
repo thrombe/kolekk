@@ -1,15 +1,14 @@
-
+use derivative::Derivative;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
-use derivative::Derivative;
-pub use ts_rs::TS;
 use std::fmt::Debug;
+pub use ts_rs::TS;
 
 pub mod api {
     pub mod tmdb {
-        use serde::{Serialize, Deserialize};
+        use serde::{Deserialize, Serialize};
         use ts_rs::TS;
-        
+
         // https://developers.themoviedb.org/3/tv/get-tv-images
         // https://developers.themoviedb.org/3/movies/get-movie-images
         #[derive(Serialize, Deserialize, TS, Debug, Clone)]
@@ -188,11 +187,11 @@ pub struct ByteArrayFile {
 pub struct DragDropPaste<F: Debug> {
     // priority in the same order
     pub file_uris: Option<Vec<String>>, // "http://" "ftp://" "smb://" "/home/"
-    pub text: Option<String>, // anything. links, just text, whatever
-    pub text_html: Option<String>, // <img href=""> <span>
-    pub files: Option<Vec<F>>, // File data
-    
-    pub uri_list: Option<String>, // link drops. (link is also available in self.text)    
+    pub text: Option<String>,           // anything. links, just text, whatever
+    pub text_html: Option<String>,      // <img href=""> <span>
+    pub files: Option<Vec<F>>,          // File data
+
+    pub uri_list: Option<String>, // link drops. (link is also available in self.text)
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
@@ -271,9 +270,13 @@ impl Image {
 
     pub async fn add_tag(&mut self, db: &DatabaseConnection, tag: String) {
         if tags::Entity::find()
-        .filter(tags::Column::Id.eq(self.id))
-        .filter(tags::Column::Tag.eq(tag.clone()))
-        .one(db).await.unwrap().is_some() {
+            .filter(tags::Column::Id.eq(self.id))
+            .filter(tags::Column::Tag.eq(tag.clone()))
+            .one(db)
+            .await
+            .unwrap()
+            .is_some()
+        {
             return;
         }
 
@@ -281,10 +284,7 @@ impl Image {
             id: sea_orm::Set(self.id),
             tag: sea_orm::Set(tag),
         };
-        let tag = tag
-        .insert(db)
-        .await
-        .unwrap();
+        let tag = tag.insert(db).await.unwrap();
         self.tags.push(tag.tag);
     }
 
@@ -393,4 +393,3 @@ pub mod metadata {
 
     impl ActiveModelBehavior for ActiveModel {}
 }
-
