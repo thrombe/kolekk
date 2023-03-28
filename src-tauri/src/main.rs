@@ -89,7 +89,7 @@ async fn setup(app_handle: &tauri::AppHandle) -> Result<(), Error> {
     println!("{:?}", &conf);
     init_logger(&conf.app_log_dir).unwrap();
 
-    let client = std::sync::Arc::new(reqwest::Client::new());
+    let client = reqwest::Client::new();
 
     app_handle
         .manage(TmdbClient::new(include_str!("../../cache/tmdb_v3_auth"), client.clone()).await?);

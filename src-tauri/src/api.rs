@@ -140,11 +140,12 @@ pub mod tmdb {
     pub struct TmdbClient {
         api_key: String,
         config: Config,
-        client: Arc<Client>,
+        client: Client,
     }
 
     impl TmdbClient {
-        pub async fn new(api_key: impl Into<String>, client: Arc<Client>) -> Result<Self, Error> {
+        // reqwest::Client is clonable
+        pub async fn new(api_key: impl Into<String>, client: Client) -> Result<Self, Error> {
             // https://api.themoviedb.org/3/configuration?api_key=<<api_key>>
             let api_key = api_key.into();
             let tmdb = Self {
