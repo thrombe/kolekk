@@ -27,6 +27,7 @@ log = "0.4.17"
 md5 = "0.7.0"
 tantivy = "0.19.2"
 reqwest = { version = "0.11.14", features = ["json"] }
+scraper = "0.15.0"
 
 [dependencies.musiplayer]
 # version = "0.1"

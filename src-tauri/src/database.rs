@@ -3,7 +3,7 @@ use crate::{dbg, debug, error};
 
 use std::{collections::HashMap, ops::Deref, sync::Mutex};
 
-use kolekk_types::{images, metadata, tags, urls, Image};
+use kolekk_types::{images, metadata, tags, urls, Bookmark, Image};
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection};
 use tantivy::{
     collector::TopDocs,
@@ -37,6 +37,137 @@ pub async fn add_image(db: &AppDatabase, img: Image) -> Result<(), Error> {
     let opstamp = writer.add_document(doc).look(|e| dbg!(e)).infer_err()?;
     writer.commit().look(|e| dbg!(e)).infer_err()?;
     Ok(())
+}
+
+pub async fn add_bookmark(db: &AppDatabase, bk: Bookmark) -> Result<(), Error> {
+    let mut doc = Document::new();
+    let json = serde_json::to_value(&bk).infer_err().look(|e| dbg!(e))?;
+    doc.add_json_object(
+        db.get_field(&Fields::Json),
+        json.as_object().bad_err("cannot fail")?.to_owned(),
+    );
+    doc.add_facet(db.get_field(&Fields::ObjectType), ObjectType::Bookmark);
+    doc.add_u64(db.get_field(&Fields::Id), bk.id as _);
+    let _ = bk
+        .title
+        .map(|t| doc.add_text(db.get_field(&Fields::Title), t));
+    let _ = bk
+        .description
+        .map(|d| doc.add_text(db.get_field(&Fields::Description), d));
+    bk.tags
+        .into_iter()
+        .for_each(|t| doc.add_text(db.get_field(&Fields::Tag), t));
+    bk.related
+        .into_iter()
+        .for_each(|r| doc.add_u64(db.get_field(&Fields::Related), r as _));
+
+    let mut writer = db.index_writer.lock().infer_err()?;
+    let opstamp = writer.add_document(doc).look(|e| dbg!(e)).infer_err()?;
+    writer.commit().look(|e| dbg!(e)).infer_err()?;
+    Ok(())
+}
+
+pub fn search_object(
+    db: &AppDatabase,
+    ob_type: ObjectType,
+    query: String,
+    limit: usize,
+    offset: usize,
+) -> Result<Vec<serde_json::Map<String, serde_json::Value>>, Error> {
+    // TODO: look into using QueryParser, or maybe somehow including regex queries and stuff
+    // TODO: is query is empty, return results by recently added or recently viewed or a mixture of this stuff
+    //       - 2 fast values, 1 each for when added timestamp and for last viewed timestamp
+    //       - timestamps are not really needed, so just an increasing counter will also do
+
+    // facet:TermQuery AND (
+    //   title:PhraseQuery(entire query) -> priority 0
+    //   // OR tag(s):TermQuery(split at whiltespace map) -> priority 1
+    //   OR tag(s):FuzzyTermQuery(split at whitespace map) -> priority 2
+    //   OR title:FuzzyTermQuery(split at whitespace map) -> priority 3
+    // )
+    let searcher = db.get_searcher();
+
+    let obj_type_query = Box::new(TermQuery::new(
+        Term::from_facet(db.get_field(&Fields::ObjectType), &ob_type.into()),
+        IndexRecordOption::Basic,
+    ));
+
+    let phrase_query_terms = query
+        .split_whitespace()
+        .map(|t| Term::from_field_text(db.get_field(&Fields::Title), t))
+        .collect::<Vec<_>>();
+    let title_query = if phrase_query_terms.len() < 2 {
+        // PhraseQuery does not support less than 2 terms
+        Box::new(TermQuery::new(
+            Term::from_field_text(db.get_field(&Fields::Title), &query),
+            IndexRecordOption::Basic,
+        )) as _
+    } else {
+        Box::new(PhraseQuery::new(phrase_query_terms)) as _
+    };
+
+    let tag_query = Box::new(BooleanQuery::new(
+        query
+            .split_whitespace()
+            .map(|t| {
+                (
+                    Occur::Should,
+                    Box::new(FuzzyTermQuery::new(
+                        Term::from_field_text(db.get_field(&Fields::Tag), t),
+                        2,    // ?
+                        true, // what??
+                    )) as _,
+                )
+            })
+            .collect(),
+    ));
+
+    let title_fuzzy_query = Box::new(BooleanQuery::new(
+        // TODO: implement these  a methods of Fields and ObjectType
+        query
+            .split_whitespace()
+            .map(|t| {
+                (
+                    Occur::Should, // TODO: should this be Must instead?
+                    Box::new(FuzzyTermQuery::new(
+                        Term::from_field_text(db.get_field(&Fields::Title), t),
+                        2,    // ?
+                        true, // what??
+                    )) as _,
+                )
+            })
+            .collect(),
+    ));
+
+    let search_query = Box::new(BooleanQuery::new(vec![
+        // TODO: the priority stuff
+        (Occur::Should, title_query),
+        (Occur::Should, tag_query),
+        (Occur::Should, title_fuzzy_query),
+    ]));
+
+    searcher
+        .search(
+            &BooleanQuery::new(vec![
+                (Occur::Must, obj_type_query),
+                (Occur::Should, Box::new(AllQuery)),
+                (Occur::Should, search_query),
+            ]),
+            &TopDocs::with_limit(limit).and_offset(offset),
+        )
+        .infer_err()
+        .look(|e| dbg!(e))?
+        .into_iter()
+        .map(move |(_score, address)| {
+            let doc = searcher.doc(address).look(|e| dbg!(e)).infer_err()?;
+            Ok(doc
+                .get_first(db.get_field(&Fields::Json))
+                .bad_err("no value")?
+                .as_json()
+                .bad_err("not an object")?
+                .to_owned())
+        })
+        .collect()
 }
 
 pub fn search_images(
@@ -234,6 +365,8 @@ impl AppDatabase {
         let _ = fields.insert(&Fields::Url, url);
         let title = schema_builder.add_text_field(&Fields::Title, STORED | TEXT);
         let _ = fields.insert(&Fields::Title, title);
+        let description = schema_builder.add_text_field(&Fields::Description, STORED | TEXT);
+        let _ = fields.insert(&Fields::Description, description);
         let tag = schema_builder.add_text_field(&Fields::Tag, STORED | TEXT);
         let _ = fields.insert(&Fields::Tag, tag);
         let object_type =
@@ -243,6 +376,10 @@ impl AppDatabase {
         let _ = fields.insert(&Fields::Chksum, chksum);
         let size = schema_builder.add_u64_field(&Fields::Size, STORED);
         let _ = fields.insert(&Fields::Size, size);
+        let related = schema_builder.add_u64_field(&Fields::Related, STORED);
+        let _ = fields.insert(&Fields::Related, related);
+        let json = schema_builder.add_json_field(&Fields::Json, STORED);
+        let _ = fields.insert(&Fields::Json, json);
 
         let schema = schema_builder.build();
         let index = Index::create_in_ram(schema);
@@ -274,10 +411,13 @@ impl AppDatabase {
 
 pub enum Fields {
     Id,
+    Json,
+    Related,
     SrcPath,
     DbPath,
     Url,
     Title,
+    Description,
     Tag,
     ObjectType,
     Chksum,
@@ -298,6 +438,9 @@ impl Deref for Fields {
             Self::Url => "url",
             Self::Chksum => "chksum",
             Self::Size => "size",
+            Self::Json => "json",
+            Self::Description => "description",
+            Self::Related => "related",
         }
     }
 }

@@ -210,10 +210,11 @@ pub struct Image {
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
 pub struct Bookmark {
     pub id: u32,
-    pub title: String,
+    pub title: Option<String>,
     pub url: String,
     pub tags: Vec<String>,
-    pub description: String,
+    pub description: Option<String>,
+    pub related: Vec<u32>,
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
