@@ -25,7 +25,7 @@ pub async fn save_bookmark(
         .as_ref()
         .map(|v| v.iter().map(String::as_str).collect::<HashSet<_>>())
         .or_else(|| data.text.as_ref().map(|t| t.lines().collect()))
-        .or_else(|| data.text_html.as_ref().map(|h| todo!())) // parse all potential urls if the text does not exist
+        .or_else(|| data.text_html.as_ref().map(|h| get_urls_from_hrefs(h)))
         .unwrap_or_default()
         .into_iter()
         .map(|s| s.trim_matches(&['.', ' '][..]))
@@ -51,6 +51,40 @@ pub async fn save_bookmark(
         .into_iter()
         .collect::<Result<Vec<_>, _>>()?;
     Ok(())
+}
+
+pub fn get_urls_from_hrefs(mut h: &str) -> HashSet<&str> {
+    // the html is broken for some reason. so cannot parse using scraper
+    
+    // dbg!(scraper::Html::parse_fragment(h)
+    //     .select(&scraper::Selector::parse("*").unwrap())
+    //     .map(|e| e.value().attrs().collect::<Vec<_>>())
+    //     .collect::<Vec<_>>());
+
+    let mut urls = HashSet::new();
+    loop {
+        let url = h
+            .find("href")
+            .map(|start| {
+                h = &h[start + 1..];
+                h
+            })
+            .and_then(|h| {
+                h.find('"')
+                    .map(|s| &h[s + 1..])
+                    .map(|h| h.find('"').map(|e| &h[..e]))
+            })
+            .flatten();
+        match url {
+            Some(u) => {
+                urls.insert(u);
+            }
+            None => {
+                break;
+            }
+        }
+    }
+    urls
 }
 
 pub fn try_bookmark_from_markdown_url(id: u32, u: impl AsRef<str>) -> Option<Bookmark> {
