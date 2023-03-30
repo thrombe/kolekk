@@ -7,6 +7,7 @@
     import Observer from '$lib/Observer.svelte';
     import ImageCard from '$lib/ImageCard.svelte';
     import { tick } from 'svelte';
+    import { fastScroll } from '$lib/fast_scroll';
 
     const open_in_stremio = async (id: number | null, media_type: string) => {
         if (!id) {
@@ -87,7 +88,7 @@
     }}>Search</button
 >
 
-<cl style="">
+<cl style="" use:fastScroll>
     {#each $search_results.results as media (media.id)}
         <div
             on:click={() => {

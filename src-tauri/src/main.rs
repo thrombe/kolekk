@@ -21,7 +21,7 @@ use tauri::Manager;
 
 pub use logg::{debug, error};
 
-use crate::{api::tmdb::TmdbClient, bad_error::InferBadError, database::AppDatabase};
+use crate::{api::tmdb::TmdbClient, database::AppDatabase};
 
 #[derive(PartialEq, Eq)]
 pub enum AppInitialisationStatus {
@@ -47,7 +47,9 @@ fn main() {
             orm::add_tag_to_image,
             orm::remove_tag_from_image,
             filesystem::save_images_in_appdir,
-            bookmarks::save_bookmark,
+            bookmarks::save_bookmarks_from_drop,
+            bookmarks::save_bookmarks,
+            bookmarks::get_bookmarks,
             search::search_images,
             search::search_bookmarks,
             api::commands::search_tmdb_multi,
