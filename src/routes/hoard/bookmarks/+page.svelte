@@ -8,10 +8,17 @@
     import type { Bookmark, DragDropPaste } from 'types';
     import { scroll_pos, selected } from "./state";
 
+    let new_bookmarks = new Array();
     const on_receive = async (e: DragDropPaste<File>) => {
         console.log(e);
         console.log(e.text_html);
-        await invoke('save_bookmarks_from_drop', { data: await files_to_bytearrays(e) });
+        let bks: [Bookmark] = await invoke('get_bookmarks', { data: await files_to_bytearrays(e) });
+        console.log(bks, new_bookmarks);
+        new_bookmarks = bks;
+    };
+
+    const save_bookmarks = async (bks: [Bookmark]) => {
+        await invoke('save_bookmarks', {data: bks});
     };
 
     let bookmarks = new Array();
@@ -57,7 +64,12 @@
         if (document.activeElement?.tagName == "INPUT") {return}
     };
     const on_keydown = async (event: KeyboardEvent) => {
-        if (document.activeElement?.tagName == "INPUT") {return}
+        if (document.activeElement?.tagName == "INPUT") {
+            if (event.key == "Escape") {
+                (document.activeElement as HTMLElement).blur();
+            }
+            return;
+        }
 
         if (event.key == "ArrowLeft") {
             if ($selected-1 >= 0) {
@@ -99,19 +111,58 @@
 <div use:auto_update />
 <svelte:window on:keyup={on_keyup} on:keydown={on_keydown} />
 
-    <buttons>
-        <input bind:value={query} on:input={search_bookmarks} />
-        <button on:click={search_bookmarks}>refresh</button>
+<buttons>
+    <input bind:value={query} on:input={search_bookmarks} />
+    <button on:click={search_bookmarks}>refresh</button>
 
-        <input bind:value={tag_name} />
-        <button on:click={add_tag}>add tag</button>
-        <button on:click={remove_tag}>remove tag</button>
-    </buttons>
-    <buttons-blok />
+    <input bind:value={tag_name} />
+    <button on:click={add_tag}>add tag</button>
+    <button on:click={remove_tag}>remove tag</button>
+</buttons>
+<buttons-blok />
+
+{#if new_bookmarks.length > 0}
+    <some-box>
+    <cl class={"new-items"} use:fastScroll>
+        {#each new_bookmarks as bk, i}
+            <bookmark>
+                <div class={"bookmark-buttons"}>
+                    <button on:click={() => bk.tags = [...bk.tags, tag_name]} >add tag</button>
+                    <button on:click={() => {save_bookmarks([bk]);new_bookmarks = new_bookmarks.filter((e) => bk.id != e.id) }} >add to db</button>
+                    <button on:click={() => {new_bookmarks = new_bookmarks.filter((e) => bk.id != e.id)}}>remove</button>
+                </div>
+                <div class={"content"} >
+                    <span>{bk.title}</span>
+                    <tags use:fastScroll>
+                        {#each bk.tags as tag}
+                            <tag>{tag}</tag>
+                        {/each}
+                    </tags>
+                </div>
+            </bookmark>
+        {/each}
+    </cl>
+    </some-box>
+{/if}
+
 <cl use:fastScroll bind:this={main_element} on:scroll={() => $scroll_pos = main_element.scrollHeight} >
     {#each bookmarks as bk, i}
         {#if i == $selected}
-            <span class={"title"} style={"background-color: #282828;"} bind:this={selected_element} >{bk.title?bk.title:bk.url}</span>
+            <bookmark style={"width: 50%;border-radius: 15px;overflow:hidden;"}>
+                <div class={"bookmark-buttons"}>
+                    <button on:click={() => bk.tags = [...bk.tags, tag_name]} >add tag</button>
+                    <button on:click={() => {save_bookmarks([bk]);new_bookmarks = new_bookmarks.filter((e) => bk.id != e.id) }} >add to db</button>
+                    <button on:click={() => {new_bookmarks = new_bookmarks.filter((e) => bk.id != e.id)}}>remove</button>
+                </div>
+                <div class={"content"} >
+                    <span class={""} >{bk.title}</span>
+                    <tags use:fastScroll>
+                        {#each bk.tags as tag}
+                            <tag>{tag}</tag>
+                        {/each}
+                    </tags>
+                </div>
+            </bookmark>
         {:else}
             <span class={"title"} on:click={() => {$selected = i}} on:keyup={()=>{}} >{bk.title?bk.title:bk.url}</span>
         {/if}
@@ -123,12 +174,106 @@
         --buttons-height: 33px;
     }
 
+    tags {
+        background-color: #8add8a;
+        width: 100%;
+        height: calc(100% / 3);
+        display: flex;
+        flex-direction: row;
+        overflow: auto;
+    }
+
+    tag {
+        border: 1px solid;
+        border-radius: 5px;
+        padding-left: 4px;
+        padding-right: 4px;
+    }
+
+    tag + tag {
+        margin-left: 2px;
+    }
+
+    bookmark + bookmark {
+        margin-top: 3px;
+    }
+
+    bookmark {
+        width: 100%;
+        display: flex;
+        flex-direction:row;
+        height: 75px;
+    }
+
+    bookmark .content span {
+        width: calc(100%);
+        background-color: #dd8a8a;
+        overflow-wrap: break-word;
+        text-overflow: ellipsis;
+        height: calc(100% / 3 * 2);
+    }
+
+    bookmark .content {
+        display: flex;
+        flex-direction:column;
+        width: calc(100% - 80px);
+    }
+
+    .bookmark-buttons {
+        display: flex;
+        flex-direction:column;
+        height: 100%;
+    }
+
+    .bookmark-buttons button {
+        width: 80px;
+        margin: 0px;
+        padding: 0px;
+        border: 0px;
+        height: calc(100% / 3);
+    }
+
+    .bookmark-buttons button:nth-of-type(1) {
+        border-top-left-radius: 10px;
+    }
+    .bookmark-buttons button:nth-of-type(3) {
+        border-bottom-left-radius: 10px;
+    }
+
+    .bookmark-buttons button:hover {
+        background-color: #8add8a;
+    }
+
+    some-box {
+        position: absolute;
+        top: var(--buttons-height);
+        height: calc(100% - var(--buttons-height));
+        width: 100%;
+        background-color: #282828aa;
+        display: flex;
+    }
+
+    .new-items {
+        position: absolute;
+        top: 5%;
+        left: 5%;
+        max-height: calc(90% - 2px);
+        background-color: #282828;
+        width: 90%;
+        border: 2px solid;
+        border-color: #285528;
+        border-radius: 15px;
+        display: flex;
+        align-content:flex-start;
+        height: min-content;
+    }
+
     .title {
         font-size: 1.87ch;
         padding-bottom: 0.556ch;
         font-weight: 500;
         width: calc(50%);
-        height: min-content;
+        height: 75px;
 
         text-align: center;
         text-overflow: ellipsis;

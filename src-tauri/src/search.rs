@@ -1,7 +1,10 @@
-use kolekk_types::{Bookmark, Image};
+use kolekk_types::Image;
 use tauri::State;
 
-use crate::{bad_error::Error, database::AppDatabase};
+use crate::{
+    bad_error::Error,
+    database::{AppDatabase, ObjectType},
+};
 
 #[tauri::command]
 pub async fn search_images(
@@ -20,11 +23,5 @@ pub async fn search_bookmarks(
     limit: usize,
     offset: usize,
 ) -> Result<Vec<serde_json::Map<String, serde_json::Value>>, Error> {
-    crate::database::search_object(
-        db.inner(),
-        crate::database::ObjectType::Bookmark,
-        query,
-        limit,
-        offset,
-    )
+    crate::database::search_object(db.inner(), ObjectType::Bookmark, query, limit, offset)
 }

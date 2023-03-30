@@ -7,7 +7,7 @@ use kolekk_types::{images, metadata, tags, urls, Bookmark, Image};
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection};
 use tantivy::{
     collector::TopDocs,
-    query::{AllQuery, BooleanQuery, EmptyQuery, FuzzyTermQuery, Occur, PhraseQuery, TermQuery},
+    query::{AllQuery, BooleanQuery, EmptyQuery, FuzzyTermQuery, Occur, PhraseQuery, TermQuery, BoostQuery},
     schema::{Facet, FacetOptions, Field, IndexRecordOption, STORED, TEXT},
     Document, Index, IndexReader, IndexWriter, Term,
 };
@@ -142,7 +142,7 @@ pub fn search_object(
     let search_query = Box::new(BooleanQuery::new(vec![
         // TODO: the priority stuff
         (Occur::Should, title_query),
-        (Occur::Should, tag_query),
+        (Occur::Should, Box::new(BoostQuery::new(tag_query, 2.0))),
         (Occur::Should, title_fuzzy_query),
     ]));
 
