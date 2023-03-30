@@ -10,8 +10,18 @@ use tauri::{http::Uri, Manager, State};
 
 use crate::{
     bad_error::{Error, InferBadError, Inspectable},
-    database::AppDatabase,
+    database::{add_tag_to_object, remove_tag_from_object, AppDatabase, ObjectType},
 };
+
+#[tauri::command]
+pub async fn search_bookmarks(
+    db: State<'_, AppDatabase>,
+    query: String,
+    limit: usize,
+    offset: usize,
+) -> Result<Vec<serde_json::Map<String, serde_json::Value>>, Error> {
+    crate::database::search_object(db.inner(), ObjectType::Bookmark, query, limit, offset)
+}
 
 #[tauri::command]
 pub async fn get_bookmarks(
@@ -30,8 +40,7 @@ pub async fn save_bookmarks_from_drop(
     db: State<'_, AppDatabase>,
     app: State<'_, tauri::AppHandle>,
 ) -> Result<(), Error> {
-    let data = bookmarks_from_ddp(data, client.inner(), db.inner())
-        .await;
+    let data = bookmarks_from_ddp(data, client.inner(), db.inner()).await;
     save_bookmarks(data, db, app).await
 }
 
@@ -41,8 +50,7 @@ pub async fn save_bookmarks(
     db: State<'_, AppDatabase>,
     app: State<'_, tauri::AppHandle>,
 ) -> Result<(), Error> {
-    data
-        .into_iter()
+    data.into_iter()
         .map(|b| async {
             let id = b.id;
             crate::database::add_bookmark(db.inner(), b)
@@ -57,6 +65,24 @@ pub async fn save_bookmarks(
         .into_iter()
         .collect::<Result<Vec<_>, _>>()?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn add_tag_to_bookmark(
+    id: u32,
+    tag_id: u32,
+    db: State<'_, AppDatabase>,
+) -> Result<(), Error> {
+    add_tag_to_object(db.inner(), id, tag_id).await
+}
+
+#[tauri::command]
+pub async fn remove_tag_from_bookmark(
+    id: u32,
+    tag_id: u32,
+    db: State<'_, AppDatabase>,
+) -> Result<(), Error> {
+    remove_tag_from_object(db.inner(), id, tag_id).await
 }
 
 pub async fn bookmarks_from_ddp(

@@ -1,15 +1,19 @@
 #[allow(unused_imports)]
 use crate::{dbg, debug, error};
 
-use std::{collections::HashMap, ops::Deref, sync::{Mutex, atomic::AtomicU32}};
+use std::{
+    collections::HashMap,
+    ops::Deref,
+    sync::{atomic::AtomicU32, Mutex},
+};
 
-use kolekk_types::{images, metadata, tags, urls, Bookmark, Image};
+use kolekk_types::{Bookmark, Image, Tag};
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection};
 use tantivy::{
     collector::TopDocs,
-    query::{AllQuery, BooleanQuery, EmptyQuery, FuzzyTermQuery, Occur, PhraseQuery, TermQuery, BoostQuery},
-    schema::{Facet, FacetOptions, Field, IndexRecordOption, STORED, TEXT},
-    Document, Index, IndexReader, IndexWriter, Term,
+    query::{AllQuery, BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, PhraseQuery, TermQuery},
+    schema::{Facet, FacetOptions, Field, IndexRecordOption, FAST, STORED, TEXT},
+    DocAddress, Document, Index, IndexReader, IndexWriter, Term,
 };
 
 use crate::{
@@ -17,53 +21,136 @@ use crate::{
     config::AppConfig,
 };
 
+// is async cuz the other db might require it in future
 pub async fn add_image(db: &AppDatabase, img: Image) -> Result<(), Error> {
     let mut doc = Document::new();
-    doc.add_facet(db.get_field(&Fields::ObjectType), ObjectType::Image);
-    doc.add_u64(db.get_field(&Fields::Id), img.id as _);
-    doc.add_text(db.get_field(&Fields::Title), img.title);
-    doc.add_text(db.get_field(&Fields::SrcPath), img.src_path);
-    doc.add_text(db.get_field(&Fields::DbPath), img.db_path);
-    doc.add_bytes(db.get_field(&Fields::Chksum), img.chksum);
-    doc.add_u64(db.get_field(&Fields::Size), img.size as _);
+    doc.add_facet(db.get_field(Fields::ObjectType), ObjectType::Image);
+    doc.add_u64(db.get_field(Fields::Id), img.id as _);
+    doc.add_text(db.get_field(Fields::Title), img.title);
+    doc.add_text(db.get_field(Fields::SrcPath), img.src_path);
+    doc.add_text(db.get_field(Fields::DbPath), img.db_path);
+    doc.add_bytes(db.get_field(Fields::Chksum), img.chksum);
+    doc.add_u64(db.get_field(Fields::Size), img.size as _);
     img.tags
         .into_iter()
-        .for_each(|t| doc.add_text(db.get_field(&Fields::Tag), t));
+        .for_each(|t| doc.add_u64(db.get_field(Fields::Tag), t as _));
     img.urls
         .into_iter()
-        .for_each(|u| doc.add_text(db.get_field(&Fields::Url), u));
+        .for_each(|u| doc.add_text(db.get_field(Fields::Url), u));
 
     let mut writer = db.index_writer.lock().infer_err()?;
-    let opstamp = writer.add_document(doc).look(|e| dbg!(e)).infer_err()?;
+    let _opstamp = writer.add_document(doc).look(|e| dbg!(e)).infer_err()?;
     writer.commit().look(|e| dbg!(e)).infer_err()?;
     Ok(())
 }
 
+// is async cuz the other db might require it in future
 pub async fn add_bookmark(db: &AppDatabase, bk: Bookmark) -> Result<(), Error> {
     let mut doc = Document::new();
     let json = serde_json::to_value(&bk).infer_err().look(|e| dbg!(e))?;
     doc.add_json_object(
-        db.get_field(&Fields::Json),
+        db.get_field(Fields::Json),
         json.as_object().bad_err("cannot fail")?.to_owned(),
     );
-    doc.add_facet(db.get_field(&Fields::ObjectType), ObjectType::Bookmark);
-    doc.add_u64(db.get_field(&Fields::Id), bk.id as _);
+    doc.add_facet(db.get_field(Fields::ObjectType), ObjectType::Bookmark);
+    doc.add_u64(db.get_field(Fields::Id), bk.id as _);
     let _ = bk
         .title
-        .map(|t| doc.add_text(db.get_field(&Fields::Title), t));
+        .map(|t| doc.add_text(db.get_field(Fields::Title), t));
     let _ = bk
         .description
-        .map(|d| doc.add_text(db.get_field(&Fields::Description), d));
+        .map(|d| doc.add_text(db.get_field(Fields::Description), d));
     bk.tags
         .into_iter()
-        .for_each(|t| doc.add_text(db.get_field(&Fields::Tag), t));
+        .for_each(|t| doc.add_u64(db.get_field(Fields::Tag), t as _));
     bk.related
         .into_iter()
-        .for_each(|r| doc.add_u64(db.get_field(&Fields::Related), r as _));
+        .for_each(|r| doc.add_u64(db.get_field(Fields::Related), r as _));
 
     let mut writer = db.index_writer.lock().infer_err()?;
-    let opstamp = writer.add_document(doc).look(|e| dbg!(e)).infer_err()?;
+    let _opstamp = writer.add_document(doc).look(|e| dbg!(e)).infer_err()?;
     writer.commit().look(|e| dbg!(e)).infer_err()?;
+    Ok(())
+}
+
+// is async cuz the other db might require it in future
+pub async fn add_tag(db: &AppDatabase, tag: Tag) -> Result<(), Error> {
+    let mut doc = Document::new();
+    let json = serde_json::to_value(&tag).infer_err().look(|e| dbg!(e))?;
+    doc.add_json_object(
+        db.get_field(Fields::Json),
+        json.as_object().bad_err("cannot fail")?.to_owned(),
+    );
+    doc.add_facet(db.get_field(Fields::ObjectType), ObjectType::Bookmark);
+    doc.add_u64(
+        db.get_field(Fields::Id),
+        match tag {
+            Tag::Main { id, .. } => id,
+            Tag::Alias { id, .. } => id,
+        } as _,
+    );
+    doc.add_text(
+        db.get_field(Fields::Title),
+        match tag {
+            Tag::Main { name, .. } => name,
+            Tag::Alias { name, .. } => name,
+        },
+    );
+
+    let mut writer = db.index_writer.lock().infer_err()?;
+    let _opstamp = writer.add_document(doc).look(|e| dbg!(e)).infer_err()?;
+    writer.commit().look(|e| dbg!(e)).infer_err()?;
+    Ok(())
+}
+
+// is async cuz the other db might require it in future
+pub async fn add_tag_to_object(db: &AppDatabase, id: u32, tag_id: u32) -> Result<(), Error> {
+    add_field_value(db, id, Fields::Tag, tag_id as u64)
+}
+
+// is async cuz the other db might require it in future
+pub async fn remove_tag_from_object(db: &AppDatabase, id: u32, tag_id: u32) -> Result<(), Error> {
+    remove_field_value(db, id, Fields::Tag, tag_id as u64)
+}
+
+pub fn add_field_value(
+    db: &AppDatabase,
+    id: u32,
+    field: Fields,
+    value: impl Into<tantivy::schema::Value>,
+) -> Result<(), Error> {
+    let mut doc = db.get_doc(id)?;
+    doc.add_field_value(db.get_field(field), value.into());
+
+    let mut writer = db.index_writer.lock().infer_err()?;
+    let _opstamp = writer.delete_term(Term::from_field_u64(db.get_field(Fields::Id), id as _));
+    let _opstamp = writer.add_document(doc).infer_err()?;
+    let _opstamp = writer.commit().infer_err()?;
+    Ok(())
+}
+
+pub fn remove_field_value(
+    db: &AppDatabase,
+    id: u32,
+    field: Fields,
+    value: impl Into<tantivy::schema::Value>,
+) -> Result<(), Error> {
+    let doc = db.get_doc(id)?;
+
+    let mut new_doc = Document::new();
+    let value = value.into();
+    let f = db.get_field(field);
+    doc.field_values()
+        .iter()
+        .filter(|fv| fv.field != f || fv.value != value)
+        .for_each(|fv| {
+            new_doc.add_field_value(fv.field(), fv.value.clone());
+        });
+
+    let mut writer = db.index_writer.lock().infer_err()?;
+    let _opstamp = writer.delete_term(Term::from_field_u64(db.get_field(Fields::Id), id as _));
+    let _opstamp = writer.add_document(new_doc).infer_err()?;
+    let _opstamp = writer.commit().infer_err()?;
     Ok(())
 }
 
@@ -88,18 +175,18 @@ pub fn search_object(
     let searcher = db.get_searcher();
 
     let obj_type_query = Box::new(TermQuery::new(
-        Term::from_facet(db.get_field(&Fields::ObjectType), &ob_type.into()),
+        Term::from_facet(db.get_field(Fields::ObjectType), &ob_type.into()),
         IndexRecordOption::Basic,
     ));
 
     let phrase_query_terms = query
         .split_whitespace()
-        .map(|t| Term::from_field_text(db.get_field(&Fields::Title), t))
+        .map(|t| Term::from_field_text(db.get_field(Fields::Title), t))
         .collect::<Vec<_>>();
     let title_query = if phrase_query_terms.len() < 2 {
         // PhraseQuery does not support less than 2 terms
         Box::new(TermQuery::new(
-            Term::from_field_text(db.get_field(&Fields::Title), &query),
+            Term::from_field_text(db.get_field(Fields::Title), &query),
             IndexRecordOption::Basic,
         )) as _
     } else {
@@ -113,7 +200,7 @@ pub fn search_object(
                 (
                     Occur::Should,
                     Box::new(FuzzyTermQuery::new(
-                        Term::from_field_text(db.get_field(&Fields::Tag), t),
+                        Term::from_field_text(db.get_field(Fields::Tag), t),
                         2,    // ?
                         true, // what??
                     )) as _,
@@ -130,7 +217,7 @@ pub fn search_object(
                 (
                     Occur::Should, // TODO: should this be Must instead?
                     Box::new(FuzzyTermQuery::new(
-                        Term::from_field_text(db.get_field(&Fields::Title), t),
+                        Term::from_field_text(db.get_field(Fields::Title), t),
                         2,    // ?
                         true, // what??
                     )) as _,
@@ -161,7 +248,7 @@ pub fn search_object(
         .map(move |(_score, address)| {
             let doc = searcher.doc(address).look(|e| dbg!(e)).infer_err()?;
             Ok(doc
-                .get_first(db.get_field(&Fields::Json))
+                .get_first(db.get_field(Fields::Json))
                 .bad_err("no value")?
                 .as_json()
                 .bad_err("not an object")?
@@ -190,18 +277,18 @@ pub fn search_images(
     let searcher = db.get_searcher();
 
     let obj_type_query = Box::new(TermQuery::new(
-        Term::from_facet(db.get_field(&Fields::ObjectType), &ObjectType::Image.into()),
+        Term::from_facet(db.get_field(Fields::ObjectType), &ObjectType::Image.into()),
         IndexRecordOption::Basic,
     ));
 
     let phrase_query_terms = query
         .split_whitespace()
-        .map(|t| Term::from_field_text(db.get_field(&Fields::Title), t))
+        .map(|t| Term::from_field_text(db.get_field(Fields::Title), t))
         .collect::<Vec<_>>();
     let title_query = if phrase_query_terms.len() < 2 {
         // PhraseQuery does not support less than 2 terms
         Box::new(TermQuery::new(
-            Term::from_field_text(db.get_field(&Fields::Title), &query),
+            Term::from_field_text(db.get_field(Fields::Title), &query),
             IndexRecordOption::Basic,
         )) as _
     } else {
@@ -215,7 +302,7 @@ pub fn search_images(
                 (
                     Occur::Should,
                     Box::new(FuzzyTermQuery::new(
-                        Term::from_field_text(db.get_field(&Fields::Tag), t),
+                        Term::from_field_text(db.get_field(Fields::Tag), t),
                         2,    // ?
                         true, // what??
                     )) as _,
@@ -232,7 +319,7 @@ pub fn search_images(
                 (
                     Occur::Should, // TODO: should this be Must instead?
                     Box::new(FuzzyTermQuery::new(
-                        Term::from_field_text(db.get_field(&Fields::Title), t),
+                        Term::from_field_text(db.get_field(Fields::Title), t),
                         2,    // ?
                         true, // what??
                     )) as _,
@@ -265,46 +352,46 @@ pub fn search_images(
             Ok(Image {
                 // these unwraps should probably be fine
                 id: doc
-                    .get_first(db.get_field(&Fields::Id))
+                    .get_first(db.get_field(Fields::Id))
                     .bad_err("no id")?
                     .as_u64()
                     .unwrap() as _,
                 title: doc
-                    .get_first(db.get_field(&Fields::Title))
+                    .get_first(db.get_field(Fields::Title))
                     .bad_err("no title")?
                     .as_text()
                     .unwrap()
                     .to_owned(),
                 src_path: doc
-                    .get_first(db.get_field(&Fields::SrcPath))
+                    .get_first(db.get_field(Fields::SrcPath))
                     .bad_err("no src_path")?
                     .as_text()
                     .unwrap()
                     .to_owned(),
                 db_path: doc
-                    .get_first(db.get_field(&Fields::DbPath))
+                    .get_first(db.get_field(Fields::DbPath))
                     .bad_err("no db_path")?
                     .as_text()
                     .unwrap()
                     .to_owned(),
                 chksum: doc
-                    .get_first(db.get_field(&Fields::Chksum))
+                    .get_first(db.get_field(Fields::Chksum))
                     .bad_err("no chksum")?
                     .as_bytes()
                     .unwrap()
                     .to_owned(),
                 size: doc
-                    .get_first(db.get_field(&Fields::Size))
+                    .get_first(db.get_field(Fields::Size))
                     .bad_err("no size")?
                     .as_u64()
                     .unwrap() as _,
                 urls: doc
-                    .get_all(db.get_field(&Fields::Url))
+                    .get_all(db.get_field(Fields::Url))
                     .map(|u| u.as_text().unwrap().to_owned())
                     .collect(),
                 tags: doc
-                    .get_all(db.get_field(&Fields::Tag))
-                    .map(|t| t.as_text().unwrap().to_owned())
+                    .get_all(db.get_field(Fields::Tag))
+                    .map(|t| t.as_u64().unwrap().to_owned() as _)
                     .collect(),
             })
         })
@@ -316,7 +403,7 @@ pub struct AppDatabase {
     index: Index,
     index_reader: IndexReader,
     index_writer: Mutex<IndexWriter>,
-    fields: HashMap<&'static str, Field>,
+    fields: HashMap<Fields, Field>,
     id_gen: AtomicU32,
 }
 
@@ -342,45 +429,45 @@ impl AppDatabase {
             let backend = db.get_database_backend();
             let schema = sea_orm::Schema::new(backend);
             // dbg!(backend.build(&table).to_string());
-            let table = schema.create_table_from_entity(images::Entity);
-            let _ = db.execute(backend.build(&table)).await.unwrap();
-            let table = schema.create_table_from_entity(tags::Entity);
-            let _ = db.execute(backend.build(&table)).await.unwrap();
-            let table = schema.create_table_from_entity(urls::Entity);
-            let _ = db.execute(backend.build(&table)).await.unwrap();
-            let table = schema.create_table_from_entity(metadata::Entity);
-            let _ = db.execute(backend.build(&table)).await.unwrap();
+            // let table = schema.create_table_from_entity(kolekk_types::images::Entity);
+            // let _ = db.execute(backend.build(&table)).await.unwrap();
+            // let table = schema.create_table_from_entity(kolekk_types::tags::Entity);
+            // let _ = db.execute(backend.build(&table)).await.unwrap();
+            // let table = schema.create_table_from_entity(kolekk_types::urls::Entity);
+            // let _ = db.execute(backend.build(&table)).await.unwrap();
+            // let table = schema.create_table_from_entity(kolekk_types::metadata::Entity);
+            // let _ = db.execute(backend.build(&table)).await.unwrap();
         }
 
         let mut schema_builder = tantivy::schema::Schema::builder();
 
-        let mut fields = HashMap::<&str, Field>::new();
+        let mut fields = HashMap::<Fields, Field>::new();
 
-        let id = schema_builder.add_text_field(&Fields::Id, STORED);
-        let _ = fields.insert(&Fields::Id, id);
+        let id = schema_builder.add_u64_field(&Fields::Id, STORED | FAST);
+        let _ = fields.insert(Fields::Id, id);
         let src_path = schema_builder.add_text_field(&Fields::SrcPath, STORED);
-        let _ = fields.insert(&Fields::SrcPath, src_path);
+        let _ = fields.insert(Fields::SrcPath, src_path);
         let db_path = schema_builder.add_text_field(&Fields::DbPath, STORED);
-        let _ = fields.insert(&Fields::DbPath, db_path);
+        let _ = fields.insert(Fields::DbPath, db_path);
         let url = schema_builder.add_text_field(&Fields::Url, STORED);
-        let _ = fields.insert(&Fields::Url, url);
+        let _ = fields.insert(Fields::Url, url);
         let title = schema_builder.add_text_field(&Fields::Title, STORED | TEXT);
-        let _ = fields.insert(&Fields::Title, title);
+        let _ = fields.insert(Fields::Title, title);
         let description = schema_builder.add_text_field(&Fields::Description, STORED | TEXT);
-        let _ = fields.insert(&Fields::Description, description);
-        let tag = schema_builder.add_text_field(&Fields::Tag, STORED | TEXT);
-        let _ = fields.insert(&Fields::Tag, tag);
+        let _ = fields.insert(Fields::Description, description);
+        let tag = schema_builder.add_u64_field(&Fields::Tag, STORED | FAST);
+        let _ = fields.insert(Fields::Tag, tag);
         let object_type =
             schema_builder.add_facet_field(&Fields::ObjectType, FacetOptions::default());
-        let _ = fields.insert(&Fields::ObjectType, object_type);
+        let _ = fields.insert(Fields::ObjectType, object_type);
         let chksum = schema_builder.add_bytes_field(&Fields::Chksum, STORED);
-        let _ = fields.insert(&Fields::Chksum, chksum);
+        let _ = fields.insert(Fields::Chksum, chksum);
         let size = schema_builder.add_u64_field(&Fields::Size, STORED);
-        let _ = fields.insert(&Fields::Size, size);
+        let _ = fields.insert(Fields::Size, size);
         let related = schema_builder.add_u64_field(&Fields::Related, STORED);
-        let _ = fields.insert(&Fields::Related, related);
+        let _ = fields.insert(Fields::Related, related);
         let json = schema_builder.add_json_field(&Fields::Json, STORED);
-        let _ = fields.insert(&Fields::Json, json);
+        let _ = fields.insert(Fields::Json, json);
 
         let schema = schema_builder.build();
         let index = Index::create_in_ram(schema);
@@ -398,23 +485,40 @@ impl AppDatabase {
         })
     }
 
-    pub fn get_field(&self, ident: &str) -> Field {
-        *self
-            .fields
-            .get(ident.look(|e| dbg!(e)))
-            .look(|e| dbg!(e))
-            .unwrap()
+    pub fn get_field(&self, f: Fields) -> Field {
+        *self.fields.get(&f).unwrap()
     }
 
     pub fn get_searcher(&self) -> Searcher {
         Searcher(self.index_reader.searcher())
     }
 
+    pub fn get_doc_address(&self, id: u32) -> Result<DocAddress, Error> {
+        let searcher = self.get_searcher();
+        let id_term = Term::from_field_u64(self.get_field(Fields::Id), id as _);
+        let top_docs = searcher
+            .search(
+                &TermQuery::new(id_term, IndexRecordOption::Basic),
+                &TopDocs::with_limit(1),
+            )
+            .infer_err()?;
+        let (_score, doc_address) = top_docs.first().bad_err("object does not exist")?;
+        Ok(*doc_address)
+    }
+
+    pub fn get_doc(&self, id: u32) -> Result<Document, Error> {
+        let searcher = self.get_searcher();
+        let doc = searcher.doc(self.get_doc_address(id)?).infer_err()?;
+        Ok(doc)
+    }
+
     pub fn new_id(&self) -> u32 {
-        self.id_gen.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        self.id_gen
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 }
 
+#[derive(Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Debug)]
 pub enum Fields {
     Id,
     Json,
@@ -460,6 +564,8 @@ impl AsRef<str> for Fields {
 pub enum ObjectType {
     Image,
     Bookmark,
+    Tag,
+    Group,
 }
 
 impl Deref for ObjectType {
@@ -467,8 +573,10 @@ impl Deref for ObjectType {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            ObjectType::Image => "/image",
-            ObjectType::Bookmark => "/bookmark",
+            Self::Image => "/image",
+            Self::Bookmark => "/bookmark",
+            Self::Tag => "/tag",
+            Self::Group => "/group",
         }
     }
 }

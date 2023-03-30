@@ -9,7 +9,7 @@ use kolekk_types::{
         AllInfo, AltTitles, ExternalIDs, ExternalIdSearchResult, Genre, ImageInfo, Images,
         ListResults, Movie, MovieListResult, MultiSearchResult, Season, Title, Tv, TvListResult,
     },
-    Bookmark, ByteArrayFile, DragDropPaste, FilderKind, Image, TS,
+    Bookmark, ByteArrayFile, DragDropPaste, FilderKind, Group, Image, Object, Tag, TS,
 };
 
 fn main() {
@@ -49,7 +49,10 @@ fn main() {
         Image,
         DragDropPaste<()>,
         ByteArrayFile,
-        FilderKind
+        FilderKind,
+        Object,
+        Tag,
+        Group
     );
     export!(
         AllInfo<()>,

@@ -195,6 +195,8 @@ pub struct DragDropPaste<F: Debug> {
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[serde(tag = "object_type")]
+// #[serde(rename = "image")]
 pub struct Image {
     pub id: u32,
     pub title: String,
@@ -203,17 +205,52 @@ pub struct Image {
     pub chksum: Vec<u8>,
     pub size: usize,
     pub urls: Vec<String>,
-    pub tags: Vec<String>,
+    pub tags: Vec<u32>,
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[serde(tag = "object_type")]
 pub struct Bookmark {
     pub id: u32,
     pub title: Option<String>,
     pub url: String,
-    pub tags: Vec<String>,
+    pub tags: Vec<u32>,
     pub description: Option<String>,
     pub related: Vec<u32>,
+}
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[serde(tag = "object_type")]
+pub struct Group {
+    pub id: u32,
+    pub main: Option<u32>,
+    pub items: Vec<u32>,
+    pub tags: Vec<u32>,
+}
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[serde(untagged)]
+pub enum Object {
+    Image(Image),
+    Bookmark(Bookmark),
+    Group(Group),
+    Tag(Tag),
+}
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[serde(tag = "object_type")]
+pub enum Tag {
+    #[serde(rename = "main_tag")]
+    Main {
+        id: u32,
+        name: String,
+    },
+    #[serde(rename = "alias_tag")]
+    Alias {
+        id: u32,
+        name: String,
+        alias_to: u32,
+    },
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
@@ -235,161 +272,161 @@ pub struct FileMetadata {
     pub size: u64,
 }
 
-impl Image {
-    pub async fn all_from_db(db: &DatabaseConnection) -> Vec<Self> {
-        let img = images::Entity::find().all(db).await.unwrap();
-        let mut images = vec![];
-        for e in img.into_iter() {
-            let e = Self {
-                id: e.id,
-                title: e.title,
-                src_path: e.src_path,
-                db_path: e.db_path,
-                chksum: e.chksum,
-                size: e.size as _,
-                urls: urls::Entity::find_by_id(e.id)
-                    .all(db)
-                    .await
-                    .unwrap()
-                    .into_iter()
-                    .map(|e| e.url)
-                    .collect(),
-                tags: tags::Entity::find()
-                    .filter(tags::Column::Id.eq(e.id))
-                    .all(db)
-                    .await
-                    .unwrap()
-                    .into_iter()
-                    .map(|e| e.tag)
-                    .collect(),
-            };
-            images.push(e);
-        }
-        images
-    }
+// impl Image {
+//     pub async fn all_from_db(db: &DatabaseConnection) -> Vec<Self> {
+//         let img = images::Entity::find().all(db).await.unwrap();
+//         let mut images = vec![];
+//         for e in img.into_iter() {
+//             let e = Self {
+//                 id: e.id,
+//                 title: e.title,
+//                 src_path: e.src_path,
+//                 db_path: e.db_path,
+//                 chksum: e.chksum,
+//                 size: e.size as _,
+//                 urls: urls::Entity::find_by_id(e.id)
+//                     .all(db)
+//                     .await
+//                     .unwrap()
+//                     .into_iter()
+//                     .map(|e| e.url)
+//                     .collect(),
+//                 tags: tags::Entity::find()
+//                     .filter(tags::Column::Id.eq(e.id))
+//                     .all(db)
+//                     .await
+//                     .unwrap()
+//                     .into_iter()
+//                     .map(|e| e.tag)
+//                     .collect(),
+//             };
+//             images.push(e);
+//         }
+//         images
+//     }
 
-    pub async fn add_tag(&mut self, db: &DatabaseConnection, tag: String) {
-        if tags::Entity::find()
-            .filter(tags::Column::Id.eq(self.id))
-            .filter(tags::Column::Tag.eq(tag.clone()))
-            .one(db)
-            .await
-            .unwrap()
-            .is_some()
-        {
-            return;
-        }
+//     pub async fn add_tag(&mut self, db: &DatabaseConnection, tag: String) {
+//         if tags::Entity::find()
+//             .filter(tags::Column::Id.eq(self.id))
+//             .filter(tags::Column::Tag.eq(tag.clone()))
+//             .one(db)
+//             .await
+//             .unwrap()
+//             .is_some()
+//         {
+//             return;
+//         }
 
-        let tag = tags::ActiveModel {
-            id: sea_orm::Set(self.id),
-            tag: sea_orm::Set(tag),
-        };
-        let tag = tag.insert(db).await.unwrap();
-        self.tags.push(tag.tag);
-    }
+//         let tag = tags::ActiveModel {
+//             id: sea_orm::Set(self.id),
+//             tag: sea_orm::Set(tag),
+//         };
+//         let tag = tag.insert(db).await.unwrap();
+//         self.tags.push(tag.tag);
+//     }
 
-    pub async fn remove_tag(&mut self, db: &DatabaseConnection, tag: String) {
-        self.tags
-            .remove(self.tags.iter().position(|e| *e == tag).unwrap());
-        let tag = tags::ActiveModel {
-            id: sea_orm::Set(self.id),
-            tag: sea_orm::Set(tag),
-        };
-        let _ = tags::Entity::delete(tag).exec(db).await.unwrap();
-    }
-}
+//     pub async fn remove_tag(&mut self, db: &DatabaseConnection, tag: String) {
+//         self.tags
+//             .remove(self.tags.iter().position(|e| *e == tag).unwrap());
+//         let tag = tags::ActiveModel {
+//             id: sea_orm::Set(self.id),
+//             tag: sea_orm::Set(tag),
+//         };
+//         let _ = tags::Entity::delete(tag).exec(db).await.unwrap();
+//     }
+// }
 
-pub mod bookmarks {
-    use super::*;
+// pub mod bookmarks {
+//     use super::*;
 
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-    #[sea_orm(table_name = "bookmarks")]
-    pub struct Model {
-        #[sea_orm(primary_key)]
-        pub id: u32,
-        pub title: String,
-        pub url: String,
-    }
+//     #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+//     #[sea_orm(table_name = "bookmarks")]
+//     pub struct Model {
+//         #[sea_orm(primary_key)]
+//         pub id: u32,
+//         pub title: String,
+//         pub url: String,
+//     }
 
-    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-    pub enum Relation {}
+//     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+//     pub enum Relation {}
 
-    impl ActiveModelBehavior for ActiveModel {}
-}
+//     impl ActiveModelBehavior for ActiveModel {}
+// }
 
-pub mod images {
-    use super::*;
+// pub mod images {
+//     use super::*;
 
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-    #[sea_orm(table_name = "images")]
-    pub struct Model {
-        #[sea_orm(primary_key)]
-        pub id: u32,
-        // #[sea_orm(primary_key)]
-        // #[sea_orm(unique)]
-        pub chksum: Vec<u8>,
-        pub size: u32,
-        pub title: String,
-        pub src_path: String,
-        pub db_path: String,
-    }
+//     #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+//     #[sea_orm(table_name = "images")]
+//     pub struct Model {
+//         #[sea_orm(primary_key)]
+//         pub id: u32,
+//         // #[sea_orm(primary_key)]
+//         // #[sea_orm(unique)]
+//         pub chksum: Vec<u8>,
+//         pub size: u32,
+//         pub title: String,
+//         pub src_path: String,
+//         pub db_path: String,
+//     }
 
-    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-    pub enum Relation {}
+//     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+//     pub enum Relation {}
 
-    impl ActiveModelBehavior for ActiveModel {}
-}
+//     impl ActiveModelBehavior for ActiveModel {}
+// }
 
-pub mod tags {
-    use super::*;
+// pub mod tags {
+//     use super::*;
 
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-    #[sea_orm(table_name = "tags")]
-    pub struct Model {
-        #[sea_orm(primary_key)]
-        pub id: u32,
-        #[sea_orm(primary_key)]
-        pub tag: String,
-    }
+//     #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+//     #[sea_orm(table_name = "tags")]
+//     pub struct Model {
+//         #[sea_orm(primary_key)]
+//         pub id: u32,
+//         #[sea_orm(primary_key)]
+//         pub tag: String,
+//     }
 
-    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-    pub enum Relation {}
+//     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+//     pub enum Relation {}
 
-    impl ActiveModelBehavior for ActiveModel {}
-}
+//     impl ActiveModelBehavior for ActiveModel {}
+// }
 
-pub mod urls {
-    use super::*;
+// pub mod urls {
+//     use super::*;
 
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-    #[sea_orm(table_name = "urls")]
-    pub struct Model {
-        #[sea_orm(primary_key)]
-        pub id: u32,
-        #[sea_orm(unique)]
-        pub url: String,
-    }
+//     #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+//     #[sea_orm(table_name = "urls")]
+//     pub struct Model {
+//         #[sea_orm(primary_key)]
+//         pub id: u32,
+//         #[sea_orm(unique)]
+//         pub url: String,
+//     }
 
-    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-    pub enum Relation {}
+//     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+//     pub enum Relation {}
 
-    impl ActiveModelBehavior for ActiveModel {}
-}
+//     impl ActiveModelBehavior for ActiveModel {}
+// }
 
-pub mod metadata {
-    use super::*;
+// pub mod metadata {
+//     use super::*;
 
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-    #[sea_orm(table_name = "metadata")]
-    pub struct Model {
-        #[sea_orm(primary_key)]
-        pub id: u32,
-        // pub added_ts: datetime?,
-        // pub last_edit: ts?,
-    }
+//     #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
+//     #[sea_orm(table_name = "metadata")]
+//     pub struct Model {
+//         #[sea_orm(primary_key)]
+//         pub id: u32,
+//         // pub added_ts: datetime?,
+//         // pub last_edit: ts?,
+//     }
 
-    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-    pub enum Relation {}
+//     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+//     pub enum Relation {}
 
-    impl ActiveModelBehavior for ActiveModel {}
-}
+//     impl ActiveModelBehavior for ActiveModel {}
+// }

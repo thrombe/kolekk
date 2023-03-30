@@ -10,9 +10,10 @@ mod config;
 mod database;
 mod filesystem;
 mod logg;
-mod orm;
+// mod orm;
+mod images;
 mod player;
-mod search;
+mod tag;
 
 use bad_error::Error;
 use logg::init_logger;
@@ -42,16 +43,21 @@ fn main() {
             player::seek_perc,
             player::set_stat,
             player::stop_song,
-            orm::add_image_from_path,
-            orm::get_images,
-            orm::add_tag_to_image,
-            orm::remove_tag_from_image,
-            filesystem::save_images_in_appdir,
+            // orm::add_image_from_path,
+            // orm::get_images,
+            // orm::add_tag_to_image,
+            // orm::remove_tag_from_image,
             bookmarks::save_bookmarks_from_drop,
             bookmarks::save_bookmarks,
             bookmarks::get_bookmarks,
-            search::search_images,
-            search::search_bookmarks,
+            bookmarks::add_tag_to_bookmark,
+            bookmarks::remove_tag_from_bookmark,
+            bookmarks::search_bookmarks,
+            images::search_images,
+            images::save_images_in_appdir,
+            tag::search_tags,
+            tag::save_tag,
+            tag::save_alias_tag,
             api::commands::search_tmdb_multi,
             api::commands::tmdb_get_external_ids,
         ])
