@@ -29,7 +29,7 @@ pub mod tmdb {
     #[allow(unused_imports)]
     use crate::{dbg, debug, error};
 
-    use std::{fmt::Debug, sync::Arc};
+    use std::fmt::Debug;
 
     use kolekk_types::api::tmdb::{
         AltTitles, ExternalIDs, ExternalIdSearchResult, Images, ListResults, Movie,
@@ -38,7 +38,7 @@ pub mod tmdb {
     use reqwest::Client;
     use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-    use crate::bad_error::{BadError, Error, InferBadError, Inspectable};
+    use crate::bad_error::{Error, InferBadError, Inspectable};
 
     const BASE_URL: &str = "https://api.themoviedb.org/3/";
     const IMAGE_BASE_URL: &str = "https://image.tmdb.org/t/p/";
