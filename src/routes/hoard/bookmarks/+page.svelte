@@ -113,6 +113,9 @@
             query = "";
             bookmark_search_input.focus();
             event.preventDefault();
+        } else if (tag_box.show && event.key == "Escape") {
+            tag_box.show = false;
+            event.preventDefault();
         }
 
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(event.key) > -1) {
@@ -158,7 +161,6 @@
             limit: 50,
             offset: 0
         });
-        console.log(searched_tags);
     };
     const add_tag_to_bookmark = async (bk: Bookmark, tag_id: number) => {
         if (!bk.tags.includes(tag_id)) {
@@ -324,6 +326,9 @@
                             {#each tags as tag}
                                 <tag
                                     on:click={async () => {
+                                        if (!tag_box.show) {
+                                            return;
+                                        }
                                         await remove_tag_from_bookmark(bk, tag.id);
                                         bk.tags = bk.tags;
                                     }}
