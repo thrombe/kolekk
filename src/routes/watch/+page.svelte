@@ -27,17 +27,21 @@
         }
     };
 
-    const search_tmdb_multi = async (query: string, page: number, include_adult: Boolean): Promise<ListResults<MultiSearchResult>> => {
+    const search_tmdb_multi = async (
+        query: string,
+        page: number,
+        include_adult: Boolean
+    ): Promise<ListResults<MultiSearchResult>> => {
         console.log('searched for page', page, 'with query', query);
         return await invoke('search_tmdb_multi', {
             query: query,
             page: page,
             includeAdult: include_adult
-        })
+        });
     };
 
     const search = async () => {
-        if ($search_query == "") {
+        if ($search_query == '') {
             $search_results.results.length = 0;
             $search_results.page = null;
         } else {
@@ -61,7 +65,11 @@
 
         if ($search_results.page! < $search_results.total_pages!) {
             let old_res = $search_results;
-            let new_res = await search_tmdb_multi($search_query, $search_results.page! + 1, $include_adult);
+            let new_res = await search_tmdb_multi(
+                $search_query,
+                $search_results.page! + 1,
+                $include_adult
+            );
 
             // tmdb returns duplicates for some reason :(
             old_res.results.map((item) => id_set.add(item.id));
