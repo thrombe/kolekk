@@ -58,6 +58,7 @@ fn main() {
             tag::search_tags,
             tag::save_tag,
             tag::save_alias_tag,
+            tag::get_tags_from_ids,
             api::commands::search_tmdb_multi,
             api::commands::tmdb_get_external_ids,
         ])

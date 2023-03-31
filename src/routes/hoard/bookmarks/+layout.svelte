@@ -7,8 +7,8 @@
     let search_input: any;
 
     const control_state = async (event: KeyboardEvent) => {
-        if (event.key == "/") {
           if (document.activeElement?.tagName == "INPUT") {return}
+        if (event.key == '\\') {
             show_search = true;
             await tick();
             search_input.focus();

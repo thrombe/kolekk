@@ -9,7 +9,7 @@ use tauri::{http::Uri, State};
 use crate::{
     bad_error::{Error, InferBadError, Inspectable},
     config::AppConfig,
-    database::AppDatabase,
+    database::{AppDatabase, ObjectType},
     filesystem::{file_mdata, path_is_in_dir, Filable, FilableUri, FileSource, FiledResult},
 };
 
@@ -19,8 +19,8 @@ pub async fn search_images(
     query: String,
     limit: usize,
     offset: usize,
-) -> Result<Vec<Image>, Error> {
-    crate::database::search_images(db.inner(), query, limit, offset)
+) -> Result<Vec<serde_json::Map<String, serde_json::Value>>, Error> {
+    crate::database::search_object(db.inner(), ObjectType::Image, query, limit, offset)
 }
 
 #[tauri::command]

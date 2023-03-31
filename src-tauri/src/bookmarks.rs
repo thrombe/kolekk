@@ -6,11 +6,12 @@ use std::{collections::HashSet, str::FromStr};
 use futures::{future::OptionFuture, stream::FuturesUnordered, StreamExt};
 use kolekk_types::{Bookmark, ByteArrayFile, DragDropPaste};
 use reqwest::Client;
+use tantivy::Term;
 use tauri::{http::Uri, Manager, State};
 
 use crate::{
-    bad_error::{Error, InferBadError, Inspectable},
-    database::{add_tag_to_object, remove_tag_from_object, AppDatabase, ObjectType},
+    bad_error::{BadError, Error, InferBadError, Inspectable},
+    database::{add_bookmark, AppDatabase, Fields, ObjectType},
 };
 
 #[tauri::command]
@@ -73,7 +74,28 @@ pub async fn add_tag_to_bookmark(
     tag_id: u32,
     db: State<'_, AppDatabase>,
 ) -> Result<(), Error> {
-    add_tag_to_object(db.inner(), id, tag_id).await
+    let doc = db.get_doc(id)?;
+    let bk = doc
+        .get_first(db.get_field(Fields::Json))
+        .and_then(|j| j.as_json())
+        .and_then(|j| {
+            serde_json::from_value::<Bookmark>(serde_json::Value::Object(j.to_owned())).ok()
+        })
+        .look(|b| dbg!(b))
+        .map(|mut b| {
+            b.tags.push(tag_id);
+            b
+        });
+
+    {
+        let writer = db.index_writer.lock().infer_err()?;
+        let _opstamp = writer.delete_term(Term::from_field_u64(db.get_field(Fields::Id), id as _));
+    }
+
+    bk.map(|b| add_bookmark(db.inner(), b))
+        .bad_err("eror")?
+        .await?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -82,7 +104,28 @@ pub async fn remove_tag_from_bookmark(
     tag_id: u32,
     db: State<'_, AppDatabase>,
 ) -> Result<(), Error> {
-    remove_tag_from_object(db.inner(), id, tag_id).await
+    let doc = db.get_doc(id)?;
+    let bk = doc
+        .get_first(db.get_field(Fields::Json))
+        .and_then(|j| j.as_json())
+        .and_then(|j| {
+            serde_json::from_value::<Bookmark>(serde_json::Value::Object(j.to_owned())).ok()
+        })
+        .look(|b| dbg!(b))
+        .map(|mut b| {
+            b.tags.retain(|t| *t != tag_id);
+            b
+        });
+
+    {
+        let writer = db.index_writer.lock().infer_err()?;
+        let _opstamp = writer.delete_term(Term::from_field_u64(db.get_field(Fields::Id), id as _));
+    }
+
+    bk.map(|b| add_bookmark(db.inner(), b))
+        .bad_err("eror")?
+        .await?;
+    Ok(())
 }
 
 pub async fn bookmarks_from_ddp(

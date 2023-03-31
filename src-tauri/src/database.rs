@@ -2,7 +2,7 @@
 use crate::{dbg, debug, error};
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     ops::Deref,
     sync::{atomic::AtomicU32, Mutex},
 };
@@ -12,7 +12,7 @@ use sea_orm::{ConnectionTrait, Database, DatabaseConnection};
 use tantivy::{
     collector::TopDocs,
     query::{AllQuery, BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, PhraseQuery, TermQuery},
-    schema::{Facet, FacetOptions, Field, IndexRecordOption, FAST, STORED, TEXT},
+    schema::{Facet, FacetOptions, Field, IndexRecordOption, FAST, INDEXED, STORED, TEXT},
     DocAddress, Document, Index, IndexReader, IndexWriter, Term,
 };
 
@@ -81,7 +81,7 @@ pub async fn add_tag(db: &AppDatabase, tag: Tag) -> Result<(), Error> {
         db.get_field(Fields::Json),
         json.as_object().bad_err("cannot fail")?.to_owned(),
     );
-    doc.add_facet(db.get_field(Fields::ObjectType), ObjectType::Bookmark);
+    doc.add_facet(db.get_field(Fields::ObjectType), ObjectType::Tag);
     doc.add_u64(
         db.get_field(Fields::Id),
         match tag {
@@ -103,57 +103,8 @@ pub async fn add_tag(db: &AppDatabase, tag: Tag) -> Result<(), Error> {
     Ok(())
 }
 
-// is async cuz the other db might require it in future
-pub async fn add_tag_to_object(db: &AppDatabase, id: u32, tag_id: u32) -> Result<(), Error> {
-    add_field_value(db, id, Fields::Tag, tag_id as u64)
-}
-
-// is async cuz the other db might require it in future
-pub async fn remove_tag_from_object(db: &AppDatabase, id: u32, tag_id: u32) -> Result<(), Error> {
-    remove_field_value(db, id, Fields::Tag, tag_id as u64)
-}
-
-pub fn add_field_value(
-    db: &AppDatabase,
-    id: u32,
-    field: Fields,
-    value: impl Into<tantivy::schema::Value>,
-) -> Result<(), Error> {
-    let mut doc = db.get_doc(id)?;
-    doc.add_field_value(db.get_field(field), value.into());
-
-    let mut writer = db.index_writer.lock().infer_err()?;
-    let _opstamp = writer.delete_term(Term::from_field_u64(db.get_field(Fields::Id), id as _));
-    let _opstamp = writer.add_document(doc).infer_err()?;
-    let _opstamp = writer.commit().infer_err()?;
-    Ok(())
-}
-
-pub fn remove_field_value(
-    db: &AppDatabase,
-    id: u32,
-    field: Fields,
-    value: impl Into<tantivy::schema::Value>,
-) -> Result<(), Error> {
-    let doc = db.get_doc(id)?;
-
-    let mut new_doc = Document::new();
-    let value = value.into();
-    let f = db.get_field(field);
-    doc.field_values()
-        .iter()
-        .filter(|fv| fv.field != f || fv.value != value)
-        .for_each(|fv| {
-            new_doc.add_field_value(fv.field(), fv.value.clone());
-        });
-
-    let mut writer = db.index_writer.lock().infer_err()?;
-    let _opstamp = writer.delete_term(Term::from_field_u64(db.get_field(Fields::Id), id as _));
-    let _opstamp = writer.add_document(new_doc).infer_err()?;
-    let _opstamp = writer.commit().infer_err()?;
-    Ok(())
-}
-
+// TODO: when query is empty, sort by recently added / most recent interations / total interactions + most recent interactions
+//       collect this stat inside the objects
 pub fn search_object(
     db: &AppDatabase,
     ob_type: ObjectType,
@@ -193,24 +144,84 @@ pub fn search_object(
         Box::new(PhraseQuery::new(phrase_query_terms)) as _
     };
 
-    let tag_query = Box::new(BooleanQuery::new(
-        query
-            .split_whitespace()
-            .map(|t| {
-                (
-                    Occur::Should,
-                    Box::new(FuzzyTermQuery::new(
-                        Term::from_field_text(db.get_field(Fields::Tag), t),
-                        2,    // ?
-                        true, // what??
+    // - search tags
+    // - replace all alias tags by main
+    // - map tags to ids
+    // - dedup tag ids while keeping the ones that appear first
+    // - only consider first n tags / tags above a certain score
+    // - convert these into queries (term queries + boost with the score)
+    // - search items for this query
+    let mut tag_set = HashSet::new();
+    let tag_prequery = BooleanQuery::new(vec![
+        (
+            Occur::Must,
+            Box::new(TermQuery::new(
+                Term::from_facet(db.get_field(Fields::ObjectType), &ObjectType::Tag.into()),
+                IndexRecordOption::Basic,
+            )) as _,
+        ),
+        (
+            Occur::Must,
+            Box::new(BooleanQuery::new(
+                query
+                    .split_whitespace()
+                    .map(|t| {
+                        (
+                            Occur::Should,
+                            Box::new(FuzzyTermQuery::new(
+                                Term::from_field_text(db.get_field(Fields::Title), t),
+                                2,    // ?
+                                true, // what??
+                            )) as _,
+                        )
+                    })
+                    .collect(),
+            )),
+        ),
+    ]);
+    let tags = searcher
+        .search(&tag_prequery, &TopDocs::with_limit(20).and_offset(0))
+        .infer_err()
+        .look(|e| dbg!(e))?
+        .into_iter()
+        .map(|(score, address)| {
+            let doc = searcher.doc(address).look(|e| dbg!(e)).infer_err()?;
+            let t = doc
+                .get_first(db.get_field(Fields::Json))
+                .bad_err("no value")?
+                .as_json()
+                .bad_err("not an object")?
+                .to_owned();
+            let t = serde_json::from_value::<Tag>(serde_json::Value::Object(t)).infer_err()?;
+            let t = match t {
+                Tag::Main { id, .. } => id,
+                Tag::Alias { alias_to, .. } => alias_to,
+            };
+            Ok((score, t, tag_set.insert(t)))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let tags = tags
+        .into_iter()
+        .enumerate()
+        .filter(|(_, (_, _, f))| *f)
+        .map(|(_i, (score, t, _))| (score, t))
+        .map(|(score, t)| {
+            (
+                Occur::Should,
+                Box::new(BoostQuery::new(
+                    Box::new(TermQuery::new(
+                        Term::from_field_u64(db.get_field(Fields::Tag), t as _),
+                        IndexRecordOption::Basic,
                     )) as _,
-                )
-            })
-            .collect(),
-    ));
+                    score,
+                )) as _,
+            )
+        })
+        .collect();
+    let tag_query = Box::new(BooleanQuery::new(tags));
 
     let title_fuzzy_query = Box::new(BooleanQuery::new(
-        // TODO: implement these  a methods of Fields and ObjectType
+        // TODO: implement these as methods of Fields and ObjectType
         query
             .split_whitespace()
             .map(|t| {
@@ -257,152 +268,11 @@ pub fn search_object(
         .collect()
 }
 
-pub fn search_images(
-    db: &AppDatabase,
-    query: String,
-    limit: usize,
-    offset: usize,
-) -> Result<Vec<Image>, Error> {
-    // TODO: look into using QueryParser, or maybe somehow including regex queries and stuff
-    // TODO: is query is empty, return results by recently added or recently viewed or a mixture of this stuff
-    //       - 2 fast values, 1 each for when added timestamp and for last viewed timestamp
-    //       - timestamps are not really needed, so just an increasing counter will also do
-
-    // facet:TermQuery AND (
-    //   title:PhraseQuery(entire query) -> priority 0
-    //   // OR tag(s):TermQuery(split at whiltespace map) -> priority 1
-    //   OR tag(s):FuzzyTermQuery(split at whitespace map) -> priority 2
-    //   OR title:FuzzyTermQuery(split at whitespace map) -> priority 3
-    // )
-    let searcher = db.get_searcher();
-
-    let obj_type_query = Box::new(TermQuery::new(
-        Term::from_facet(db.get_field(Fields::ObjectType), &ObjectType::Image.into()),
-        IndexRecordOption::Basic,
-    ));
-
-    let phrase_query_terms = query
-        .split_whitespace()
-        .map(|t| Term::from_field_text(db.get_field(Fields::Title), t))
-        .collect::<Vec<_>>();
-    let title_query = if phrase_query_terms.len() < 2 {
-        // PhraseQuery does not support less than 2 terms
-        Box::new(TermQuery::new(
-            Term::from_field_text(db.get_field(Fields::Title), &query),
-            IndexRecordOption::Basic,
-        )) as _
-    } else {
-        Box::new(PhraseQuery::new(phrase_query_terms)) as _
-    };
-
-    let tag_query = Box::new(BooleanQuery::new(
-        query
-            .split_whitespace()
-            .map(|t| {
-                (
-                    Occur::Should,
-                    Box::new(FuzzyTermQuery::new(
-                        Term::from_field_text(db.get_field(Fields::Tag), t),
-                        2,    // ?
-                        true, // what??
-                    )) as _,
-                )
-            })
-            .collect(),
-    ));
-
-    let title_fuzzy_query = Box::new(BooleanQuery::new(
-        // TODO: implement these  a methods of Fields and ObjectType
-        query
-            .split_whitespace()
-            .map(|t| {
-                (
-                    Occur::Should, // TODO: should this be Must instead?
-                    Box::new(FuzzyTermQuery::new(
-                        Term::from_field_text(db.get_field(Fields::Title), t),
-                        2,    // ?
-                        true, // what??
-                    )) as _,
-                )
-            })
-            .collect(),
-    ));
-
-    let search_query = Box::new(BooleanQuery::new(vec![
-        // TODO: the priority stuff
-        (Occur::Should, title_query),
-        (Occur::Should, tag_query),
-        (Occur::Should, title_fuzzy_query),
-    ]));
-
-    searcher
-        .search(
-            &BooleanQuery::new(vec![
-                (Occur::Must, obj_type_query),
-                (Occur::Should, Box::new(AllQuery)),
-                (Occur::Should, search_query),
-            ]),
-            &TopDocs::with_limit(limit).and_offset(offset),
-        )
-        .infer_err()
-        .look(|e| dbg!(e))?
-        .into_iter()
-        .map(move |(_score, address)| {
-            let doc = searcher.doc(address).look(|e| dbg!(e)).infer_err()?;
-            Ok(Image {
-                // these unwraps should probably be fine
-                id: doc
-                    .get_first(db.get_field(Fields::Id))
-                    .bad_err("no id")?
-                    .as_u64()
-                    .unwrap() as _,
-                title: doc
-                    .get_first(db.get_field(Fields::Title))
-                    .bad_err("no title")?
-                    .as_text()
-                    .unwrap()
-                    .to_owned(),
-                src_path: doc
-                    .get_first(db.get_field(Fields::SrcPath))
-                    .bad_err("no src_path")?
-                    .as_text()
-                    .unwrap()
-                    .to_owned(),
-                db_path: doc
-                    .get_first(db.get_field(Fields::DbPath))
-                    .bad_err("no db_path")?
-                    .as_text()
-                    .unwrap()
-                    .to_owned(),
-                chksum: doc
-                    .get_first(db.get_field(Fields::Chksum))
-                    .bad_err("no chksum")?
-                    .as_bytes()
-                    .unwrap()
-                    .to_owned(),
-                size: doc
-                    .get_first(db.get_field(Fields::Size))
-                    .bad_err("no size")?
-                    .as_u64()
-                    .unwrap() as _,
-                urls: doc
-                    .get_all(db.get_field(Fields::Url))
-                    .map(|u| u.as_text().unwrap().to_owned())
-                    .collect(),
-                tags: doc
-                    .get_all(db.get_field(Fields::Tag))
-                    .map(|t| t.as_u64().unwrap().to_owned() as _)
-                    .collect(),
-            })
-        })
-        .collect()
-}
-
 pub struct AppDatabase {
     sql: DatabaseConnection,
     index: Index,
     index_reader: IndexReader,
-    index_writer: Mutex<IndexWriter>,
+    pub index_writer: Mutex<IndexWriter>, // TODO: RWlock + make commits explicit (don't commit in add_object functions. commit should be called when needed explicitly)
     fields: HashMap<Fields, Field>,
     id_gen: AtomicU32,
 }
@@ -443,7 +313,7 @@ impl AppDatabase {
 
         let mut fields = HashMap::<Fields, Field>::new();
 
-        let id = schema_builder.add_u64_field(&Fields::Id, STORED | FAST);
+        let id = schema_builder.add_u64_field(&Fields::Id, STORED | FAST | INDEXED);
         let _ = fields.insert(Fields::Id, id);
         let src_path = schema_builder.add_text_field(&Fields::SrcPath, STORED);
         let _ = fields.insert(Fields::SrcPath, src_path);
@@ -455,7 +325,7 @@ impl AppDatabase {
         let _ = fields.insert(Fields::Title, title);
         let description = schema_builder.add_text_field(&Fields::Description, STORED | TEXT);
         let _ = fields.insert(Fields::Description, description);
-        let tag = schema_builder.add_u64_field(&Fields::Tag, STORED | FAST);
+        let tag = schema_builder.add_u64_field(&Fields::Tag, STORED | FAST | INDEXED);
         let _ = fields.insert(Fields::Tag, tag);
         let object_type =
             schema_builder.add_facet_field(&Fields::ObjectType, FacetOptions::default());
@@ -501,6 +371,7 @@ impl AppDatabase {
                 &TermQuery::new(id_term, IndexRecordOption::Basic),
                 &TopDocs::with_limit(1),
             )
+            .look(|e| dbg!(e))
             .infer_err()?;
         let (_score, doc_address) = top_docs.first().bad_err("object does not exist")?;
         Ok(*doc_address)
