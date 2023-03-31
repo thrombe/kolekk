@@ -2,6 +2,7 @@
     import DataListener from '$lib/DataListener.svelte';
     import { files_to_bytearrays } from '$lib/data_listener';
     import { fastScroll } from '$lib/fast_scroll';
+    import Observer from '$lib/Observer.svelte';
     import { listen, type UnlistenFn, type Event } from '@tauri-apps/api/event';
     import { invoke } from '@tauri-apps/api/tauri';
     import { onMount, tick } from 'svelte';
@@ -32,6 +33,15 @@
         bookmarks = list;
         $selected = 0;
     };
+    const next_page = async () => {
+        let list: [Bookmark] = await invoke('search_bookmarks', {
+            query: query,
+            limit: 50,
+            offset: bookmarks.length
+        });
+        bookmarks.push(...list);
+        bookmarks = bookmarks;
+    }
 
     search_bookmarks();
     const auto_update = (_node: any) => {
@@ -349,6 +359,7 @@
             >
         {/if}
     {/each}
+    <Observer enter_screen={next_page} />
 </cl>
 
 <style>
