@@ -7,6 +7,11 @@
     export let width = 200;
     export let lazy = false;
     export let aspect_ratio = 1.0;
+    export let selected = false;
+    let ele: any;
+    $: if ((selected || true) && ele) {
+        ele.scrollIntoView({ block: 'nearest' });
+    };
 
     let lazy_img_src = '';
 
@@ -19,22 +24,22 @@
             lazy_img_src = img_source;
         }
     }
+
+    $: color = selected? "#558855" : "#885555";
 </script>
 
-<cl>
+<cl bind:this={ele}>
     {#if lazy}
         <Observer enter_screen={on_intersect} />
     {/if}
 
     <card-div draggable="true" style="height:{width / aspect_ratio}px; width: {width}px">
-        <card-insides draggable="true">
-            <image-div>
-                <img draggable="false" src={lazy_img_src} alt="" />
-            </image-div>
+        <card-insides draggable="true" style={"--color: " + color + ";" + "--color-transparent: " + color + "00;"}>
+            <image-div style={"background-image: url(" + lazy_img_src + ");"} />
             {#if title && title.length > 0}
-                <span class="title">
-                    {title}
-                </span>
+                <title-box>
+                    <span>{title}</span>
+                </title-box>
             {/if}
 
             {#if tags.length > 0}
@@ -50,38 +55,45 @@
 </cl>
 
 <style>
+    * {
+        --border: 2px;
+        --border-radius: 15px;
+    }
+
     image-div {
         width: 100%;
-        /* height: 100%; */
-        max-height: 100%;
-        height: calc(100%);
+        height: 100%;
+        overflow: hidden;
+        background-size: cover;
+        background-color: var(--color);
+    }
+
+    title-box {
+        position: absolute;
+        bottom: 0;
+        width: calc(100% - 3 * var(--border));
+        height: 25%;
+        background-image: linear-gradient(to top, var(--color), var(--color-transparent));
+        border-radius: var(--border-radius);
+        margin-bottom: 3px;
         overflow: hidden;
     }
 
-    image-div img {
-        /* border-radius: 15px; */
-        /* border-bottom-left-radius: 0px; */
-        /* border-bottom-right-radius: 0px; */
-
-        width: calc(100%);
-        height: calc(100%);
-        object-fit: cover;
-    }
-
-    .title {
-        font-size: 1.17ch;
-        padding-bottom: 0.556ch;
-        font-weight: 500;
-        width: calc(100%);
-        height: min-content;
-
+    title-box span {
+        position: absolute;
+        bottom: 0;
+        width: calc(100% - 6 * var(--border));
+        padding-left: calc(3 * var(--border));
+        padding-right: calc(3 * var(--border));
+        border-radius: var(--border-radius);
         text-align: center;
         text-overflow: ellipsis;
         overflow: hidden;
         white-space: nowrap;
-
-        color: aquamarine;
-        /* background-color: blue; */
+        font-size: 1.17ch;
+        padding-bottom: 0.456ch;
+        font-weight: 500;
+        color: #eeeeee;
     }
 
     card-div {
@@ -89,29 +101,21 @@
     }
 
     card-insides {
-        /* width: 100%; */
-        /* height: calc(100% - 2px - 6px); */
-        height: calc(100% - 0px - 5px);
+        height: calc(100% - 2 * var(--border) - 6px);
 
         display: flex;
         flex-direction: column;
         align-items: center;
-        color: rgb(179, 179, 179);
+        color: var(--color);
         margin-left: 3px;
         margin-right: 3px;
         margin-top: 3px;
         margin-bottom: 3px;
 
-        background-color: blueviolet;
-
-        border: 1px solid;
-        border-radius: 15px;
-        border-color: red;
+        border: var(--border) solid;
+        border-radius: var(--border-radius);
 
         overflow: hidden;
-    }
-
-    card-div + card-div {
     }
 
     tags-div {
@@ -158,14 +162,6 @@
         margin-left: 1.5%;
     }
 
-    buttons {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        width: 100%;
-        height: 33px;
-    }
-
     tag-padding {
         /* width: 12px; */
         height: 1px;
@@ -180,10 +176,5 @@
         overflow: auto;
         width: 100%;
         /* height: 100%; */
-    }
-    rw {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
     }
 </style>
