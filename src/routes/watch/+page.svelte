@@ -46,25 +46,23 @@
             $search_results.page = null;
         } else {
             $search_results = await search_tmdb_multi($search_query, 1, $include_adult);
+            id_set = new Set();
+            collisions = new Array();
 
-            await end_reached();
+            setTimeout(end_reached, 500);
         }
     };
 
     let id_set = new Set();
+    let collisions = new Array();
     const end_reached = async () => {
         await tick();
 
-        if (!$search_results.page) {
-            id_set = new Set();
-            return;
-        }
         if (!end_is_visible) {
             return;
         }
 
         if ($search_results.page! < $search_results.total_pages!) {
-            let old_res = $search_results;
             let new_res = await search_tmdb_multi(
                 $search_query,
                 $search_results.page! + 1,
@@ -72,14 +70,21 @@
             );
 
             // tmdb returns duplicates for some reason :(
-            old_res.results.map((item) => id_set.add(item.id));
-            new_res.results = new_res.results.filter((item) => !id_set.has(item.id));
+            new_res.results = new_res.results.filter((item) => {
+                if (id_set.has(item.id)) {
+                    collisions.push(item);
+                    return false;
+                } else {
+                    id_set.add(item.id);
+                    return true;
+                }
+            });
 
-            old_res.results.push(...new_res.results);
-            new_res.results = old_res.results;
+            $search_results.results.push(...new_res.results);
+            new_res.results = $search_results.results;
             $search_results = new_res;
 
-            await end_reached();
+            setTimeout(end_reached, 500);
         }
     };
 
@@ -88,13 +93,21 @@
     let window_height = 100;
 </script>
 
-<input bind:value={$search_query} on:input={search} />
-<button
-    on:click={() => {
-        $include_adult = !$include_adult;
-        search();
-    }}>Search</button
->
+<cl class={"inputs"}>
+    <input bind:value={$search_query} on:input={search} />
+    <button on:click={search}>Search</button>
+    <button
+        on:click={() => {
+            $include_adult = !$include_adult;
+            search();
+        }}>include mature: {$include_adult}</button
+    >
+    <button on:click={() =>{
+        console.log($search_results.results, collisions);
+        let ids = $search_results.results.map(e => e.id);
+        console.log(collisions.filter(e => !ids.includes(e.id)));
+    }} >{($search_results).results.length}</button>
+</cl>
 
 <cl style="" use:fastScroll>
     {#each $search_results.results as media (media.id)}
@@ -102,6 +115,7 @@
             on:click={() => {
                 open_in_stremio(media.id, media.media_type);
             }}
+            on:keydown={()=>{}}
         >
             <ImageCard
                 title={media.media_type == 'tv' ? media.name : media.title}
@@ -122,11 +136,20 @@
 <svelte:window bind:innerHeight={window_height} bind:innerWidth={window_width} />
 
 <style>
+    * {
+        --input-height: 33px;
+    }
+
+    .inputs {
+        height: var(--input-height);
+    }
+
     cl {
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
         overflow: auto;
         width: 100%;
+        height: calc(100% - var(--input-height));
     }
 </style>

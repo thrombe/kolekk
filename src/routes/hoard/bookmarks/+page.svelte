@@ -48,7 +48,7 @@
         // document.addEventListener("item-added", search_bookmarks, true);
         let unlisten: UnlistenFn | undefined;
         let destroyed = false;
-        listen('item-added', (event: Event<number>) => {
+        listen('item-added', (_event: Event<number>) => {
             search_bookmarks();
         }).then((e) => {
             if (destroyed) {
