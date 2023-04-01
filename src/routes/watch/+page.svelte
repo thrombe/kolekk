@@ -48,6 +48,15 @@
             $search_results = await search_tmdb_multi($search_query, 1, $include_adult);
             id_set = new Set();
             collisions = new Array();
+            $search_results.results = $search_results.results.filter((item) => {
+                if (id_set.has(item.id)) {
+                    collisions.push(item);
+                    return false;
+                } else {
+                    id_set.add(item.id);
+                    return true;
+                }
+            });
 
             setTimeout(end_reached, 500);
         }
