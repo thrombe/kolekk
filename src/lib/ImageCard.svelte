@@ -9,7 +9,7 @@
     export let aspect_ratio = 1.0;
     export let selected = false;
     let ele: any;
-    $: if ((selected || true) && ele) {
+    $: if (selected && ele) {
         ele.scrollIntoView({ block: 'nearest' });
     };
 
@@ -26,6 +26,8 @@
     }
 
     $: color = selected? "#558855" : "#885555";
+    $: wrap = selected? "normal" : "nowrap";
+    $: shade_height = selected? "60%" : "25%";
 </script>
 
 <cl bind:this={ele}>
@@ -37,8 +39,8 @@
         <card-insides draggable="true" style={"--color: " + color + ";" + "--color-transparent: " + color + "00;"}>
             <image-div style={"background-image: url(" + lazy_img_src + ");"} />
             {#if title && title.length > 0}
-                <title-box>
-                    <span>{title}</span>
+                <title-box style={"height: " + shade_height + ";"} >
+                    <span style={"white-space: " + wrap + ";"} >{title}</span>
                 </title-box>
             {/if}
 
@@ -72,7 +74,6 @@
         position: absolute;
         bottom: 0;
         width: calc(100% - 3 * var(--border));
-        height: 25%;
         background-image: linear-gradient(to top, var(--color), var(--color-transparent));
         border-radius: var(--border-radius);
         margin-bottom: 3px;
@@ -89,11 +90,10 @@
         text-align: center;
         text-overflow: ellipsis;
         overflow: hidden;
-        white-space: nowrap;
-        font-size: 1.17ch;
+        font-size: 1.37ch;
         padding-bottom: 0.456ch;
-        font-weight: 500;
-        color: #eeeeee;
+        font-weight: 550;
+        color: #cccccc;
     }
 
     card-div {

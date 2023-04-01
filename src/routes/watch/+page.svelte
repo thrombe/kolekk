@@ -131,6 +131,7 @@
             // await add_tag_button();
             // event.preventDefault();
         } else if (event.key == '/') {
+            selected = 0;
             $search_query = "";
             search_input.focus();
             event.preventDefault();
@@ -154,7 +155,7 @@
         }}>include mature: {$include_adult}</button
     >
     <button on:click={() =>{
-        console.log($search_results.results, collisions);
+        console.log($search_results.results, collisions, id_set);
         let ids = $search_results.results.map(e => e.id);
         console.log(collisions.filter(e => !ids.includes(e.id)));
     }} >{($search_results).results.length}</button>
@@ -162,7 +163,12 @@
 
 <cl style="" use:fastScroll >
     {#each $search_results.results as media, i (media.id)}
-        <div>
+        <div
+            on:click={() => {
+                selected = i;
+            }}
+            on:keydown={()=>{}}
+        >
             <ImageCard
                 title={media.media_type == 'tv' ? media.name : media.title}
                 img_source={media.poster_path
@@ -174,11 +180,11 @@
                 selected={selected == i}
             />
             <button
-                class="nice_button"
+                class="stremio-button"
                 on:click={() => {
                     open_in_stremio(media.id, media.media_type);
                 }}
-            />
+            ><span>stremio</span></button>
         </div>
     {/each}
 
@@ -209,28 +215,37 @@
         position: relative;
     }
 
-    .nice_button {
-        --width: 30px;
+    .stremio-button {
+        --width: 20px;
         --height: 20px;
         position: absolute;
         z-index: 2;
         float: left;
         height: var(--height);
         width: var(--width);
-        top: calc(9% - var(--height) / 2);
-        left: calc(16% - var(--width) / 2);
+        top: calc(var(--height) / 2);
+        left: calc(var(--width) / 2);
         background-color: #ffffffaf;
         border: 2px solid;
         border-radius: 8px;
         border-color: #885555;
         padding: 0px;
-        margin: -px;
+        margin: 0px;
         transition: width 0.2s ease;
+        text-align: center;
+        line-height: calc(var(--height) / 2.0);
+        color: transparent;
     }
 
-    .nice_button:hover {
+    .stremio-button span {
+        font-size: 1.87ch;
+        font-weight: 700;
+    }
+
+    .stremio-button:hover {
         background-color: #558855af;
-        width: calc(2 * var(--width));
+        width: calc(2.9 * var(--width));
         transition: width 0.2s ease;
+        color: #d8d8d8;
     }
 </style>
