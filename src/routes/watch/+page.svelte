@@ -124,7 +124,7 @@
                 selected -= elements_per_row;
             }
         } else if (event.key == 'ArrowDown') {
-            if (selected + elements_per_row < $search_results.results.length) {
+            if (selected + 1 < $search_results.results.length) {
                 selected += elements_per_row;
             }
         } else if (event.key == 'a') {
@@ -158,10 +158,10 @@
         console.log($search_results.results, collisions, id_set);
         let ids = $search_results.results.map(e => e.id);
         console.log(collisions.filter(e => !ids.includes(e.id)));
-    }} >{($search_results).results.length}</button>
+    }} >{($search_results).results.length} | end visible: {end_is_visible}</button>
 </cl>
 
-<cl style="" use:fastScroll >
+<cl use:fastScroll >
     {#each $search_results.results as media, i (media.id)}
         <div
             on:click={() => {
@@ -177,7 +177,7 @@
                 lazy={hasAPI}
                 width={window_width / 5}
                 aspect_ratio={2 / 3}
-                selected={selected == i}
+                selected={selected == i || (i == $search_results.results.length-1 && selected >= $search_results.results.length)}
             />
             <button
                 class="stremio-button"
