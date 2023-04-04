@@ -234,7 +234,7 @@
 
 {#if new_bookmarks.length > 0}
     <some-box>
-        <cl class={'new-items'} use:fastScroll>
+        <cl class={'new-items'} >
             {#each new_bookmarks as bk, i}
                 <bookmark>
                     <div class={'bookmark-buttons'}>
@@ -253,7 +253,7 @@
                     </div>
                     <div class={'content'}>
                         <span>{bk.title}</span>
-                        <tags use:fastScroll>
+                        <tags>
                             {#each bk.tags as tag}
                                 <tag>{tag}</tag>
                             {/each}
@@ -266,7 +266,6 @@
 {/if}
 
 <cl
-    use:fastScroll
     bind:this={main_element}
     on:scroll={() => ($scroll_pos = main_element.scrollTop)}
 >
@@ -331,7 +330,7 @@
                             </tags>
                         </floating-tag-box>
                     {/if}
-                    <tags use:fastScroll>
+                    <tags>
                         {#await get_tags_from_ids(bk.tags) then tags}
                             {#each tags as tag}
                                 <tag

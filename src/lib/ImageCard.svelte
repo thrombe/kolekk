@@ -30,33 +30,39 @@
     $: shade_height = selected? "60%" : "25%";
 </script>
 
-<cl bind:this={ele}>
-    {#if lazy}
-        <Observer enter_screen={on_intersect} />
-    {/if}
+<this-helps-position-the-title>
+    <cl bind:this={ele}>
+        {#if lazy}
+            <Observer enter_screen={on_intersect} />
+        {/if}
 
-    <card-div draggable="true" style="height:{width / aspect_ratio}px; width: {width}px">
-        <card-insides draggable="true" style={"--color: " + color + ";" + "--color-transparent: " + color + "00;"}>
-            <image-div style={"background-image: url(" + lazy_img_src + ");"} />
-            {#if title && title.length > 0}
-                <title-box style={"height: " + shade_height + ";"} >
-                    <span style={"white-space: " + wrap + ";"} >{title}</span>
-                </title-box>
-            {/if}
+        <card-div draggable="true" style="height:{width / aspect_ratio}px; width: {width}px">
+            <card-insides draggable="true" style={"--color: " + color + ";" + "--color-transparent: " + color + "00;"}>
+                <image-div style={"background-image: url(" + lazy_img_src + ");"} />
+                {#if title && title.length > 0}
+                    <title-box style={"height: " + shade_height + ";"} >
+                        <span style={"white-space: " + wrap + ";"} >{title}</span>
+                    </title-box>
+                {/if}
 
-            {#if tags.length > 0}
-                <tags-div>
-                    <tag-padding>{'a'}</tag-padding>
-                    {#each tags as tag}
-                        <tag>{tag}</tag>
-                    {/each}
-                </tags-div>
-            {/if}
-        </card-insides>
-    </card-div>
-</cl>
+                {#if tags.length > 0}
+                    <tags-div>
+                        <tag-padding>{'a'}</tag-padding>
+                        {#each tags as tag}
+                            <tag>{tag}</tag>
+                        {/each}
+                    </tags-div>
+                {/if}
+            </card-insides>
+        </card-div>
+    </cl>
+</this-helps-position-the-title>
 
 <style>
+    this-helps-position-the-title {
+        position: relative;
+    }
+    
     * {
         --border: 2px;
         --border-radius: 15px;
@@ -67,6 +73,7 @@
         height: 100%;
         overflow: hidden;
         background-size: cover;
+        background-position: center;
         background-color: var(--color);
     }
 
@@ -78,6 +85,7 @@
         border-radius: var(--border-radius);
         margin-bottom: 3px;
         overflow: hidden;
+        left: var(--border);
     }
 
     title-box span {

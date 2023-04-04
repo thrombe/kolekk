@@ -161,7 +161,7 @@
     }} >{($search_results).results.length} | end visible: {end_is_visible}</button>
 </cl>
 
-<cl use:fastScroll >
+<cl>
     {#each $search_results.results as media, i (media.id)}
         <div
             on:click={() => {
