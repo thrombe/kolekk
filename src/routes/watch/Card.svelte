@@ -7,7 +7,6 @@
     export let width = 200;
     export let aspect_ratio = 1.0;
     export let selected = false;
-    export let bg_color = 'transparent';
     export let media: MultiSearchResult;
     export let on_click: any = () => {};
 
@@ -36,6 +35,7 @@
 
     $: wrap = selected ? 'normal' : 'nowrap';
     $: shade_height = selected ? '60%' : '25%';
+    let bg_color = '#282828';
 
     let external_ids: ExternalIDs;
     const open_in_stremio = async () => {
