@@ -8,15 +8,18 @@
     export let aspect_ratio = 1.0;
     export let bg_color = 'transparent';
 
-    let ele: HTMLElement;
     let insides: HTMLElement;
-    $: if (ele) {
-        ele.style.setProperty('--bg-color', bg_color);
-    }
+    $: height = width / aspect_ratio;
     $: if (insides) {
+        insides.style.setProperty('--bg-color', bg_color);
+
         insides.style.width = width.toString() + 'px';
-        let height = width / aspect_ratio;
         insides.style.height = height.toString() + 'px';
+    }
+    let abs: HTMLElement;
+    $: if (abs) {
+        abs.style.left = (width / 2).toString() + "px";
+        abs.style.top = (height / 2).toString() + "px";
     }
 
     let lazy_img_src = '';
@@ -32,9 +35,13 @@
     }
 </script>
 
-<cl bind:this={ele}>
+<cl>
     {#if lazy && hasAPI}
-        <Observer enter_screen={on_intersect} />
+        <rel>
+            <abs bind:this={abs}>
+                <Observer enter_screen={on_intersect} />
+            </abs>
+        </rel>
     {/if}
 
     <card-div bind:this={insides}>
@@ -45,6 +52,13 @@
 </cl>
 
 <style>
+    abs {
+        position: absolute;
+    }
+    rel {
+        position: relative;
+    }
+
     image-div {
         width: 100%;
         height: 100%;
@@ -55,6 +69,7 @@
 
     card-insides {
         height: 100%;
+        width: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -63,6 +78,5 @@
 
     cl {
         display: flex;
-        width: 100%;
     }
 </style>

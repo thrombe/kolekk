@@ -148,6 +148,7 @@
     }
 
     card-insides {
+        width: calc(100% - 2 * var(--border) - 6px);
         height: calc(100% - 2 * var(--border) - 6px);
 
         display: flex;
