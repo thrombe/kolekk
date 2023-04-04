@@ -41,7 +41,7 @@
         });
         bookmarks.push(...list);
         bookmarks = bookmarks;
-    }
+    };
 
     search_bookmarks();
     const auto_update = (_node: any) => {
@@ -120,10 +120,10 @@
             await add_tag_button();
             event.preventDefault();
         } else if (event.key == '/') {
-            query = "";
+            query = '';
             bookmark_search_input.focus();
             event.preventDefault();
-        } else if (tag_box.show && event.key == "Escape") {
+        } else if (tag_box.show && event.key == 'Escape') {
             tag_box.show = false;
             event.preventDefault();
         }
@@ -234,7 +234,7 @@
 
 {#if new_bookmarks.length > 0}
     <some-box>
-        <cl class={'new-items'} >
+        <cl class={'new-items'}>
             {#each new_bookmarks as bk, i}
                 <bookmark>
                     <div class={'bookmark-buttons'}>
@@ -265,10 +265,7 @@
     </some-box>
 {/if}
 
-<cl
-    bind:this={main_element}
-    on:scroll={() => ($scroll_pos = main_element.scrollTop)}
->
+<cl bind:this={main_element} on:scroll={() => ($scroll_pos = main_element.scrollTop)}>
     {#each bookmarks as bk, i (bk.id)}
         {#if i == $selected}
             <bookmark
