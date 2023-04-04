@@ -22,7 +22,7 @@ fn main() {
     let mut contents = String::new();
 
     macro_rules! export {
-        ($($t:ty), *) => {
+        ($($t:ty), *  $(,)?) => {
             $(
                 let name = format!("{}.ts", stringify!($t));
                 let mut ttype = String::new();
@@ -52,7 +52,7 @@ fn main() {
         FilderKind,
         Object,
         Tag,
-        Group
+        Group,
     );
     export!(
         AllInfo<()>,
@@ -69,7 +69,7 @@ fn main() {
         Tv,
         Title,
         Genre,
-        Season
+        Season,
     );
 
     remove_dir(cache_dir).unwrap();
