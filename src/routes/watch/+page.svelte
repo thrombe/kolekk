@@ -2,9 +2,9 @@
     import { invoke } from '@tauri-apps/api/tauri';
     import type { ListResults, MultiSearchResult } from 'types';
     import { search_results, search_query, include_adult } from './media';
-    import Observer from '$lib/Observer.svelte';
     import { tick } from 'svelte';
     import Card from './Card.svelte';
+    import Scrollable from '$lib/Scrollable.svelte';
 
     const search_tmdb_multi = async (
         query: string,
@@ -80,45 +80,15 @@
     let window_width = 100;
     let window_height = 100;
     let selected = 0;
-    let elements_per_row = 5;
     let search_input: any;
     const on_keydown = async (event: KeyboardEvent) => {
-        if (document.activeElement?.tagName == 'INPUT') {
-            if (event.key == 'Escape') {
-                (document.activeElement as HTMLElement).blur();
-            }
-            return;
-        }
-
-        if (event.key == 'ArrowLeft') {
-            if (selected - 1 >= 0) {
-                selected -= 1;
-            }
-        } else if (event.key == 'ArrowRight') {
-            if (selected + 1 < $search_results.results.length) {
-                selected += 1;
-            }
-        } else if (event.key == 'ArrowUp') {
-            if (selected - elements_per_row >= 0) {
-                selected -= elements_per_row;
-            }
-        } else if (event.key == 'ArrowDown') {
-            if (selected + 1 < $search_results.results.length) {
-                selected += elements_per_row;
-            }
-        } else if (event.key == 'a') {
+        if (event.key == 'a') {
             // await add_tag_button();
             // event.preventDefault();
         } else if (event.key == '/') {
             selected = 0;
             $search_query = '';
             search_input.focus();
-            event.preventDefault();
-        } else if (false && event.key == 'Escape') {
-            // event.preventDefault();
-        }
-
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(event.key) > -1) {
             event.preventDefault();
         }
     };
@@ -147,28 +117,37 @@
 </cl>
 
 <cl>
-    {#each $search_results.results as media, i (media.id)}
-        <Card
-            width={window_width / 5}
-            aspect_ratio={2 / 3}
-            selected={selected == i ||
-                (i == $search_results.results.length - 1 &&
-                    selected >= $search_results.results.length)}
-            {media}
-            on_click={() => {
-                selected = i;
-            }}
-        />
-    {/each}
+    <Scrollable
+        columns={5}
+        num_items={$search_results.results.length}
+        bind:selected={selected}
+        width={window_width}
+        end_reached={end_reached}
+        on_keydown={on_keydown}
+        bind:end_is_visible={end_is_visible}
+        keyboard_control={true}
 
-    <!-- observer -->
-    <Observer enter_screen={end_reached} bind:visible={end_is_visible} />
+        let:item_width={width}
+    >
+        {#each $search_results.results as media, i (media.id)}
+            <Card
+                width={width}
+                aspect_ratio={2 / 3}
+                selected={selected == i ||
+                    (i == $search_results.results.length - 1 &&
+                        selected >= $search_results.results.length)}
+                {media}
+                on_click={() => {
+                    selected = i;
+                }}
+            />
+        {/each}
+    </Scrollable>
 </cl>
 
 <svelte:window
     bind:innerHeight={window_height}
     bind:innerWidth={window_width}
-    on:keydown={on_keydown}
 />
 
 <style>
