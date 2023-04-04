@@ -1,31 +1,10 @@
 <script lang="ts">
     import { invoke } from '@tauri-apps/api/tauri';
-    import type { ExternalIDs, ListResults, MultiSearchResult } from 'types';
+    import type { ListResults, MultiSearchResult } from 'types';
     import { search_results, search_query, include_adult } from './media';
-    const hasAPI = 'IntersectionObserver' in window;
-    import { open } from '@tauri-apps/api/shell';
     import Observer from '$lib/Observer.svelte';
-    import ImageCard from '$lib/ImageCard.svelte';
     import { tick } from 'svelte';
-    import { fastScroll } from '$lib/fast_scroll';
-
-    const open_in_stremio = async (id: number | null, media_type: string) => {
-        if (!id) {
-            return;
-        }
-
-        let ids: ExternalIDs = await invoke('tmdb_get_external_ids', {
-            id: { id: id, media_type: media_type }
-        });
-        if (media_type == 'tv') {
-            media_type = 'series';
-        }
-        if (ids.imdb_id) {
-            let href = 'stremio:///detail/' + media_type + '/' + ids.imdb_id;
-            console.log(href, ids);
-            open(href);
-        }
-    };
+    import Card from './Card.svelte';
 
     const search_tmdb_multi = async (
         query: string,
@@ -132,10 +111,10 @@
             // event.preventDefault();
         } else if (event.key == '/') {
             selected = 0;
-            $search_query = "";
+            $search_query = '';
             search_input.focus();
             event.preventDefault();
-        } else if (false && event.key == "Escape") {
+        } else if (false && event.key == 'Escape') {
             // event.preventDefault();
         }
 
@@ -145,54 +124,52 @@
     };
 </script>
 
-<cl class={"inputs"}>
-    <input bind:value={$search_query} on:input={search} bind:this={search_input}/>
+<cl class={'inputs'}>
+    <input bind:value={$search_query} on:input={search} bind:this={search_input} />
     <button on:click={search}>Search</button>
     <button
         on:click={() => {
             $include_adult = !$include_adult;
             search();
-        }}>include mature: {$include_adult}</button
+        }}
     >
-    <button on:click={() =>{
-        console.log($search_results.results, collisions, id_set);
-        let ids = $search_results.results.map(e => e.id);
-        console.log(collisions.filter(e => !ids.includes(e.id)));
-    }} >{($search_results).results.length} | end visible: {end_is_visible}</button>
+        include mature: {$include_adult}
+    </button>
+    <button
+        on:click={() => {
+            console.log($search_results.results, collisions, id_set);
+            let ids = $search_results.results.map((e) => e.id);
+            console.log(collisions.filter((e) => !ids.includes(e.id)));
+        }}
+    >
+        {$search_results.results.length} | end visible: {end_is_visible}
+    </button>
 </cl>
 
 <cl>
     {#each $search_results.results as media, i (media.id)}
-        <div
-            on:click={() => {
+        <Card
+            width={window_width / 5}
+            aspect_ratio={2 / 3}
+            selected={selected == i ||
+                (i == $search_results.results.length - 1 &&
+                    selected >= $search_results.results.length)}
+            {media}
+            on_click={() => {
                 selected = i;
             }}
-            on:keydown={()=>{}}
-        >
-            <ImageCard
-                title={media.media_type == 'tv' ? media.name : media.title}
-                img_source={media.poster_path
-                    ? 'https://image.tmdb.org/t/p/w200/' + media.poster_path
-                    : ''}
-                lazy={hasAPI}
-                width={window_width / 5}
-                aspect_ratio={2 / 3}
-                selected={selected == i || (i == $search_results.results.length-1 && selected >= $search_results.results.length)}
-            />
-            <button
-                class="stremio-button"
-                on:click={() => {
-                    open_in_stremio(media.id, media.media_type);
-                }}
-            ><span>stremio</span></button>
-        </div>
+        />
     {/each}
 
     <!-- observer -->
     <Observer enter_screen={end_reached} bind:visible={end_is_visible} />
 </cl>
 
-<svelte:window bind:innerHeight={window_height} bind:innerWidth={window_width} on:keydown={on_keydown} />
+<svelte:window
+    bind:innerHeight={window_height}
+    bind:innerWidth={window_width}
+    on:keydown={on_keydown}
+/>
 
 <style>
     * {
@@ -210,42 +187,5 @@
         overflow: auto;
         width: 100%;
         height: calc(100% - var(--input-height));
-    }
-    cl div {
-        position: relative;
-    }
-
-    .stremio-button {
-        --width: 20px;
-        --height: 20px;
-        position: absolute;
-        z-index: 2;
-        float: left;
-        height: var(--height);
-        width: var(--width);
-        top: calc(var(--height) / 2);
-        left: calc(var(--width) / 2);
-        background-color: #ffffffaf;
-        border: 2px solid;
-        border-radius: 8px;
-        border-color: #885555;
-        padding: 0px;
-        margin: 0px;
-        transition: width 0.2s ease;
-        text-align: center;
-        line-height: calc(var(--height) / 2.0);
-        color: transparent;
-    }
-
-    .stremio-button span {
-        font-size: 1.87ch;
-        font-weight: 700;
-    }
-
-    .stremio-button:hover {
-        background-color: #558855af;
-        width: calc(2.9 * var(--width));
-        transition: width 0.2s ease;
-        color: #d8d8d8;
     }
 </style>
