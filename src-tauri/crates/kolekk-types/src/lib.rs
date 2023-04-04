@@ -173,6 +173,27 @@ pub mod api {
             pub external_ids: ExternalIDs,
         }
     }
+
+    pub mod tachidesk {
+        use serde::{Serialize, Deserialize};
+        use ts_rs::TS;
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        #[serde(rename_all = "camelCase")]
+        pub struct Extension {
+            pub name: String,
+            pub pkg_name: String,
+            pub version_name: String,
+            pub version_code: u32,
+            pub lang: String,
+            pub is_nsfw: bool,
+            pub apk_name: String,
+            pub icon_url: String,
+            pub installed: bool,
+            pub has_update: bool,
+            pub obsolete: bool,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, TS, Derivative, Clone)]

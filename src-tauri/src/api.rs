@@ -1,10 +1,21 @@
 pub mod commands {
-    use kolekk_types::api::tmdb::{ExternalIDs, ListResults, MultiSearchResult};
-    use tauri::State;
+    use kolekk_types::api::{
+        tachidesk::Extension,
+        tmdb::{ExternalIDs, ListResults, MultiSearchResult},
+    };
+    use reqwest::Client;
+    use tauri::{Manager, State, WindowEvent};
 
-    use crate::bad_error::Error;
+    use crate::{
+        bad_error::{Error, InferBadError},
+        config::AppConfig,
+        database::AppDatabase,
+    };
 
-    use super::tmdb::{Id, TmdbClient};
+    use super::{
+        tachidesk::TachideskClient,
+        tmdb::{Id, TmdbClient},
+    };
 
     #[tauri::command]
     pub async fn search_tmdb_multi(
@@ -22,6 +33,86 @@ pub mod commands {
         id: Id,
     ) -> Result<ExternalIDs, Error> {
         tmdb.get_external_ids(id).await
+    }
+
+    #[tauri::command]
+    pub async fn init_tachidesk_client(
+        app_handle: tauri::State<'_, tauri::AppHandle>,
+        client: tauri::State<'_, Client>,
+        conf: tauri::State<'_, AppConfig>,
+    ) -> Result<(), Error> {
+        if app_handle.try_state::<TachideskClient>().is_none() {
+            let tachi = TachideskClient::download_if_needed(
+                client.inner().clone(),
+                conf.app_data_dir.join("tachidesk"),
+            )
+            .await?;
+            // TODO: if nothing works, try spawnning some async task that just listens for async channel and kills tachidesk when it receives from it
+            let handle = app_handle.app_handle();
+            app_handle.manage(tachi);
+            // TODO: ugly unwraps :(
+            app_handle
+                // .get_window("kolekk")
+                .windows()
+                .into_values()
+                .next()
+                .expect("no window?")
+                .on_window_event(move |e| {
+                    match e {
+                        WindowEvent::Destroyed | WindowEvent::CloseRequested { .. } => {
+                            handle
+                                .state::<TachideskClient>()
+                                .inner()
+                                .clild
+                                .lock()
+                                .infer_err()
+                                .unwrap()
+                                .start_kill()
+                                .unwrap();
+                        }
+                        _ => {}
+                    }
+                });
+        }
+        Ok(())
+    }
+
+    #[tauri::command]
+    pub async fn tachidesk_get_all_extensions(
+        tachi: tauri::State<'_, TachideskClient>,
+    ) -> Result<Vec<Extension>, Error> {
+        tachi.get_all_extensions().await
+    }
+}
+
+mod common {
+    #[allow(unused_imports)]
+    use crate::{dbg, debug, error};
+
+    use std::fmt::Debug;
+
+    use reqwest::Client;
+    use serde::de::DeserializeOwned;
+
+    use crate::bad_error::{Error, InferBadError, Inspectable};
+
+    pub async fn get_parsed<T: DeserializeOwned + Debug>(
+        client: &Client,
+        url: impl reqwest::IntoUrl,
+    ) -> Result<T, Error> {
+        let res = client
+            .get(url)
+            .send()
+            .await
+            .look(|e| dbg!(e))
+            .infer_err()?
+            // .json()
+            .text()
+            .await
+            .look(|e| dbg!(e))
+            .infer_err()?;
+        let res = serde_json::from_str(&res).look(|e| dbg!(e)).infer_err()?;
+        Ok(res)
     }
 }
 
@@ -171,19 +262,7 @@ pub mod tmdb {
             &self,
             url: impl reqwest::IntoUrl,
         ) -> Result<T, Error> {
-            let res = self
-                .client
-                .get(url)
-                .send()
-                .await
-                .look(|e| dbg!(e))
-                .infer_err()?
-                // .json()
-                .text()
-                .await
-                .look(|e| dbg!(e))
-                .infer_err()?;
-            let res = serde_json::from_str(&res).look(|e| dbg!(e)).infer_err()?;
+            let res = super::common::get_parsed(&self.client, url).await?;
             Ok(res)
         }
 
@@ -370,6 +449,189 @@ pub mod tmdb {
                 ))
                 .await?;
             Ok(res)
+        }
+    }
+}
+
+pub mod tachidesk {
+    #[allow(unused_imports)]
+    use crate::{dbg, debug, error};
+
+    use std::{
+        fmt::Debug,
+        fs::File,
+        io::{BufReader, Cursor, Write},
+        path::{Path, PathBuf},
+        sync::Mutex,
+    };
+
+    use flate2::{bufread::MultiGzDecoder, read::GzDecoder};
+    use kolekk_types::api::tachidesk::Extension;
+    use reqwest::Client;
+    use serde::{de::DeserializeOwned, Deserialize};
+    use tar::Archive;
+    use tokio::process::{Child, Command};
+
+    use crate::bad_error::{BadError, Error, InferBadError, Inspectable};
+
+    const BASE_URL: &str = "http://0.0.0.0:4567";
+
+    #[derive(Debug)]
+    pub struct TachideskClient {
+        pub clild: Mutex<Child>,
+        client: Client,
+        pub jre: PathBuf,
+        pub tachidesk_path: PathBuf,
+        pub root_dir: PathBuf,
+    }
+
+    #[derive(Debug, Clone, Deserialize)]
+    struct GithubRelease {
+        url: String,
+        name: String,
+        tag_name: String,
+        created_at: String,
+        published_at: String,
+        draft: bool,
+        prerelease: bool,
+        assets: Vec<GithubReleaseAsset>,
+    }
+    #[derive(Debug, Clone, Deserialize)]
+    struct GithubReleaseAsset {
+        url: String,
+        name: String,
+        size: u64,
+        browser_download_url: String,
+    }
+
+    impl TachideskClient {
+        pub fn new(
+            client: Client,
+            jre: impl AsRef<Path>,
+            tachidesk_jar: impl AsRef<Path>,
+            tachidesk_root_dir: impl AsRef<Path>,
+        ) -> Result<Self, Error> {
+            let jre = jre.as_ref();
+            let tachidesk_jar = tachidesk_jar.as_ref();
+            let root_dir = tachidesk_root_dir.as_ref();
+
+            jre.exists()
+                .then_some(())
+                .bad_err("jre path does not exist")?;
+            tachidesk_jar
+                .exists()
+                .then_some(())
+                .bad_err("tachidesk jar does not exist")?;
+
+            let mut tachi = Command::new(jre.join("bin/java"));
+            tachi
+                .kill_on_drop(true)
+                .arg(format!(
+                    "-Dsuwayomi.tachidesk.config.server.rootDir={}",
+                    root_dir.to_string_lossy()
+                ))
+                .arg("-Dsuwayomi.tachidesk.config.server.webUIEnabled=false")
+                .arg("-Dsuwayomi.tachidesk.config.server.systemTrayEnabled=false")
+                .arg("-jar")
+                .arg(tachidesk_jar);
+
+            let client = Self {
+                client,
+                clild: Mutex::new(tachi.spawn().infer_err()?),
+                jre: jre.to_path_buf(),
+                tachidesk_path: tachidesk_jar.to_path_buf(),
+                root_dir: root_dir.to_path_buf(),
+            };
+            Ok(client)
+        }
+
+        pub async fn download_if_needed(
+            client: Client,
+            tachidesk_path: impl AsRef<Path>,
+        ) -> Result<Self, Error> {
+            let tachidesk_path = tachidesk_path.as_ref().to_path_buf();
+            let assets = tachidesk_path.join("assets");
+            // TODO: check if new version is released
+            let asset_info = assets.join("asset_info");
+            let tachidesk_root_dir = tachidesk_path.join("data_root");
+
+            if !assets.exists() || !asset_info.exists() {
+                // TODO:
+                // - need to communicate how much of the file is downloaded (progress bar)
+                let res = client
+                    .get("https://api.github.com/repos/Suwayomi/Tachidesk-Server/releases/latest")
+                    .header("User-Agent", "kolekk")
+                    .send()
+                    .await
+                    .look(|e| dbg!(e))
+                    .infer_err()?
+                    .text()
+                    .await
+                    .look(|e| dbg!(e))
+                    .infer_err()?;
+                let releases = serde_json::from_str::<GithubRelease>(&res)
+                    .look(|e| dbg!(e))
+                    .infer_err()?;
+                let asset = releases
+                    .assets
+                    .into_iter()
+                    .find(|r| r.name.ends_with("linux-x64.tar.gz"))
+                    .bad_err("could not find required asset")?;
+                let bytes = client
+                    .get(asset.browser_download_url)
+                    .send()
+                    .await
+                    .infer_err()?
+                    .bytes()
+                    .await
+                    .infer_err()?;
+                let out_dir = assets.clone();
+                let tar_contents = tachidesk_path.join(
+                    asset
+                        .name
+                        .strip_suffix(".tar.gz")
+                        .bad_err("name contains .tar.gz. this won't fail")?,
+                );
+
+                let _r: Result<_, Error> = tokio::task::spawn_blocking(move || {
+                    std::fs::create_dir_all(&tachidesk_path).infer_err()?;
+                    let zip_path = tachidesk_path.join(&asset.name);
+                    let mut tar_gz = File::create(&zip_path).infer_err()?;
+                    std::io::copy(&mut Cursor::new(bytes), &mut tar_gz).infer_err()?;
+                    // let tar = GzDecoder::new(tar_gz);
+                    let tar_gz = File::open(zip_path).infer_err()?;
+                    let decoder = MultiGzDecoder::new(BufReader::new(tar_gz));
+                    let mut archive = Archive::new(decoder);
+                    archive.unpack(&tachidesk_path).infer_err()?;
+                    std::fs::rename(tar_contents, out_dir).infer_err()?;
+
+                    let mut asset_info = File::create(asset_info).infer_err()?;
+                    write!(&mut asset_info, "{}", asset.name).infer_err()?;
+                    Ok(())
+                })
+                .await
+                .infer_err()?;
+            }
+
+            Self::new(
+                client,
+                assets.join("jre"),
+                assets.join("Tachidesk-Server.jar"),
+                tachidesk_root_dir,
+            )
+        }
+
+        async fn get_parsed<T: DeserializeOwned + Debug>(
+            &self,
+            url: impl reqwest::IntoUrl,
+        ) -> Result<T, Error> {
+            let res = super::common::get_parsed(&self.client, url).await?;
+            Ok(res)
+        }
+
+        pub async fn get_all_extensions(&self) -> Result<Vec<Extension>, Error> {
+            self.get_parsed(format!("{}/api/v1/extension/list", BASE_URL))
+                .await
         }
     }
 }

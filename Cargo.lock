@@ -4778,6 +4778,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "fern",
+ "flate2",
  "futures",
  "kolekk-types",
  "log 0.4.17",
@@ -4789,6 +4790,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tantivy",
+ "tar",
  "tauri",
  "tauri-build",
  "tauri-specta",

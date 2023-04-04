@@ -61,6 +61,8 @@ fn main() {
             tag::get_tags_from_ids,
             api::commands::search_tmdb_multi,
             api::commands::tmdb_get_external_ids,
+            api::commands::init_tachidesk_client,
+            api::commands::tachidesk_get_all_extensions,
         ])
         .setup(|app| {
             app.handle().manage(app.handle());

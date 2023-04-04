@@ -5,9 +5,13 @@ use std::{
 };
 
 use kolekk_types::{
-    api::tmdb::{
-        AllInfo, AltTitles, ExternalIDs, ExternalIdSearchResult, Genre, ImageInfo, Images,
-        ListResults, Movie, MovieListResult, MultiSearchResult, Season, Title, Tv, TvListResult,
+    api::{
+        tachidesk::Extension,
+        tmdb::{
+            AllInfo, AltTitles, ExternalIDs, ExternalIdSearchResult, Genre, ImageInfo, Images,
+            ListResults, Movie, MovieListResult, MultiSearchResult, Season, Title, Tv,
+            TvListResult,
+        },
     },
     Bookmark, ByteArrayFile, DragDropPaste, FilderKind, Group, Image, Object, Tag, TS,
 };
@@ -71,6 +75,7 @@ fn main() {
         Genre,
         Season,
     );
+    export!(Extension);
 
     remove_dir(cache_dir).unwrap();
 
