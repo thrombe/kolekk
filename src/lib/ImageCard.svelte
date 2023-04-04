@@ -7,6 +7,7 @@
     export let lazy = false;
     export let aspect_ratio = 1.0;
     export let bg_color = 'transparent';
+    export let scale = "100%";
 
     let insides: HTMLElement;
     $: height = width / aspect_ratio;
@@ -20,6 +21,10 @@
     $: if (abs) {
         abs.style.left = (width / 2).toString() + "px";
         abs.style.top = (height / 2).toString() + "px";
+    }
+    let scalable: HTMLElement;
+    $: if (scalable) {
+        scalable.style.scale = scale;
     }
 
     let lazy_img_src = '';
@@ -35,7 +40,7 @@
     }
 </script>
 
-<cl>
+<cl bind:this={scalable}>
     {#if lazy && hasAPI}
         <rel>
             <abs bind:this={abs}>
