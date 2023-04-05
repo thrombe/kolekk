@@ -9,6 +9,7 @@
     export let selected = false;
     export let media: MultiSearchResult;
     export let on_click: any = () => {};
+    export let root: HTMLElement | null = null;
 
     let title = media.media_type == 'tv' ? media.name : media.title;
     let img_source = media.poster_path
@@ -66,7 +67,7 @@
     <cl bind:this={ele} draggable="true" on:click={on_click} on:keydown={() => {}}>
         <card-div bind:this={insides}>
             <card-insides>
-                <ImageCard {img_source} {width} {aspect_ratio} {bg_color} lazy={true} />
+                <ImageCard {img_source} {width} {aspect_ratio} {bg_color} lazy={true} root={root} />
 
                 {#if title && title.length > 0}
                     <title-box style={'height: ' + shade_height}>

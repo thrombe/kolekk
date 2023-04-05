@@ -3,6 +3,7 @@
     export let leave_screen: () => void | Promise<void> = async () => {};
 
     export let visible: Boolean | null = null;
+    export let root: HTMLElement | null = null;
 
     const on_intersect = async (entries: any) => {
         if (entries[0].isIntersecting) {
@@ -23,7 +24,7 @@
         };
     }
 
-    let observer = new IntersectionObserver(on_intersect, { rootMargin: '200px' });
+    let observer = new IntersectionObserver(on_intersect, { rootMargin: '200px', root: root });
 </script>
 
 <p use:observe />

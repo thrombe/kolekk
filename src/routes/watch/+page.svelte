@@ -128,6 +128,7 @@
         keyboard_control={true}
 
         let:item_width={width}
+        let:root={root}
     >
         {#each $search_results.results as media, i (media.id)}
             <Card
@@ -140,6 +141,7 @@
                 on_click={() => {
                     selected = i;
                 }}
+                root={root}
             />
         {/each}
     </Scrollable>

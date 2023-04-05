@@ -8,6 +8,7 @@
     export let aspect_ratio = 1.0;
     export let bg_color = 'transparent';
     export let scale = "100%";
+    export let root: HTMLElement | null = null;
 
     let insides: HTMLElement;
     $: height = width / aspect_ratio;
@@ -44,7 +45,7 @@
     {#if lazy && hasAPI}
         <rel>
             <abs bind:this={abs}>
-                <Observer enter_screen={on_intersect} />
+                <Observer enter_screen={on_intersect} root={root} />
             </abs>
         </rel>
     {/if}
@@ -62,6 +63,7 @@
     }
     rel {
         position: relative;
+        z-index: 5;
     }
 
     image-div {

@@ -47,10 +47,12 @@
     };
 
     $: item_width = width / columns;
+
+    let root: HTMLElement | null = null;
 </script>
 
-<cl>
-    <slot item_width={item_width} />
+<cl bind:this={root} >
+    <slot item_width={item_width} root={root} />
 
     <!-- observer -->
     <Observer enter_screen={end_reached} bind:visible={end_is_visible} />

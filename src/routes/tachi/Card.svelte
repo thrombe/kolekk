@@ -7,6 +7,7 @@
     export let selected = false;
     export let ext: Extension;
     export let on_click: any = () => {};
+    export let root: HTMLElement | null = null;
 
     let img_source = "http://0.0.0.0:4567" + ext.iconUrl + "?useCache=true";
 
@@ -45,6 +46,7 @@
                         lazy={true}
                         aspect_ratio={1}
                         scale={"130%"}
+                        root={root}
                     />
                 </cropper>
 

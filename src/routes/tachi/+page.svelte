@@ -1,5 +1,4 @@
 <script lang="ts">
-    import ImageCard from '$lib/ImageCard.svelte';
     import { invoke } from '@tauri-apps/api/tauri';
     import { onMount } from 'svelte';
     import { extensions } from './state';
@@ -39,6 +38,7 @@
         keyboard_control={true}
 
         let:item_width={width}
+        let:root={root}
     >
         {#each $extensions as ext, i (ext.pkgName)}
             <Card
@@ -51,6 +51,7 @@
                 on_click={() => {
                     selected = i;
                 }}
+                root={root}
             />
         {/each}
     </Scrollable>
