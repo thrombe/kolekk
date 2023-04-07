@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { search_results, search_query, include_adult, page_num_fetched } from './state';
     import { tick } from 'svelte';
     import Card from './Card.svelte';
     import Scrollable from '$lib/Scrollable.svelte';
@@ -7,27 +6,31 @@
     import { page } from '$app/stores';
     import type { MangaListPage } from 'types';
 
+    let search_query = '';
+    let search_results = { mangaList: new Array(), hasNextPage: false };
+    let page_num_fetched = 1;
+    let include_adult = false;
     const search = async () => {
-        if ($search_query == '') {
-            $page_num_fetched = 1;
-            $search_results = await invoke('tachidesk_get_popular_manga_list', {
+        if (search_query == '') {
+            page_num_fetched = 1;
+            search_results = await invoke('tachidesk_get_popular_manga_list', {
                 sourceId: $page.params.src_id,
                 page: 1
             });
-            console.log($search_results);
+            console.log(search_results);
         } else {
-            $page_num_fetched = 1;
-            $search_results = await invoke('tachidesk_search_manga_in', {
+            page_num_fetched = 1;
+            search_results = await invoke('tachidesk_search_manga_in', {
                 sourceId: $page.params.src_id,
-                query: $search_query,
+                query: search_query,
                 page: 1
             });
-            console.log($search_results);
+            console.log(search_results);
         }
 
         id_set = new Set();
         collisions = new Array();
-        $search_results.mangaList = $search_results.mangaList.filter((item) => {
+        search_results.mangaList = search_results.mangaList.filter((item) => {
             if (id_set.has(item.id)) {
                 collisions.push(item);
                 return false;
@@ -49,19 +52,19 @@
             return;
         }
 
-        if ($search_results.hasNextPage) {
+        if (search_results.hasNextPage) {
             let new_res: MangaListPage;
-            $page_num_fetched += 1;
-            if ($search_query == '') {
+            page_num_fetched += 1;
+            if (search_query == '') {
                 new_res = await invoke('tachidesk_get_popular_manga_list', {
                     sourceId: $page.params.src_id,
-                    page: $page_num_fetched
+                    page: page_num_fetched
                 });
             } else {
                 new_res = await invoke('tachidesk_search_manga_in', {
                     sourceId: $page.params.src_id,
-                    query: $search_query,
-                    page: $page_num_fetched
+                    query: search_query,
+                    page: page_num_fetched
                 });
             }
             new_res.mangaList = new_res.mangaList.filter((item) => {
@@ -74,12 +77,12 @@
                 }
             });
             console.log(
-                $page_num_fetched,
+                page_num_fetched,
                 new_res.mangaList.map((e) => e.id)
             );
-            $search_results.hasNextPage = new_res.hasNextPage;
-            $search_results.mangaList.push(...new_res.mangaList);
-            $search_results = $search_results;
+            search_results.hasNextPage = new_res.hasNextPage;
+            search_results.mangaList.push(...new_res.mangaList);
+            search_results = search_results;
 
             setTimeout(end_reached, 500);
         }
@@ -96,7 +99,7 @@
             // event.preventDefault();
         } else if (event.key == '/') {
             selected = 0;
-            $search_query = '';
+            search_query = '';
             search_input.focus();
             event.preventDefault();
         }
@@ -104,21 +107,21 @@
 </script>
 
 <cl class={'inputs'}>
-    <input bind:value={$search_query} on:input={search} bind:this={search_input} />
+    <input bind:value={search_query} on:input={search} bind:this={search_input} />
     <button on:click={search}>Search</button>
     <button
         on:click={() => {
-            $include_adult = !$include_adult;
+            include_adult = !include_adult;
             search();
         }}
     >
-        include mature: {$include_adult}
+        include mature: {include_adult}
     </button>
     <button
         on:click={() => {
             let id_set = new Set();
             let collisions = new Array();
-            $search_results.mangaList.forEach((m) => {
+            search_results.mangaList.forEach((m) => {
                 if (id_set.has(m.id)) {
                     collisions.push(m.id);
                 } else {
@@ -128,14 +131,14 @@
             console.log(collisions);
         }}
     >
-        {$search_results.mangaList.length} | end visible: {end_is_visible}
+        {search_results.mangaList.length} | end visible: {end_is_visible}
     </button>
 </cl>
 
 <cl>
     <Scrollable
         columns={5}
-        num_items={$search_results.mangaList.length}
+        num_items={search_results.mangaList.length}
         bind:selected
         width={window_width}
         {end_reached}
@@ -145,13 +148,13 @@
         let:item_width={width}
         let:root
     >
-        {#each $search_results.mangaList as manga, i (manga.id)}
+        {#each search_results.mangaList as manga, i (manga.id)}
             <Card
                 {width}
                 aspect_ratio={2 / 3}
                 selected={selected == i ||
-                    (i == $search_results.mangaList.length - 1 &&
-                        selected >= $search_results.mangaList.length)}
+                    (i == search_results.mangaList.length - 1 &&
+                        selected >= search_results.mangaList.length)}
                 {manga}
                 on_click={() => {
                     selected = i;
