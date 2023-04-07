@@ -199,6 +199,16 @@ pub mod api {
 
         #[derive(Serialize, Deserialize, TS, Debug, Clone)]
         #[serde(rename_all = "camelCase")]
+        pub struct About {
+            build_time: u64,
+            build_type: String,
+            github: String,
+            name: String,
+            version: String,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        #[serde(rename_all = "camelCase")]
         pub struct Extension {
             pub name: String,
             pub pkg_name: String,
