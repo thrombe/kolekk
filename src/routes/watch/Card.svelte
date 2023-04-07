@@ -4,10 +4,11 @@
     import type { ExternalIDs, MultiSearchResult } from 'types';
     import { open } from '@tauri-apps/api/shell';
 
-    export let width = 200;
-    export let aspect_ratio = 1.0;
-    export let selected = false;
+    export let width: number;
+    export let aspect_ratio: number;
     export let media: MultiSearchResult;
+
+    export let selected = false;
     export let on_click: any = () => {};
     export let root: HTMLElement | null = null;
 
@@ -67,7 +68,7 @@
     <cl bind:this={ele} draggable="true" on:click={on_click} on:keydown={() => {}}>
         <card-div bind:this={insides}>
             <card-insides>
-                <ImageCard {img_source} {width} {aspect_ratio} {bg_color} lazy={true} {root} />
+                <ImageCard {img_source} {width} {aspect_ratio} {bg_color} {root} lazy={false} />
 
                 {#if title && title.length > 0}
                     <title-box style={'height: ' + shade_height}>

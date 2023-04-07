@@ -5,6 +5,7 @@
     import { tick } from 'svelte';
     import Card from './Card.svelte';
     import Scrollable from '$lib/Scrollable.svelte';
+    import Virtual from '$lib/Virtual.svelte';
 
     const search_tmdb_multi = async (
         query: string,
@@ -92,6 +93,8 @@
             event.preventDefault();
         }
     };
+
+    let item_aspect_ratio = 2 / 3;
 </script>
 
 <cl class={'inputs'}>
@@ -126,22 +129,30 @@
         {on_keydown}
         bind:end_is_visible
         keyboard_control={true}
+        {item_aspect_ratio}
+
         let:item_width={width}
         let:root
     >
         {#each $search_results.results as media, i (media.id)}
-            <Card
+            <Virtual
                 {width}
-                aspect_ratio={2 / 3}
-                selected={selected == i ||
-                    (i == $search_results.results.length - 1 &&
-                        selected >= $search_results.results.length)}
-                {media}
-                on_click={() => {
-                    selected = i;
-                }}
+                aspect_ratio={item_aspect_ratio}
                 {root}
-            />
+            >
+                <Card
+                    {width}
+                    aspect_ratio={item_aspect_ratio}
+                    selected={selected == i ||
+                        (i == $search_results.results.length - 1 &&
+                            selected >= $search_results.results.length)}
+                    {media}
+                    on_click={() => {
+                        selected = i;
+                    }}
+                    {root}
+                />
+            </Virtual>
         {/each}
     </Scrollable>
 </cl>

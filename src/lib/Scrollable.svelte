@@ -1,11 +1,13 @@
 <script lang="ts">
     import Observer from '$lib/Observer.svelte';
 
-    export let columns = 1;
-    export let num_items = 1;
+    export let width: number;
+    export let item_aspect_ratio: number;
+    export let columns: number;
+    export let num_items: number;
+
     export let selected = 0;
     export let on_keydown = async (_: KeyboardEvent) => {};
-    export let width = 100;
     export let end_reached = async () => {};
     export let end_is_visible = true;
     export let keyboard_control = false;
@@ -47,6 +49,8 @@
     };
 
     $: item_width = width / columns;
+    $: item_height = item_width / item_aspect_ratio;
+    $: margin = item_height*2;
 
     let root: HTMLElement | null = null;
 </script>
@@ -55,7 +59,7 @@
     <slot {item_width} {root} />
 
     <!-- observer -->
-    <Observer enter_screen={end_reached} bind:visible={end_is_visible} />
+    <Observer enter_screen={end_reached} bind:visible={end_is_visible} {root} {margin}/>
 </cl>
 
 <svelte:window on:keydown={_on_keydown} />

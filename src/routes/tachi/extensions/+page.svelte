@@ -4,6 +4,7 @@
     import { extensions } from './state';
     import Scrollable from '$lib/Scrollable.svelte';
     import Card from './Card.svelte';
+    import Virtual from '$lib/Virtual.svelte';
 
     // TODO: make extensions searchable
     const get_all_extensions = async () => {
@@ -18,10 +19,12 @@
         }
     });
 
-    const on_keydown = async (e: KeyboardEvent) => {};
+    const on_keydown = async (_: KeyboardEvent) => {};
 
     let window_width = 100;
     let selected = 0;
+
+    let item_aspect_ratio = 2 / 3;
 </script>
 
 <svelte:window bind:innerWidth={window_width} />
@@ -35,23 +38,31 @@
         num_items={$extensions.length}
         bind:selected
         width={window_width}
+        item_aspect_ratio={item_aspect_ratio}
         {on_keydown}
         keyboard_control={true}
+
         let:item_width={width}
         let:root
     >
         {#each $extensions as ext, i (ext.pkgName)}
-            <Card
+            <Virtual
                 {width}
-                aspect_ratio={2 / 3}
-                selected={selected == i ||
-                    (i == $extensions.length - 1 && selected >= $extensions.length)}
-                {ext}
-                on_click={() => {
-                    selected = i;
-                }}
+                aspect_ratio={item_aspect_ratio}
                 {root}
-            />
+            >
+                <Card
+                    {width}
+                    aspect_ratio={item_aspect_ratio}
+                    selected={selected == i ||
+                        (i == $extensions.length - 1 && selected >= $extensions.length)}
+                    {ext}
+                    on_click={() => {
+                        selected = i;
+                    }}
+                    {root}
+                />
+            </Virtual>
         {/each}
     </Scrollable>
 </cl>

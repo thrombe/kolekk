@@ -2,10 +2,11 @@
     import Observer from './Observer.svelte';
     const hasAPI = 'IntersectionObserver' in window;
 
+    export let width: number;
+    export let aspect_ratio: number;
+    export let lazy: boolean;
+
     export let img_source = '';
-    export let width = 200;
-    export let lazy = false;
-    export let aspect_ratio = 1.0;
     export let bg_color = 'transparent';
     export let scale = '100%';
     export let root: HTMLElement | null = null;
@@ -45,7 +46,7 @@
     {#if lazy && hasAPI}
         <rel>
             <abs bind:this={abs}>
-                <Observer enter_screen={on_intersect} {root} />
+                <Observer enter_screen={on_intersect} {root} margin={height} />
             </abs>
         </rel>
     {/if}

@@ -5,6 +5,7 @@
     import { invoke } from '@tauri-apps/api/tauri';
     import { page } from '$app/stores';
     import type { MangaListPage } from 'types';
+    import Virtual from '$lib/Virtual.svelte';
 
     let search_query = '';
     let search_results = { mangaList: new Array(), hasNextPage: false };
@@ -104,6 +105,8 @@
             event.preventDefault();
         }
     };
+
+    let item_aspect_ratio = 2 / 3;
 </script>
 
 <cl class={'inputs'}>
@@ -141,26 +144,34 @@
         num_items={search_results.mangaList.length}
         bind:selected
         width={window_width}
+        {item_aspect_ratio}
         {end_reached}
         {on_keydown}
         bind:end_is_visible
         keyboard_control={true}
+
         let:item_width={width}
         let:root
     >
         {#each search_results.mangaList as manga, i (manga.id)}
-            <Card
+            <Virtual
                 {width}
-                aspect_ratio={2 / 3}
-                selected={selected == i ||
-                    (i == search_results.mangaList.length - 1 &&
-                        selected >= search_results.mangaList.length)}
-                {manga}
-                on_click={() => {
-                    selected = i;
-                }}
+                aspect_ratio={item_aspect_ratio}
                 {root}
-            />
+            >
+                <Card
+                    {width}
+                    aspect_ratio={item_aspect_ratio}
+                    selected={selected == i ||
+                        (i == search_results.mangaList.length - 1 &&
+                            selected >= search_results.mangaList.length)}
+                    {manga}
+                    on_click={() => {
+                        selected = i;
+                    }}
+                    {root}
+                />
+            </Virtual>
         {/each}
     </Scrollable>
 </cl>

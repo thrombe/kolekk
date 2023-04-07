@@ -3,10 +3,11 @@
     import { invoke } from '@tauri-apps/api/tauri';
     import type { Extension, ExtensionAction } from 'types';
 
-    export let width = 200;
-    export let aspect_ratio = 1.0;
-    export let selected = false;
+    export let width: number;
+    export let aspect_ratio: number;
     export let ext: Extension;
+    
+    export let selected = false;
     export let on_click: any = () => {};
     export let root: HTMLElement | null = null;
 
@@ -50,10 +51,10 @@
                     <ImageCard
                         {img_source}
                         {width}
-                        lazy={true}
                         aspect_ratio={1}
                         scale={'130%'}
                         {root}
+                        lazy={false}
                     />
                 </cropper>
 
