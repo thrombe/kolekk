@@ -475,7 +475,9 @@ pub mod tmdb {
                 .results
                 .into_iter()
                 .filter(|e| {
-                    e.get("media_type").is_some() && e.get("media_type").unwrap() != "person"
+                    e.get("media_type").is_some()
+                        && (e.get("media_type").unwrap() == "tv"
+                            || e.get("media_type").unwrap() == "movie")
                 })
                 .map(|e| serde_json::from_value(e).look(|e| dbg!(e)).infer_err())
                 .collect::<Result<_, Error>>()?;
