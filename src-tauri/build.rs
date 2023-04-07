@@ -6,7 +6,7 @@ use std::{
 
 use kolekk_types::{
     api::{
-        tachidesk::{Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source},
+        tachidesk::{Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source, About},
         tmdb::{
             AllInfo, AltTitles, ExternalIDs, ExternalIdSearchResult, Genre, ImageInfo, Images,
             ListResults, Movie, MovieListResult, MultiSearchResult, Season, Title, Tv,
@@ -48,6 +48,7 @@ fn main() {
     }
 
     // TODO: no 2 types can have the same name T-T
+    // have each call to export macro output stuff in a different file
     export!(
         Bookmark,
         Image,
@@ -82,6 +83,7 @@ fn main() {
         Source,
         ExtensionAction,
         MangaListPage,
+        About,
     );
 
     remove_dir(cache_dir).unwrap();

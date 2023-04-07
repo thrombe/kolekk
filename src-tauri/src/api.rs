@@ -1,4 +1,6 @@
 pub mod commands {
+    use std::time::Duration;
+
     use kolekk_types::api::{
         tachidesk::{Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source},
         tmdb::{ExternalIDs, ListResults, MultiSearchResult},
@@ -7,7 +9,7 @@ pub mod commands {
     use tauri::{Manager, State, WindowEvent};
 
     use crate::{
-        bad_error::{Error, InferBadError},
+        bad_error::{BadError, Error, InferBadError},
         config::AppConfig,
     };
 
@@ -39,13 +41,23 @@ pub mod commands {
         app_handle: tauri::State<'_, tauri::AppHandle>,
         client: tauri::State<'_, Client>,
         conf: tauri::State<'_, AppConfig>,
-    ) -> Result<(), Error> {
+    ) -> Result<bool, Error> {
         if app_handle.try_state::<TachideskClient>().is_none() {
             let tachi = TachideskClient::download_if_needed(
                 client.inner().clone(),
                 conf.app_data_dir.join("tachidesk"),
             )
             .await?;
+
+            let now = std::time::SystemTime::now();
+            while tachi.get_server_info().await.ok().is_none() {
+                tokio::time::sleep(Duration::from_secs_f32(0.5)).await;
+                if now.elapsed().infer_err()?.as_secs_f64() > 10.0 {
+                    tachi.child.lock().infer_err()?.start_kill().infer_err()?;
+                    return None.bad_err("server timeout :(");
+                }
+            }
+
             // TODO: if nothing works, try spawnning some async task that just listens for async channel and kills tachidesk when it receives from it
             let handle = app_handle.app_handle();
             app_handle.manage(tachi);
@@ -61,7 +73,7 @@ pub mod commands {
                         handle
                             .state::<TachideskClient>()
                             .inner()
-                            .clild
+                            .child
                             .lock()
                             .infer_err()
                             .unwrap()
@@ -70,8 +82,10 @@ pub mod commands {
                     }
                     _ => {}
                 });
+            Ok(true)
+        } else {
+            Ok(false)
         }
-        Ok(())
     }
 
     #[tauri::command]
@@ -554,7 +568,7 @@ pub mod tachidesk {
 
     use flate2::bufread::MultiGzDecoder;
     use kolekk_types::api::tachidesk::{
-        Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source,
+        About, Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source,
     };
     use reqwest::{Client, Url};
     use serde::{de::DeserializeOwned, Deserialize};
@@ -567,7 +581,7 @@ pub mod tachidesk {
 
     #[derive(Debug)]
     pub struct TachideskClient {
-        pub clild: Mutex<Child>,
+        pub child: Mutex<Child>,
         client: Client,
         pub jre: PathBuf,
         pub tachidesk_path: PathBuf,
@@ -626,7 +640,7 @@ pub mod tachidesk {
 
             let client = Self {
                 client,
-                clild: Mutex::new(tachi.spawn().infer_err()?),
+                child: Mutex::new(tachi.spawn().infer_err()?),
                 jre: jre.to_path_buf(),
                 tachidesk_path: tachidesk_jar.to_path_buf(),
                 root_dir: root_dir.to_path_buf(),
@@ -716,6 +730,11 @@ pub mod tachidesk {
         ) -> Result<T, Error> {
             let res = super::common::get_parsed(&self.client, url).await?;
             Ok(res)
+        }
+
+        pub async fn get_server_info(&self) -> Result<About, Error> {
+            self.get_parsed(format!("{}/api/v1/settings/about", BASE_URL))
+                .await
         }
 
         pub async fn get_all_extensions(&self) -> Result<Vec<Extension>, Error> {
@@ -810,7 +829,10 @@ pub mod tachidesk {
             self.get_parsed(
                 Url::parse_with_params(
                     &format!("{}/api/v1/source/{}/search", BASE_URL, source_id.as_ref(),),
-                    &[("searchTerm", query.as_ref()), ("pageNum", &page.to_string())],
+                    &[
+                        ("searchTerm", query.as_ref()),
+                        ("pageNum", &page.to_string()),
+                    ],
                 )
                 .infer_err()?,
             )
