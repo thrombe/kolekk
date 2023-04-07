@@ -6,7 +6,7 @@ use std::{
 
 use kolekk_types::{
     api::{
-        tachidesk::{Chapter, Extension, Manga, Source, ExtensionAction},
+        tachidesk::{Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source},
         tmdb::{
             AllInfo, AltTitles, ExternalIDs, ExternalIdSearchResult, Genre, ImageInfo, Images,
             ListResults, Movie, MovieListResult, MultiSearchResult, Season, Title, Tv,
@@ -81,6 +81,7 @@ fn main() {
         Chapter,
         Source,
         ExtensionAction,
+        MangaListPage,
     );
 
     remove_dir(cache_dir).unwrap();

@@ -10,7 +10,7 @@
     export let on_click: any = () => {};
     export let root: HTMLElement | null = null;
 
-    let img_source = "http://0.0.0.0:4567" + ext.iconUrl + "?useCache=true";
+    let img_source = 'http://0.0.0.0:4567' + ext.iconUrl + '?useCache=true';
 
     let ele: HTMLElement;
     $: if (selected && ele) {
@@ -33,7 +33,9 @@
     $: wrap = selected ? 'normal' : 'nowrap';
 
     const tachidesk_action = async (pkgName: string, action: ExtensionAction) => {
-        await invoke("tachidesk_extension_action", { pkgName, action })
+        // this await waits till the action is complete in the backend
+        // https://github.com/Suwayomi/Tachidesk-WebUI/blob/d51150b7848cf7a6596bbba7c015328a578dfd16/src/components/ExtensionCard.tsx#L91
+        await invoke('tachidesk_extension_action', { pkgName, action });
     };
 </script>
 
@@ -50,19 +52,24 @@
                         {width}
                         lazy={true}
                         aspect_ratio={1}
-                        scale={"130%"}
-                        root={root}
+                        scale={'130%'}
+                        {root}
                     />
                 </cropper>
 
                 <buttons-box>
-                    <button on:click={() => tachidesk_action(ext.pkgName, ext.installed?"uninstall":"install")} >
-                        {ext.installed?"uninstall":"install"}
+                    <button
+                        on:click={() =>
+                            tachidesk_action(ext.pkgName, ext.installed ? 'uninstall' : 'install')}
+                    >
+                        {ext.installed ? 'uninstall' : 'install'}
                     </button>
-                    <button>{"browse"}</button>
-                    <button>{"latest"}</button>
+                    <button>{'browse'}</button>
+                    <button>{'latest'}</button>
                     {#if ext.hasUpdate}
-                        <button on:click={() => tachidesk_action(ext.pkgName, "update")} >{"update"}</button>
+                        <button on:click={() => tachidesk_action(ext.pkgName, 'update')}
+                            >{'update'}</button
+                        >
                     {/if}
                 </buttons-box>
                 {#if ext.isNsfw}

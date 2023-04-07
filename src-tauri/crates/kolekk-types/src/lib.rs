@@ -258,32 +258,40 @@ pub mod api {
             pub title: String,
             pub thumbnail_url: String,
 
-            pub artist: String,
-            pub author: String,
-            pub description: String,
+            pub artist: Option<String>,
+            pub author: Option<String>,
+            pub description: Option<String>,
             pub genre: Vec<String>,
             pub status: String,
 
             pub in_library: bool,
-            pub source: Source,
+            pub source: Option<Source>,
 
             pub meta: Metadata,
 
-            pub real_url: String,
+            pub real_url: Option<String>,
             pub fresh_data: bool,
             pub unread_count: Option<u32>,
             pub download_count: Option<u32>,
 
             pub age: u32,
             pub chapters_age: u32,
+            pub chapter_count: Option<u32>,
             pub chapters_last_fetched_at: u32,
             pub in_library_at: u32,
             pub initialized: bool,
             pub last_chapter_read: Option<Chapter>,
             pub last_fetched_at: u32,
-            pub last_read_at: u32,
+            pub last_read_at: Option<u32>,
             pub thumbnail_url_last_fetched: u32,
             pub update_strategy: String,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        #[serde(rename_all = "camelCase")]
+        pub struct MangaListPage {
+            pub has_next_page: bool,
+            pub manga_list: Vec<Manga>,
         }
     }
 }

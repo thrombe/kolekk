@@ -27,7 +27,10 @@
     <a href="/watch">Watch stuff</a>
 </h>
 <h>
-    <a href="/tachi">Tachidesk stuff</a>
+    <a href="/tachi/extensions">Tachidesk extensions</a>
+</h>
+<h>
+    <a href="/tachi/sources">Tachidesk sources</a>
 </h>
 
 <style>

@@ -63,6 +63,16 @@ fn main() {
             api::commands::tmdb_get_external_ids,
             api::commands::init_tachidesk_client,
             api::commands::tachidesk_get_all_extensions,
+            api::commands::tachidesk_get_extension_icon_url,
+            api::commands::tachidesk_get_manga_chapter_list,
+            api::commands::tachidesk_get_manga_page_url,
+            api::commands::tachidesk_get_manga_thumbnail_url,
+            api::commands::tachidesk_get_manga,
+            api::commands::tachidesk_get_source_list,
+            api::commands::tachidesk_get_latest_manga_list,
+            api::commands::tachidesk_get_popular_manga_list,
+            api::commands::tachidesk_extension_action,
+            api::commands::tachidesk_search_manga_in,
         ])
         .setup(|app| {
             app.handle().manage(app.handle());

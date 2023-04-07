@@ -15,9 +15,7 @@
         await invoke('init_tachidesk_client');
     });
 
-    const on_keydown = async (e: KeyboardEvent) => {
-        
-    };
+    const on_keydown = async (e: KeyboardEvent) => {};
 
     let window_width = 100;
     let selected = 0;
@@ -32,26 +30,24 @@
     <Scrollable
         columns={5}
         num_items={$extensions.length}
-        bind:selected={selected}
+        bind:selected
         width={window_width}
-        on_keydown={on_keydown}
+        {on_keydown}
         keyboard_control={true}
-
         let:item_width={width}
-        let:root={root}
+        let:root
     >
         {#each $extensions as ext, i (ext.pkgName)}
             <Card
-                width={width}
+                {width}
                 aspect_ratio={2 / 3}
                 selected={selected == i ||
-                    (i == $extensions.length - 1 &&
-                        selected >= $extensions.length)}
+                    (i == $extensions.length - 1 && selected >= $extensions.length)}
                 {ext}
                 on_click={() => {
                     selected = i;
                 }}
-                root={root}
+                {root}
             />
         {/each}
     </Scrollable>

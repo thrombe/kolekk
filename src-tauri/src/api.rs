@@ -1,6 +1,6 @@
 pub mod commands {
     use kolekk_types::api::{
-        tachidesk::{Chapter, Extension, ExtensionAction, Manga, Source},
+        tachidesk::{Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source},
         tmdb::{ExternalIDs, ListResults, MultiSearchResult},
     };
     use reqwest::Client;
@@ -143,12 +143,31 @@ pub mod commands {
     }
 
     #[tauri::command]
-    pub async fn tachidesk_get_manga_list(
+    pub async fn tachidesk_get_latest_manga_list(
         tachi: tauri::State<'_, TachideskClient>,
         source_id: String,
-        page: u16,
-    ) -> Result<Vec<Manga>, Error> {
-        tachi.get_manga_list(source_id, page).await
+        page: u32,
+    ) -> Result<MangaListPage, Error> {
+        tachi.get_latest_manga_list(source_id, page).await
+    }
+
+    #[tauri::command]
+    pub async fn tachidesk_get_popular_manga_list(
+        tachi: tauri::State<'_, TachideskClient>,
+        source_id: String,
+        page: u32,
+    ) -> Result<MangaListPage, Error> {
+        tachi.get_popular_manga_list(source_id, page).await
+    }
+
+    #[tauri::command]
+    pub async fn tachidesk_search_manga_in(
+        tachi: tauri::State<'_, TachideskClient>,
+        source_id: String,
+        query: String,
+        page: u32,
+    ) -> Result<MangaListPage, Error> {
+        tachi.search_manga_in(source_id, query, page).await
     }
 }
 
@@ -529,12 +548,15 @@ pub mod tachidesk {
         fs::File,
         io::{BufReader, Cursor, Write},
         path::{Path, PathBuf},
+        str::FromStr,
         sync::Mutex,
     };
 
     use flate2::bufread::MultiGzDecoder;
-    use kolekk_types::api::tachidesk::{Chapter, Extension, Manga, Source, ExtensionAction};
-    use reqwest::Client;
+    use kolekk_types::api::tachidesk::{
+        Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source,
+    };
+    use reqwest::{Client, Url};
     use serde::{de::DeserializeOwned, Deserialize};
     use tar::Archive;
     use tokio::process::{Child, Command};
@@ -702,7 +724,7 @@ pub mod tachidesk {
         }
 
         pub fn get_extension_icon_url(&self, icon_url: impl AsRef<str>) -> String {
-            format!("{}{}?useCache=true", BASE_URL, icon_url.as_ref())
+            format!("{}{}", BASE_URL, icon_url.as_ref())
         }
 
         pub async fn extension_action(
@@ -751,17 +773,47 @@ pub mod tachidesk {
                 .await
         }
 
-        pub async fn get_manga_list(
+        pub async fn get_latest_manga_list(
             &self,
             source_id: impl AsRef<str>,
-            page: u16,
-        ) -> Result<Vec<Manga>, Error> {
+            page: u32,
+        ) -> Result<MangaListPage, Error> {
             self.get_parsed(format!(
                 "{}/api/v1/source/{}/latest/{}",
                 BASE_URL,
                 source_id.as_ref(),
                 page
             ))
+            .await
+        }
+
+        pub async fn get_popular_manga_list(
+            &self,
+            source_id: impl AsRef<str>,
+            page: u32,
+        ) -> Result<MangaListPage, Error> {
+            self.get_parsed(format!(
+                "{}/api/v1/source/{}/popular/{}",
+                BASE_URL,
+                source_id.as_ref(),
+                page
+            ))
+            .await
+        }
+
+        pub async fn search_manga_in(
+            &self,
+            source_id: impl AsRef<str>,
+            query: impl AsRef<str>,
+            page: u32,
+        ) -> Result<MangaListPage, Error> {
+            self.get_parsed(
+                Url::parse_with_params(
+                    &format!("{}/api/v1/source/{}/search", BASE_URL, source_id.as_ref(),),
+                    &[("searchTerm", query.as_ref()), ("pageNum", &page.to_string())],
+                )
+                .infer_err()?,
+            )
             .await
         }
     }
