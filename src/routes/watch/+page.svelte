@@ -120,19 +120,18 @@
     <Scrollable
         columns={5}
         num_items={$search_results.results.length}
-        bind:selected={selected}
+        bind:selected
         width={window_width}
-        end_reached={end_reached}
-        on_keydown={on_keydown}
-        bind:end_is_visible={end_is_visible}
+        {end_reached}
+        {on_keydown}
+        bind:end_is_visible
         keyboard_control={true}
-
         let:item_width={width}
-        let:root={root}
+        let:root
     >
         {#each $search_results.results as media, i (media.id)}
             <Card
-                width={width}
+                {width}
                 aspect_ratio={2 / 3}
                 selected={selected == i ||
                     (i == $search_results.results.length - 1 &&
@@ -141,16 +140,13 @@
                 on_click={() => {
                     selected = i;
                 }}
-                root={root}
+                {root}
             />
         {/each}
     </Scrollable>
 </cl>
 
-<svelte:window
-    bind:innerHeight={window_height}
-    bind:innerWidth={window_width}
-/>
+<svelte:window bind:innerHeight={window_height} bind:innerWidth={window_width} />
 
 <style>
     * {

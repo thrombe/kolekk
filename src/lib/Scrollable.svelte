@@ -51,8 +51,8 @@
     let root: HTMLElement | null = null;
 </script>
 
-<cl bind:this={root} >
-    <slot item_width={item_width} root={root} />
+<cl bind:this={root}>
+    <slot {item_width} {root} />
 
     <!-- observer -->
     <Observer enter_screen={end_reached} bind:visible={end_is_visible} />

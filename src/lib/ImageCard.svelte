@@ -7,7 +7,7 @@
     export let lazy = false;
     export let aspect_ratio = 1.0;
     export let bg_color = 'transparent';
-    export let scale = "100%";
+    export let scale = '100%';
     export let root: HTMLElement | null = null;
 
     let insides: HTMLElement;
@@ -20,8 +20,8 @@
     }
     let abs: HTMLElement;
     $: if (abs) {
-        abs.style.left = (width / 2).toString() + "px";
-        abs.style.top = (height / 2).toString() + "px";
+        abs.style.left = (width / 2).toString() + 'px';
+        abs.style.top = (height / 2).toString() + 'px';
     }
     let scalable: HTMLElement;
     $: if (scalable) {
@@ -45,7 +45,7 @@
     {#if lazy && hasAPI}
         <rel>
             <abs bind:this={abs}>
-                <Observer enter_screen={on_intersect} root={root} />
+                <Observer enter_screen={on_intersect} {root} />
             </abs>
         </rel>
     {/if}
