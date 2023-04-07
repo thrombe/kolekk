@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { tick } from "svelte";
+    import { tick } from 'svelte';
 
     export let enter_screen: () => void | Promise<void> = async () => {};
     export let leave_screen: () => void | Promise<void> = async () => {};
@@ -36,7 +36,10 @@
         show = true;
     };
 
-    $: observer = new IntersectionObserver(on_intersect, { rootMargin: '' + margin + 'px', root: root });
+    $: observer = new IntersectionObserver(on_intersect, {
+        rootMargin: '' + margin + 'px',
+        root: root
+    });
 
     // the element must be reshown whenever margin or root changes
     $: if (margin || root) {

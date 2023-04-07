@@ -6,6 +6,7 @@
     import Card from './Card.svelte';
     import Scrollable from '$lib/Scrollable.svelte';
     import Virtual from '$lib/Virtual.svelte';
+    import Selectable from '$lib/Selectable.svelte';
 
     const search_tmdb_multi = async (
         query: string,
@@ -130,29 +131,31 @@
         bind:end_is_visible
         keyboard_control={true}
         {item_aspect_ratio}
-
         let:item_width={width}
         let:root
     >
         {#each $search_results.results as media, i (media.id)}
-            <Virtual
+            <Selectable
                 {width}
-                aspect_ratio={item_aspect_ratio}
-                {root}
+                {item_aspect_ratio}
+                selected={selected == i ||
+                    (i == $search_results.results.length - 1 &&
+                        selected >= $search_results.results.length)}
+                let:selected={s}
             >
-                <Card
-                    {width}
-                    aspect_ratio={item_aspect_ratio}
-                    selected={selected == i ||
-                        (i == $search_results.results.length - 1 &&
-                            selected >= $search_results.results.length)}
-                    {media}
-                    on_click={() => {
-                        selected = i;
-                    }}
-                    {root}
-                />
-            </Virtual>
+                <Virtual {width} aspect_ratio={item_aspect_ratio} {root}>
+                    <Card
+                        {width}
+                        aspect_ratio={item_aspect_ratio}
+                        selected={s}
+                        {media}
+                        on_click={() => {
+                            selected = i;
+                        }}
+                        {root}
+                    />
+                </Virtual>
+            </Selectable>
         {/each}
     </Scrollable>
 </cl>

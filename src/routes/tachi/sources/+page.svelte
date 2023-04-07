@@ -5,6 +5,7 @@
     import Scrollable from '$lib/Scrollable.svelte';
     import Card from './Card.svelte';
     import Virtual from '$lib/Virtual.svelte';
+    import Selectable from '$lib/Selectable.svelte';
 
     // TODO: make sources searchable
     const get_sources = async () => {
@@ -41,28 +42,30 @@
         {item_aspect_ratio}
         {on_keydown}
         keyboard_control={true}
-
         let:item_width={width}
         let:root
     >
         {#each $sources as source, i (source.id)}
-            <Virtual
+            <Selectable
                 {width}
-                aspect_ratio={item_aspect_ratio}
-                {root}
+                {item_aspect_ratio}
+                selected={selected == i ||
+                    (i == $sources.length - 1 && selected >= $sources.length)}
+                let:selected={s}
             >
-                <Card
-                    {width}
-                    aspect_ratio={item_aspect_ratio}
-                    selected={selected == i ||
-                        (i == $sources.length - 1 && selected >= $sources.length)}
-                    {source}
-                    on_click={() => {
-                        selected = i;
-                    }}
-                    {root}
-                />
-            </Virtual>
+                <Virtual {width} aspect_ratio={item_aspect_ratio} {root}>
+                    <Card
+                        {width}
+                        aspect_ratio={item_aspect_ratio}
+                        selected={s}
+                        {source}
+                        on_click={() => {
+                            selected = i;
+                        }}
+                        {root}
+                    />
+                </Virtual>
+            </Selectable>
         {/each}
     </Scrollable>
 </cl>

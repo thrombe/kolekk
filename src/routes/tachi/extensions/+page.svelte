@@ -5,6 +5,7 @@
     import Scrollable from '$lib/Scrollable.svelte';
     import Card from './Card.svelte';
     import Virtual from '$lib/Virtual.svelte';
+    import Selectable from '$lib/Selectable.svelte';
 
     // TODO: make extensions searchable
     const get_all_extensions = async () => {
@@ -38,31 +39,33 @@
         num_items={$extensions.length}
         bind:selected
         width={window_width}
-        item_aspect_ratio={item_aspect_ratio}
+        {item_aspect_ratio}
         {on_keydown}
         keyboard_control={true}
-
         let:item_width={width}
         let:root
     >
         {#each $extensions as ext, i (ext.pkgName)}
-            <Virtual
+            <Selectable
                 {width}
-                aspect_ratio={item_aspect_ratio}
-                {root}
+                {item_aspect_ratio}
+                selected={selected == i ||
+                    (i == $extensions.length - 1 && selected >= $extensions.length)}
+                let:selected={s}
             >
-                <Card
-                    {width}
-                    aspect_ratio={item_aspect_ratio}
-                    selected={selected == i ||
-                        (i == $extensions.length - 1 && selected >= $extensions.length)}
-                    {ext}
-                    on_click={() => {
-                        selected = i;
-                    }}
-                    {root}
-                />
-            </Virtual>
+                <Virtual {width} aspect_ratio={item_aspect_ratio} {root}>
+                    <Card
+                        {width}
+                        aspect_ratio={item_aspect_ratio}
+                        selected={s}
+                        {ext}
+                        on_click={() => {
+                            selected = i;
+                        }}
+                        {root}
+                    />
+                </Virtual>
+            </Selectable>
         {/each}
     </Scrollable>
 </cl>

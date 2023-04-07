@@ -50,7 +50,7 @@
 
     $: item_width = width / columns;
     $: item_height = item_width / item_aspect_ratio;
-    $: margin = item_height*2;
+    $: margin = item_height * 2;
 
     let root: HTMLElement | null = null;
 </script>
@@ -59,7 +59,7 @@
     <slot {item_width} {root} />
 
     <!-- observer -->
-    <Observer enter_screen={end_reached} bind:visible={end_is_visible} {root} {margin}/>
+    <Observer enter_screen={end_reached} bind:visible={end_is_visible} {root} {margin} />
 </cl>
 
 <svelte:window on:keydown={_on_keydown} />

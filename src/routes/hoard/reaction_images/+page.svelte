@@ -59,10 +59,7 @@
         <button on:click={remove_tag}>remove tag</button>
     </buttons>
     {#each images as img}
-        <card-div
-            draggable="true"
-            style="height:{width / 5}px; width: {width / 5}px"
-        >
+        <card-div draggable="true" style="height:{width / 5}px; width: {width / 5}px">
             <card-insides draggable="true">
                 <image-div>
                     <img draggable="false" src={convertFileSrc(img.db_path)} alt="" />

@@ -6,7 +6,7 @@
     export let width: number;
     export let aspect_ratio: number;
     export let ext: Extension;
-    
+
     export let selected = false;
     export let on_click: any = () => {};
     export let root: HTMLElement | null = null;
@@ -14,9 +14,6 @@
     let img_source = 'http://0.0.0.0:4567' + ext.iconUrl + '?useCache=true';
 
     let ele: HTMLElement;
-    $: if (selected && ele) {
-        ele.scrollIntoView({ block: 'nearest' });
-    }
     $: if (ele) {
         let color = selected ? '#558855' : '#885555';
         ele.style.setProperty('--color', color);

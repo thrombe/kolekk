@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Observer from "./Observer.svelte";
+    import Observer from './Observer.svelte';
 
     export let width: number;
     export let aspect_ratio: number;
@@ -14,9 +14,9 @@
 </script>
 
 {#if enabled}
-    <rel style={"width: " + width + "px; height: " + height + "px;"} >
-        <abs style={"left: " + (width / 2) + "px; top: " + (height / 2) + "px;"}>
-            <Observer bind:visible={visible} {root} margin={margin} />
+    <rel style={'width: ' + width + 'px; height: ' + height + 'px;'}>
+        <abs style={'left: ' + width / 2 + 'px; top: ' + height / 2 + 'px;'}>
+            <Observer bind:visible {root} {margin} />
         </abs>
         {#if visible}
             <slot />

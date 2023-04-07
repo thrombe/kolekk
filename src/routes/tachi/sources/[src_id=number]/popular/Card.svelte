@@ -13,9 +13,6 @@
     let img_source = 'http://0.0.0.0:4567' + manga.thumbnailUrl;
 
     let ele: HTMLElement;
-    $: if (selected && ele) {
-        ele.scrollIntoView({ block: 'nearest' });
-    }
     $: if (ele) {
         let color = selected ? '#558855' : '#885555';
         ele.style.setProperty('--color', color);
