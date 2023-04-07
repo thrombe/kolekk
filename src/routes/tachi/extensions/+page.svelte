@@ -13,6 +13,9 @@
 
     onMount(async () => {
         await invoke('init_tachidesk_client');
+        if ($extensions.length == 0) {
+            await get_all_extensions();
+        }
     });
 
     const on_keydown = async (e: KeyboardEvent) => {};
