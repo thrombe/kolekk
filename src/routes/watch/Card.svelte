@@ -56,7 +56,7 @@
         }
 
         if (external_ids.imdb_id) {
-            let href = 'stremio:///detail/' + media.media_type + '/' + external_ids.imdb_id;
+            let href = 'stremio:///detail/' + media_type + '/' + external_ids.imdb_id;
             console.log(href, external_ids);
             open(href);
         }
