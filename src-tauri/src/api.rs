@@ -1,6 +1,6 @@
 pub mod commands {
     use kolekk_types::api::{
-        tachidesk::Extension,
+        tachidesk::{Chapter, Extension, ExtensionAction, Manga, Source},
         tmdb::{ExternalIDs, ListResults, MultiSearchResult},
     };
     use reqwest::Client;
@@ -9,7 +9,6 @@ pub mod commands {
     use crate::{
         bad_error::{Error, InferBadError},
         config::AppConfig,
-        database::AppDatabase,
     };
 
     use super::{
@@ -57,21 +56,19 @@ pub mod commands {
                 .into_values()
                 .next()
                 .expect("no window?")
-                .on_window_event(move |e| {
-                    match e {
-                        WindowEvent::Destroyed | WindowEvent::CloseRequested { .. } => {
-                            handle
-                                .state::<TachideskClient>()
-                                .inner()
-                                .clild
-                                .lock()
-                                .infer_err()
-                                .unwrap()
-                                .start_kill()
-                                .unwrap();
-                        }
-                        _ => {}
+                .on_window_event(move |e| match e {
+                    WindowEvent::Destroyed | WindowEvent::CloseRequested { .. } => {
+                        handle
+                            .state::<TachideskClient>()
+                            .inner()
+                            .clild
+                            .lock()
+                            .infer_err()
+                            .unwrap()
+                            .start_kill()
+                            .unwrap();
                     }
+                    _ => {}
                 });
         }
         Ok(())
@@ -82,6 +79,76 @@ pub mod commands {
         tachi: tauri::State<'_, TachideskClient>,
     ) -> Result<Vec<Extension>, Error> {
         tachi.get_all_extensions().await
+    }
+
+    #[tauri::command]
+    pub async fn tachidesk_extension_action(
+        tachi: tauri::State<'_, TachideskClient>,
+        pkg_name: String,
+        action: ExtensionAction,
+    ) -> Result<(), Error> {
+        tachi.extension_action(pkg_name, action).await
+    }
+
+    #[tauri::command]
+    pub fn tachidesk_get_extension_icon_url(
+        tachi: tauri::State<'_, TachideskClient>,
+        icon_url: String,
+    ) -> Result<String, Error> {
+        let u = tachi.get_extension_icon_url(icon_url);
+        Ok(u)
+    }
+
+    #[tauri::command]
+    pub async fn tachidesk_get_manga_chapter_list(
+        tachi: tauri::State<'_, TachideskClient>,
+        manga_id: u32,
+    ) -> Result<Vec<Chapter>, Error> {
+        tachi.get_manga_chapter_list(manga_id).await
+    }
+
+    #[tauri::command]
+    pub fn tachidesk_get_manga_page_url(
+        tachi: tauri::State<'_, TachideskClient>,
+        manga_id: u32,
+        chapter: u32,
+        page: u32,
+    ) -> Result<String, Error> {
+        let u = tachi.get_manga_page_url(manga_id, chapter, page);
+        Ok(u)
+    }
+
+    #[tauri::command]
+    pub fn tachidesk_get_manga_thumbnail_url(
+        tachi: tauri::State<'_, TachideskClient>,
+        manga_id: u32,
+    ) -> Result<String, Error> {
+        let u = tachi.get_manga_thumbnail_url(manga_id);
+        Ok(u)
+    }
+
+    #[tauri::command]
+    pub async fn tachidesk_get_manga(
+        tachi: tauri::State<'_, TachideskClient>,
+        manga_id: u32,
+    ) -> Result<Manga, Error> {
+        tachi.get_manga(manga_id).await
+    }
+
+    #[tauri::command]
+    pub async fn tachidesk_get_source_list(
+        tachi: tauri::State<'_, TachideskClient>,
+    ) -> Result<Vec<Source>, Error> {
+        tachi.get_source_list().await
+    }
+
+    #[tauri::command]
+    pub async fn tachidesk_get_manga_list(
+        tachi: tauri::State<'_, TachideskClient>,
+        source_id: String,
+        page: u16,
+    ) -> Result<Vec<Manga>, Error> {
+        tachi.get_manga_list(source_id, page).await
     }
 }
 
@@ -465,8 +532,8 @@ pub mod tachidesk {
         sync::Mutex,
     };
 
-    use flate2::{bufread::MultiGzDecoder, read::GzDecoder};
-    use kolekk_types::api::tachidesk::Extension;
+    use flate2::bufread::MultiGzDecoder;
+    use kolekk_types::api::tachidesk::{Chapter, Extension, Manga, Source, ExtensionAction};
     use reqwest::Client;
     use serde::{de::DeserializeOwned, Deserialize};
     use tar::Archive;
@@ -632,6 +699,70 @@ pub mod tachidesk {
         pub async fn get_all_extensions(&self) -> Result<Vec<Extension>, Error> {
             self.get_parsed(format!("{}/api/v1/extension/list", BASE_URL))
                 .await
+        }
+
+        pub fn get_extension_icon_url(&self, icon_url: impl AsRef<str>) -> String {
+            format!("{}{}?useCache=true", BASE_URL, icon_url.as_ref())
+        }
+
+        pub async fn extension_action(
+            &self,
+            pkg_name: impl AsRef<str>,
+            action: ExtensionAction,
+        ) -> Result<(), Error> {
+            let _res = self
+                .client
+                .get(format!(
+                    "{}/api/v1/extension/{}/{}",
+                    BASE_URL,
+                    action.as_ref(),
+                    pkg_name.as_ref()
+                ))
+                .send()
+                .await
+                .look(|e| dbg!(e))
+                .infer_err()?;
+            Ok(())
+        }
+
+        pub async fn get_manga_chapter_list(&self, manga_id: u32) -> Result<Vec<Chapter>, Error> {
+            self.get_parsed(format!("{}/api/v1/manga/{}/chapters", BASE_URL, manga_id))
+                .await
+        }
+
+        pub fn get_manga_page_url(&self, manga_id: u32, chapter: u32, page: u32) -> String {
+            format!(
+                "{}/api/v1/manga/{}/chapter/{}/page/{}",
+                BASE_URL, manga_id, chapter, page
+            )
+        }
+
+        pub fn get_manga_thumbnail_url(&self, manga_id: u32) -> String {
+            format!("{}/api/v1/manga/{}/thumbnail", BASE_URL, manga_id)
+        }
+
+        pub async fn get_manga(&self, manga_id: u32) -> Result<Manga, Error> {
+            self.get_parsed(format!("{}/api/v1/manga/{}", BASE_URL, manga_id))
+                .await
+        }
+
+        pub async fn get_source_list(&self) -> Result<Vec<Source>, Error> {
+            self.get_parsed(format!("{}/api/v1/source/list", BASE_URL))
+                .await
+        }
+
+        pub async fn get_manga_list(
+            &self,
+            source_id: impl AsRef<str>,
+            page: u16,
+        ) -> Result<Vec<Manga>, Error> {
+            self.get_parsed(format!(
+                "{}/api/v1/source/{}/latest/{}",
+                BASE_URL,
+                source_id.as_ref(),
+                page
+            ))
+            .await
         }
     }
 }

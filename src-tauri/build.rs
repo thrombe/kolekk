@@ -6,7 +6,7 @@ use std::{
 
 use kolekk_types::{
     api::{
-        tachidesk::Extension,
+        tachidesk::{Chapter, Extension, Manga, Source, ExtensionAction},
         tmdb::{
             AllInfo, AltTitles, ExternalIDs, ExternalIdSearchResult, Genre, ImageInfo, Images,
             ListResults, Movie, MovieListResult, MultiSearchResult, Season, Title, Tv,
@@ -75,7 +75,13 @@ fn main() {
         Genre,
         Season,
     );
-    export!(Extension);
+    export!(
+        Extension,
+        Manga,
+        Chapter,
+        Source,
+        ExtensionAction,
+    );
 
     remove_dir(cache_dir).unwrap();
 

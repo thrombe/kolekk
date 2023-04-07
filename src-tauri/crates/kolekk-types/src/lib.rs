@@ -179,6 +179,25 @@ pub mod api {
         use ts_rs::TS;
 
         #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub enum ExtensionAction {
+            #[serde(rename = "install")]
+            Install,
+            #[serde(rename = "update")]
+            Update,
+            #[serde(rename = "uninstall")]
+            Uninstall,
+        }
+        impl AsRef<str> for ExtensionAction {
+            fn as_ref(&self) -> &str {
+                match self {
+                    Self::Install => "install",
+                    Self::Update => "update",
+                    Self::Uninstall => "uninstall",
+                }
+            }
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
         #[serde(rename_all = "camelCase")]
         pub struct Extension {
             pub name: String,
@@ -192,6 +211,79 @@ pub mod api {
             pub installed: bool,
             pub has_update: bool,
             pub obsolete: bool,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        #[serde(rename_all = "camelCase")]
+        pub struct Source {
+            pub id: String,
+            pub name: String,
+            pub lang: String,
+            pub icon_url: String,
+            pub supports_latest: bool,
+            pub is_configurable: bool,
+            pub is_nsfw: bool,
+            pub display_name: String,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        #[serde(rename_all = "camelCase")]
+        pub struct Chapter {
+            pub id: u32,
+            pub url: String,
+            pub name: String,
+            pub upload_date: u32,
+            pub chapter_number: u32,
+            pub scanlator: String,
+            pub manga_id: u32,
+            pub read: bool,
+            pub bookmarked: bool,
+            pub last_page_read: u32,
+            pub last_read_at: u32,
+            pub index: u32,
+            pub fetched_at: u32,
+            pub chapter_count: u32,
+            pub page_count: u32,
+            pub downloaded: bool,
+            pub meta: Metadata,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        #[serde(rename_all = "camelCase")]
+        pub struct Manga {
+            pub id: u32,
+            pub source_id: String,
+
+            pub url: String,
+            pub title: String,
+            pub thumbnail_url: String,
+
+            pub artist: String,
+            pub author: String,
+            pub description: String,
+            pub genre: Vec<String>,
+            pub status: String,
+
+            pub in_library: bool,
+            pub source: Source,
+
+            pub meta: Metadata,
+
+            pub real_url: String,
+            pub fresh_data: bool,
+            pub unread_count: Option<u32>,
+            pub download_count: Option<u32>,
+
+            pub age: u32,
+            pub chapters_age: u32,
+            pub chapters_last_fetched_at: u32,
+            pub in_library_at: u32,
+            pub initialized: bool,
+            pub last_chapter_read: Option<Chapter>,
+            pub last_fetched_at: u32,
+            pub last_read_at: u32,
+            pub thumbnail_url_last_fetched: u32,
+            pub update_strategy: String,
         }
     }
 }
