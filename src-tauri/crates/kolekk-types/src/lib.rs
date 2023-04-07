@@ -175,6 +175,8 @@ pub mod api {
     }
 
     pub mod tachidesk {
+        use std::collections::HashMap;
+
         use serde::{Serialize, Deserialize};
         use ts_rs::TS;
 
@@ -255,7 +257,7 @@ pub mod api {
             pub chapter_count: u32,
             pub page_count: u32,
             pub downloaded: bool,
-            pub meta: Metadata,
+            pub meta: HashMap<String, MetaValue>,
         }
 
         #[derive(Serialize, Deserialize, TS, Debug, Clone)]
@@ -277,7 +279,7 @@ pub mod api {
             pub in_library: bool,
             pub source: Option<Source>,
 
-            pub meta: Metadata,
+            pub meta: HashMap<String, MetaValue>,
 
             pub real_url: Option<String>,
             pub fresh_data: bool,
@@ -302,6 +304,15 @@ pub mod api {
         pub struct MangaListPage {
             pub has_next_page: bool,
             pub manga_list: Vec<Manga>,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        #[serde(untagged)]
+        pub enum MetaValue {
+            String(String),
+            Bool(bool),
+            U32(u32),
+            None,
         }
     }
 }
@@ -361,11 +372,22 @@ pub struct Group {
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
 #[serde(untagged)]
+#[allow(clippy::large_enum_variant)]
 pub enum Object {
     Image(Image),
     Bookmark(Bookmark),
     Group(Group),
     Tag(Tag),
+    Content(Content),
+}
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[serde(tag = "content_type")]
+#[allow(clippy::large_enum_variant)]
+pub enum Content {
+    TmdbTv(api::tmdb::AllInfo<api::tmdb::Movie>),
+    TmdbMovie(api::tmdb::AllInfo<api::tmdb::Tv>),
+    TachiManga(api::tachidesk::Manga),
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]

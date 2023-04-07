@@ -1,7 +1,6 @@
 <script lang="ts">
-    import { invoke, convertFileSrc } from '@tauri-apps/api/tauri';
+    import { invoke } from '@tauri-apps/api/tauri';
     import { playing, progress, paused } from './Player';
-    import { writable } from 'svelte/store';
 
     invoke('stop_song').then(() => {});
 

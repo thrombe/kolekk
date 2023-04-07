@@ -20,6 +20,7 @@ pub async fn search_images(
     limit: usize,
     offset: usize,
 ) -> Result<Vec<serde_json::Map<String, serde_json::Value>>, Error> {
+    todo!();
     crate::database::search_object(db.inner(), ObjectType::Image, query, limit, offset)
 }
 

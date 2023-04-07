@@ -6,14 +6,16 @@ use std::{
 
 use kolekk_types::{
     api::{
-        tachidesk::{Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source, About},
+        tachidesk::{
+            About, Chapter, Extension, ExtensionAction, Manga, MangaListPage, MetaValue, Source,
+        },
         tmdb::{
             AllInfo, AltTitles, ExternalIDs, ExternalIdSearchResult, Genre, ImageInfo, Images,
             ListResults, Movie, MovieListResult, MultiSearchResult, Season, Title, Tv,
             TvListResult,
         },
     },
-    Bookmark, ByteArrayFile, DragDropPaste, FilderKind, Group, Image, Object, Tag, TS,
+    Bookmark, ByteArrayFile, Content, DragDropPaste, FilderKind, Group, Image, Object, Tag, TS,
 };
 
 fn main() {
@@ -58,6 +60,7 @@ fn main() {
         Object,
         Tag,
         Group,
+        Content,
     );
     export!(
         AllInfo<()>,
@@ -84,6 +87,7 @@ fn main() {
         ExtensionAction,
         MangaListPage,
         About,
+        MetaValue,
     );
 
     remove_dir(cache_dir).unwrap();

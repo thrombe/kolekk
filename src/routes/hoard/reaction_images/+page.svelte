@@ -53,14 +53,16 @@
     <buttons>
         <input bind:value={query} on:input={search_images} />
         <button on:click={search_images}>refresh</button>
-        
+
         <input bind:value={tag_name} />
         <button on:click={add_tag}>add tag</button>
         <button on:click={remove_tag}>remove tag</button>
     </buttons>
     {#each images as img}
-        <!-- <rw> -->
-        <card-div draggable="true" style="height:{width/5}px; width: {width/5}px">
+        <card-div
+            draggable="true"
+            style="height:{width / 5}px; width: {width / 5}px"
+        >
             <card-insides draggable="true">
                 <image-div>
                     <img draggable="false" src={convertFileSrc(img.db_path)} alt="" />

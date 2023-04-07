@@ -1,11 +1,10 @@
-<script lang="ts">
-</script>
-
 <script lang="ts" context="module">
     import { invoke } from '@tauri-apps/api/tauri';
 
     invoke('initialise_app');
+</script>
 
+<script lang="ts">
 </script>
 
 <h>
