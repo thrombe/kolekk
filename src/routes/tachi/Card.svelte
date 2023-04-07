@@ -1,6 +1,7 @@
 <script lang="ts">
     import ImageCard from '$lib/ImageCard.svelte';
-    import type { Extension } from 'types';
+    import { invoke } from '@tauri-apps/api/tauri';
+    import type { Extension, ExtensionAction } from 'types';
 
     export let width = 200;
     export let aspect_ratio = 1.0;
@@ -30,6 +31,10 @@
     }
 
     $: wrap = selected ? 'normal' : 'nowrap';
+
+    const tachidesk_action = async (pkgName: string, action: ExtensionAction) => {
+        await invoke("tachidesk_extension_action", { pkgName, action })
+    };
 </script>
 
 <this-helps-position-the-tag>
@@ -51,11 +56,13 @@
                 </cropper>
 
                 <buttons-box>
-                    <button>{ext.installed?"uninstall":"install"}</button>
+                    <button on:click={() => tachidesk_action(ext.pkgName, ext.installed?"uninstall":"install")} >
+                        {ext.installed?"uninstall":"install"}
+                    </button>
                     <button>{"browse"}</button>
                     <button>{"latest"}</button>
                     {#if ext.hasUpdate}
-                        <button>{"update"}</button>
+                        <button on:click={() => tachidesk_action(ext.pkgName, "update")} >{"update"}</button>
                     {/if}
                 </buttons-box>
                 {#if ext.isNsfw}
