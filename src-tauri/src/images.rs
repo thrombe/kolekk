@@ -6,6 +6,7 @@ use std::{
     fmt::Debug,
     fs::File,
     io::{BufWriter, Cursor, Write},
+    num::NonZeroUsize,
     path::{Path, PathBuf},
     str::FromStr,
     sync::Mutex,
@@ -102,11 +103,14 @@ pub async fn image_thumbnail(
     let width = width.round() as u32;
 
     let dir = thumbnailer.dir.clone();
-    if let Some(tmb) = thumbnailer.cache.get(&uri).map(|v| v.value().clone()) {
+    let tmb = { thumbnailer.cache.lock().infer_err()?.get(&uri).cloned() };
+    if let Some(tmb) = tmb {
         let img = tokio::task::spawn_blocking(move || {
             let img = tmb.get_image(ThumbnailSize::get_appropriate_size(width), &dir)?;
             Ok(img)
-        }).await.infer_err()??;
+        })
+        .await
+        .infer_err()??;
         return Ok(img.to_string_lossy().to_string());
     }
 
@@ -114,21 +118,27 @@ pub async fn image_thumbnail(
     let u = uri.clone();
     let (tmb, img) = tokio::task::spawn_blocking(move || async move {
         let tmb = Thumbnail::new(&u, &dir, &client)
-        .await?
-        .look(|e| dbg!(e))
-        .bad_err("coule not get an image from the uri")?;
+            .await?
+            .look(|e| dbg!(e))
+            .bad_err("coule not get an image from the uri")?;
         let img = tmb.get_image(ThumbnailSize::get_appropriate_size(width), &dir)?;
         Ok((tmb, img))
-    }).await.infer_err()?.await?;
+    })
+    .await
+    .infer_err()?
+    .await?;
 
-    thumbnailer.cache.insert(uri, tmb, 1).await.look(|e| dbg!(e));
+    let old = { thumbnailer.cache.lock().infer_err()?.push(uri, tmb) };
+    if let Some((_uri, tmb)) = old {
+        tmb.delete(&thumbnailer.dir)?;
+    }
 
     Ok(img.to_string_lossy().to_string())
 }
 
 pub struct Thumbnailer {
     dir: PathBuf,
-    cache: AsyncCache<String, Thumbnail>,
+    cache: Mutex<LruCache<String, Thumbnail>>,
 }
 impl Thumbnailer {
     pub fn new(dir: impl AsRef<Path>) -> Result<Self, Error> {
@@ -138,7 +148,7 @@ impl Thumbnailer {
         }
         Ok(Self {
             dir,
-            cache: AsyncCache::new(50000, 5000, tokio::spawn).infer_err()?,
+            cache: Mutex::new(LruCache::new(NonZeroUsize::new(5000).unwrap())),
         })
     }
 }
