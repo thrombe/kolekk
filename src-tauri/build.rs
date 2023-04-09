@@ -15,7 +15,7 @@ use kolekk_types::{
             TvListResult,
         },
     },
-    Bookmark, ByteArrayFile, Content, DragDropPaste, FilderKind, Group, Image, Object, Tag, TS,
+    Bookmark, ByteArrayFile, Content, DragDropPaste, FilderKind, Group, Image, Object, Tag, TS, ThumbnailSize,
 };
 
 fn main() {
@@ -61,6 +61,7 @@ fn main() {
         Tag,
         Group,
         Content,
+        ThumbnailSize,
     );
     export!(
         AllInfo<()>,

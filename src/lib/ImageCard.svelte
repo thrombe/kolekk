@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { convertFileSrc, invoke } from '@tauri-apps/api/tauri';
     import Observer from './Observer.svelte';
     const hasAPI = 'IntersectionObserver' in window;
 
@@ -30,14 +31,21 @@
     }
 
     let lazy_img_src = '';
-
-    if (!lazy) {
-        lazy_img_src = img_source;
+    let set_img = async (uri: string, width: number) => {
+        if (!uri) {
+            lazy_img_src = img_source;
+        } else {
+            let src: string = await invoke("image_thumbnail", { uri, width });
+            lazy_img_src = convertFileSrc(src);
+        }
+    };
+    $: if (!lazy) {
+        set_img(img_source, width);
     }
 
     function on_intersect() {
         if (!lazy_img_src) {
-            lazy_img_src = img_source;
+            set_img(img_source, width);
         }
     }
 </script>

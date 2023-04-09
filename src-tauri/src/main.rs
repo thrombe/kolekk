@@ -22,7 +22,7 @@ use tauri::Manager;
 
 pub use logg::{debug, error};
 
-use crate::{api::tmdb::TmdbClient, database::AppDatabase};
+use crate::{api::tmdb::TmdbClient, database::AppDatabase, images::Thumbnailer};
 
 #[derive(PartialEq, Eq)]
 pub enum AppInitialisationStatus {
@@ -55,6 +55,7 @@ fn main() {
             bookmarks::search_bookmarks,
             images::search_images,
             images::save_images_in_appdir,
+            images::image_thumbnail,
             tag::search_tags,
             tag::save_tag,
             tag::save_alias_tag,
@@ -114,6 +115,7 @@ async fn setup(app_handle: &tauri::AppHandle) -> Result<(), Error> {
     app_handle.manage(Player(std::sync::Mutex::new(
         musiplayer::Player::new().unwrap(),
     )));
+    app_handle.manage(Thumbnailer::new(&conf.app_data_dir)?);
     app_handle.manage(conf);
     Ok(())
 }

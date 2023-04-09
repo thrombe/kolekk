@@ -407,6 +407,67 @@ pub enum Tag {
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum ThumbnailSize {
+    Original,
+    W50,
+    W100,
+    W150,
+    W200,
+    W350,
+    W500,
+    W750,
+    W1000,
+    W1920,
+}
+impl AsRef<str> for ThumbnailSize {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::Original => "original",
+            Self::W50 => "w50",
+            Self::W100 => "w100",
+            Self::W150 => "w150",
+            Self::W200 => "w200",
+            Self::W350 => "w350",
+            Self::W500 => "w500",
+            Self::W750 => "w750",
+            Self::W1000 => "w1000",
+            Self::W1920 => "w1920",
+        }
+    }
+}
+impl ThumbnailSize {
+    pub fn value(&self) -> Option<u32> {
+        match self {
+            Self::Original => None,
+            Self::W50 => Some(50),
+            Self::W100 => Some(100),
+            Self::W150 => Some(150),
+            Self::W200 => Some(200),
+            Self::W350 => Some(350),
+            Self::W500 => Some(500),
+            Self::W750 => Some(750),
+            Self::W1000 => Some(100),
+            Self::W1920 => Some(1920),
+        }
+    }
+
+    pub fn get_appropriate_size(u: u32) -> Self {
+        match u {
+            0..=75 => Self::W50,
+            76..=125 => Self::W100,
+            126..=250 => Self::W200,
+            251..=400 => Self::W350,
+            401..=600 => Self::W500,
+            601..=800 => Self::W750,
+            801..=1400 => Self::W1000,
+            1401..=2100 => Self::W1920,
+            2101.. => Self::Original,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
 pub enum FilderKind {
     File,
     Folder,

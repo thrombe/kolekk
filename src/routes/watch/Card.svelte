@@ -14,7 +14,7 @@
 
     let title = media.media_type == 'tv' ? media.name : media.title;
     let img_source = media.poster_path
-        ? 'https://image.tmdb.org/t/p/w200/' + media.poster_path
+        ? 'https://image.tmdb.org/t/p/original/' + media.poster_path
         : '';
 
     let ele: HTMLElement;

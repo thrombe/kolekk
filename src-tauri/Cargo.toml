@@ -30,6 +30,8 @@ reqwest = { version = "0.11.14", features = ["json"] }
 scraper = "0.15.0"
 flate2 = "1.0.25"
 tar = "0.4.38"
+image = "0.24.6"
+lru = "0.10.0"
 
 [dependencies.musiplayer]
 # version = "0.1"

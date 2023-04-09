@@ -11,7 +11,7 @@
     export let on_click: any = () => {};
     export let root: HTMLElement | null = null;
 
-    let img_source = 'http://0.0.0.0:4567' + ext.iconUrl + '?useCache=true';
+    let img_source = 'http://0.0.0.0:4567' + ext.iconUrl;
 
     let ele: HTMLElement;
     $: if (ele) {

@@ -1,13 +1,25 @@
 #[allow(unused_imports)]
 use crate::{dbg, debug, error};
 
-use std::{collections::HashSet, fmt::Debug, path::PathBuf, str::FromStr, time::Duration};
+use std::{
+    collections::HashSet,
+    fmt::Debug,
+    fs::File,
+    io::{BufWriter, Cursor, Write},
+    path::{Path, PathBuf},
+    str::FromStr,
+    sync::Mutex,
+    time::Duration,
+};
 
-use kolekk_types::{ByteArrayFile, DragDropPaste, Image};
+use image::io::Reader;
+use kolekk_types::{ByteArrayFile, DragDropPaste, Image, ThumbnailSize};
+use lru::LruCache;
+use reqwest::{header::HeaderValue, Client, Url};
 use tauri::{http::Uri, State};
 
 use crate::{
-    bad_error::{Error, InferBadError, Inspectable},
+    bad_error::{BadError, Error, InferBadError, Inspectable},
     config::AppConfig,
     database::{AppDatabase, ObjectType},
     filesystem::{file_mdata, path_is_in_dir, Filable, FilableUri, FileSource, FiledResult},
@@ -66,6 +78,183 @@ pub async fn save_images_in_appdir(
         .into_iter()
         .collect::<Result<_, Error>>()?;
     Ok(())
+}
+
+// fetching thumbnail for an uri
+// - check if the uri already has a an associated dir using LruCache<uri, _> else create one and copy original image in it
+//   - can store id for thumbnail Object in the lru cache
+//     - fetch thumbnail object from db and get the uuid from object
+//   - can store uuid for thumbnail dir in the lru cache
+//     - fetch the thumbnail object from db using uuid
+//   - store thumbnail object in lru cache
+// - check if the required size is smaller than the original image, create a thumbnail if required. else return original img
+// #[allow(clippy::await_holding_lock)] // clippy does not detect the drop(cache) calls?
+#[tauri::command]
+pub async fn image_thumbnail(
+    db: State<'_, AppDatabase>,
+    thumbnailer: State<'_, Thumbnailer>,
+    client: State<'_, Client>,
+    uri: String,
+    width: f64,
+) -> Result<String, Error> {
+    let width = width.round() as u32;
+
+    if let Some(tmb) = thumbnailer.cache.lock().infer_err()?.get_mut(&uri) {
+        let img = tmb.get_image(ThumbnailSize::get_appropriate_size(width), &thumbnailer.dir)?;
+        return Ok(img.to_string_lossy().to_string());
+    }
+
+    let dir = thumbnailer.dir.clone();
+    let client = client.inner().clone();
+    let u = uri.clone();
+    // - [Tokio decide how many threads](https://github.com/tokio-rs/tokio/discussions/3858)
+    let (tmb, img) = tokio::task::spawn_blocking(move || async move {
+        let mut tmb = Thumbnail::new(&u, &dir, &client)
+        .await?
+        .look(|e| dbg!(e))
+        .bad_err("coule not get an image from the uri")?;
+        let img = tmb.get_image(ThumbnailSize::get_appropriate_size(width), &dir)?;
+        Ok((tmb, img))
+    }).await.infer_err()?.await?;
+
+    let mut cache = thumbnailer.cache.lock().infer_err()?;
+    let old = cache.push(uri, tmb);
+    drop(cache);
+
+    if let Some((_uri, tmb)) = old {
+        tmb.delete(&thumbnailer.dir)?;
+    }
+
+    Ok(img.to_string_lossy().to_string())
+}
+
+pub struct Thumbnailer {
+    dir: PathBuf,
+    cache: Mutex<LruCache<String, Thumbnail>>,
+}
+impl Thumbnailer {
+    pub fn new(dir: impl AsRef<Path>) -> Result<Self, Error> {
+        let dir = dir.as_ref().join("thumbnails");
+        if !dir.exists() {
+            std::fs::create_dir(&dir).infer_err()?;
+        }
+        Ok(Self {
+            dir,
+            cache: Mutex::new(LruCache::new(std::num::NonZeroUsize::new(5000).unwrap())),
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Thumbnail {
+    width: u32,
+    uuid: String,
+}
+impl Thumbnail {
+    pub async fn new(
+        uri: impl AsRef<str>,
+        thumbnail_dir: impl AsRef<Path>,
+        client: &Client,
+    ) -> Result<Option<Self>, Error> {
+        let uri = uri.as_ref();
+        dbg!("uri => ", uri);
+        let id = uuid::Uuid::new_v4();
+        let uuid = id.hyphenated().to_string();
+        let dir = thumbnail_dir.as_ref().join(&uuid);
+        std::fs::create_dir(&dir).infer_err()?;
+
+        match PathBuf::from_str(uri).ok() {
+            Some(p) if p.exists() => {
+                let dest_path = dir.join(ThumbnailSize::Original.as_ref());
+
+                // TODO:? sync or async file io ?
+                std::fs::copy(p, &dest_path).infer_err()?;
+                let img_dimensions = Reader::open(dest_path)
+                    .infer_err()?
+                    .with_guessed_format()
+                    .infer_err()?
+                    .into_dimensions()
+                    .infer_err()?;
+
+                return Ok(Some(Self {
+                    width: img_dimensions.0,
+                    uuid,
+                }));
+            }
+            _ => {
+                // check if uri
+                if Url::parse(uri).is_ok() {
+                    let p = dir.join(ThumbnailSize::Original.as_ref()).look(|e| dbg!(e));
+                    let resp = client.get(uri).send().await.infer_err()?;
+                    resp.headers()
+                        .look(|e| dbg!(e))
+                        .get(reqwest::header::CONTENT_TYPE)
+                        .bad_err("no content type in response")?
+                        .to_str()
+                        .infer_err()?
+                        .contains("image")
+                        .then_some(())
+                        .bad_err("response is not an image")?; // bail out if not an image
+                    dbg!("fetching image!!!!!");
+                    let bytes = resp.bytes().await.infer_err()?;
+                    dbg!("got image!!!!");
+
+                    // TODO:? sync or async file io ?
+                    let mut file = BufWriter::new(File::create(&p).infer_err()?);
+                    file.write(&bytes).infer_err().look(|e| dbg!(e))?;
+                    let img_dimensions = Reader::new(Cursor::new(&bytes))
+                        .with_guessed_format()
+                        .expect("Cursor io never fails")
+                        .into_dimensions()
+                        .infer_err()?;
+
+                    return Ok(Some(Self {
+                        width: img_dimensions.0,
+                        uuid,
+                    }));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    pub fn get_image(
+        &mut self,
+        size: ThumbnailSize,
+        thumbnail_dir: impl AsRef<Path>,
+    ) -> Result<PathBuf, Error> {
+        let path = thumbnail_dir.as_ref().join(&self.uuid);
+        let original_img = path.join(ThumbnailSize::Original.as_ref());
+
+        if size.value().map(|v| v < self.width).unwrap_or(false) {
+            // thumbnail
+            let thumbnail = path.join(size.as_ref());
+            if !thumbnail.exists() {
+                let s = size
+                    .value()
+                    .expect("this should have a value as it is not Thumnail::Original");
+
+                let reader = Reader::open(&original_img)
+                    .infer_err()?
+                    .with_guessed_format()
+                    .infer_err()?;
+                let img = reader.decode().infer_err()?;
+                img.thumbnail(s, u32::MAX)
+                    .save_with_format(&thumbnail, image::ImageFormat::Jpeg)
+                    .infer_err()?;
+            }
+            Ok(thumbnail)
+        } else {
+            // original image
+            Ok(original_img)
+        }
+    }
+
+    pub fn delete(self, thumbnail_dir: impl AsRef<Path>) -> Result<(), Error> {
+        let path = thumbnail_dir.as_ref().join(self.uuid);
+        std::fs::remove_dir_all(path).infer_err()?;
+        Ok(())
+    }
 }
 
 pub async fn save_images<'a, F: Debug + Filable>(

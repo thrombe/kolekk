@@ -211,7 +211,7 @@ mod common {
             .await
             .look(|e| dbg!(e))
             .infer_err()?;
-        let res = serde_json::from_str(&res).look(|e| dbg!(e)).infer_err()?;
+        let res = serde_json::from_str(&res).infer_err()?;
         Ok(res)
     }
 }
