@@ -16,6 +16,7 @@ use image::io::Reader;
 use kolekk_types::{ByteArrayFile, DragDropPaste, Image, ThumbnailSize};
 use lru::LruCache;
 use reqwest::{header::HeaderValue, Client, Url};
+use stretto::AsyncCache;
 use tauri::{http::Uri, State};
 
 use crate::{
@@ -97,19 +98,22 @@ pub async fn image_thumbnail(
     uri: String,
     width: f64,
 ) -> Result<String, Error> {
+    // - [Tokio decide how many threads](https://github.com/tokio-rs/tokio/discussions/3858)
     let width = width.round() as u32;
 
-    if let Some(tmb) = thumbnailer.cache.lock().infer_err()?.get_mut(&uri) {
-        let img = tmb.get_image(ThumbnailSize::get_appropriate_size(width), &thumbnailer.dir)?;
+    let dir = thumbnailer.dir.clone();
+    if let Some(tmb) = thumbnailer.cache.get(&uri).map(|v| v.value().clone()) {
+        let img = tokio::task::spawn_blocking(move || {
+            let img = tmb.get_image(ThumbnailSize::get_appropriate_size(width), &dir)?;
+            Ok(img)
+        }).await.infer_err()??;
         return Ok(img.to_string_lossy().to_string());
     }
 
-    let dir = thumbnailer.dir.clone();
     let client = client.inner().clone();
     let u = uri.clone();
-    // - [Tokio decide how many threads](https://github.com/tokio-rs/tokio/discussions/3858)
     let (tmb, img) = tokio::task::spawn_blocking(move || async move {
-        let mut tmb = Thumbnail::new(&u, &dir, &client)
+        let tmb = Thumbnail::new(&u, &dir, &client)
         .await?
         .look(|e| dbg!(e))
         .bad_err("coule not get an image from the uri")?;
@@ -117,20 +121,14 @@ pub async fn image_thumbnail(
         Ok((tmb, img))
     }).await.infer_err()?.await?;
 
-    let mut cache = thumbnailer.cache.lock().infer_err()?;
-    let old = cache.push(uri, tmb);
-    drop(cache);
-
-    if let Some((_uri, tmb)) = old {
-        tmb.delete(&thumbnailer.dir)?;
-    }
+    thumbnailer.cache.insert(uri, tmb, 1).await.look(|e| dbg!(e));
 
     Ok(img.to_string_lossy().to_string())
 }
 
 pub struct Thumbnailer {
     dir: PathBuf,
-    cache: Mutex<LruCache<String, Thumbnail>>,
+    cache: AsyncCache<String, Thumbnail>,
 }
 impl Thumbnailer {
     pub fn new(dir: impl AsRef<Path>) -> Result<Self, Error> {
@@ -140,7 +138,7 @@ impl Thumbnailer {
         }
         Ok(Self {
             dir,
-            cache: Mutex::new(LruCache::new(std::num::NonZeroUsize::new(5000).unwrap())),
+            cache: AsyncCache::new(50000, 5000, tokio::spawn).infer_err()?,
         })
     }
 }
@@ -219,7 +217,7 @@ impl Thumbnail {
     }
 
     pub fn get_image(
-        &mut self,
+        &self,
         size: ThumbnailSize,
         thumbnail_dir: impl AsRef<Path>,
     ) -> Result<PathBuf, Error> {
