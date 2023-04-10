@@ -2,10 +2,11 @@
     import ImageCard from '$lib/ImageCard.svelte';
     import type { Manga } from 'types';
 
-    export let width = 200;
-    export let aspect_ratio = 1.0;
-    export let selected = false;
+    export let width: number;
+    export let aspect_ratio: number;
     export let manga: Manga;
+
+    export let selected = false;
     export let on_click: any = () => {};
     export let root: HTMLElement | null = null;
 
