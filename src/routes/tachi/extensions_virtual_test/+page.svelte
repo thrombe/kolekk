@@ -39,15 +39,17 @@
         bind:items={$extensions}
         width={window_width}
         {item_aspect_ratio}
+        {selected}
         let:item_width={width}
         let:root
         let:item={ext}
         let:index={i}
+        let:selected={s}
     >
         <Card
             {width}
             aspect_ratio={item_aspect_ratio}
-            selected={false}
+            selected={s}
             {ext}
             on_click={() => {
                 selected = i;

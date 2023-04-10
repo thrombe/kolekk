@@ -148,16 +148,18 @@
         width={window_width}
         {item_aspect_ratio}
         {end_reached}
+        {selected}
         bind:end_is_visible
         let:item_width={width}
         let:root
         let:item={manga}
         let:index={i}
+        let:selected={s}
     >
         <Card
             {width}
             aspect_ratio={item_aspect_ratio}
-            selected={false}
+            selected={s}
             {manga}
             on_click={() => {
                 selected = i;
