@@ -52,9 +52,6 @@
             aspect_ratio={item_aspect_ratio}
             selected={s}
             {ext}
-            on_click={() => {
-                selected = i;
-            }}
             {root}
         />
     </VirtualScrollable>

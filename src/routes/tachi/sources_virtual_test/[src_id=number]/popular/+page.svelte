@@ -164,9 +164,6 @@
             aspect_ratio={item_aspect_ratio}
             selected={s}
             {manga}
-            on_click={() => {
-                selected = i;
-            }}
             {root}
         />
     </VirtualScrollable>

@@ -107,7 +107,9 @@
                 <slot {item_width} {root} item={item.data} index={i + start*columns} selected={true} />
             </sel>
         {:else}
-            <slot {item_width} {root} item={item.data} index={i + start*columns} selected={false} />
+            <clk on:click={() => {selected = i + start*columns}} on:keydown={() => {}} >
+                <slot {item_width} {root} item={item.data} index={i + start*columns} selected={false} />
+            </clk>
         {/if}
     {/each}
     <pad  style="height: {bottom_padding}px; width: 100%;" />
