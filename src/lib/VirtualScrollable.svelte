@@ -9,7 +9,7 @@
     export let selected: number;
 
     export let end_reached = async () => {};
-    export let on_keydown = async (_: KeyboardEvent) => {};
+    export let on_keydown = async (_: KeyboardEvent, _a: any) => {};
     export let end_is_visible = true;
     export let keyboard_control = true;
 
@@ -68,7 +68,7 @@
                 selected += columns;
             }
         } else {
-            await on_keydown(event);
+            await on_keydown(event, try_scroll_into_view);
         }
 
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(event.key) > -1) {

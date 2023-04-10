@@ -20,7 +20,7 @@
         }
     });
 
-    const on_keydown = async (_: KeyboardEvent) => {};
+    const on_keydown = async (_: KeyboardEvent, _scroll_selected_into_view: any) => {};
 
     let window_width = 100;
     let selected = 0;
@@ -39,7 +39,8 @@
         bind:items={$extensions}
         width={window_width}
         {item_aspect_ratio}
-        {selected}
+        bind:selected
+        {on_keydown}
         let:item_width={width}
         let:root
         let:item={ext}

@@ -94,12 +94,14 @@
     let window_height = 100;
     let selected = 0;
     let search_input: any;
-    const on_keydown = async (event: KeyboardEvent) => {
+    const on_keydown = async (event: KeyboardEvent, scroll_selected_into_view: any) => {
         if (event.key == 'a') {
             // await add_tag_button();
             // event.preventDefault();
         } else if (event.key == '/') {
             selected = 0;
+            await tick();
+            await scroll_selected_into_view();
             search_query = '';
             search_input.focus();
             event.preventDefault();
@@ -148,7 +150,8 @@
         width={window_width}
         {item_aspect_ratio}
         {end_reached}
-        {selected}
+        bind:selected
+        {on_keydown}
         bind:end_is_visible
         let:item_width={width}
         let:root
