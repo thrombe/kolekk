@@ -50,3 +50,9 @@
 {#key margin || root}
     <p use:observe />
 {/key}
+
+<style>
+    p {
+        z-index: 5;
+    }
+</style>

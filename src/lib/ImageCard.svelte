@@ -1,5 +1,6 @@
 <script lang="ts">
     import { convertFileSrc, invoke } from '@tauri-apps/api/tauri';
+    import type { ThumbnailSize } from 'types';
     import Observer from './Observer.svelte';
     const hasAPI = 'IntersectionObserver' in window;
 
@@ -30,31 +31,38 @@
         scalable.style.scale = scale;
     }
 
+    let thumbnail_size: ThumbnailSize;
+    $: try_update_thumbnail_size(visible, lazy, width);
+    let try_update_thumbnail_size = async (visible: boolean, lazy: boolean, width: number) => {
+        if (!visible && lazy && hasAPI) {
+            return;
+        }
+        thumbnail_size = await invoke("get_thumbnail_size", {width});
+    };
+    $: set_img(img_source, thumbnail_size);
+
     let lazy_img_src = '';
-    let set_img = async (uri: string, width: number) => {
+    let set_img = async (uri: string, thumbnail_size: ThumbnailSize) => {
+        if (!thumbnail_size) {
+            return;
+        }
+        console.log(thumbnail_size);
         if (!uri) {
-            lazy_img_src = img_source;
+            lazy_img_src = uri;
         } else {
-            let src: string = await invoke("image_thumbnail", { uri, width });
+            let src: string = await invoke("image_thumbnail", { uri, thumbnailSize: thumbnail_size });
             lazy_img_src = convertFileSrc(src);
         }
     };
-    $: if (!lazy) {
-        set_img(img_source, width);
-    }
 
-    function on_intersect() {
-        if (!lazy_img_src) {
-            set_img(img_source, width);
-        }
-    }
+    let visible = false;
 </script>
 
 <cl bind:this={scalable}>
     {#if lazy && hasAPI}
         <rel>
             <abs bind:this={abs}>
-                <Observer enter_screen={on_intersect} {root} margin={height} />
+                <Observer {root} margin={height} bind:visible />
             </abs>
         </rel>
     {/if}

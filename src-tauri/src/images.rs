@@ -82,6 +82,11 @@ pub async fn save_images_in_appdir(
     Ok(())
 }
 
+#[tauri::command]
+pub fn get_thumbnail_size(width: f64) -> ThumbnailSize {
+    ThumbnailSize::get_appropriate_size(width.round() as _)
+}
+
 // fetching thumbnail for an uri
 // - check if the uri already has a an associated dir using LruCache<uri, _> else create one and copy original image in it
 //   - can store id for thumbnail Object in the lru cache
@@ -97,11 +102,9 @@ pub async fn image_thumbnail(
     thumbnailer: State<'_, Thumbnailer>,
     client: State<'_, Client>,
     uri: String,
-    width: f64,
+    thumbnail_size: ThumbnailSize,
 ) -> Result<String, Error> {
     // - [Tokio decide how many threads](https://github.com/tokio-rs/tokio/discussions/3858)
-    let width = width.round() as u32;
-
     let dir = thumbnailer.dir.clone();
 
     // let tmb = { thumbnailer.cache.lock().infer_err()?.get(&uri).cloned()  };
@@ -111,7 +114,7 @@ pub async fn image_thumbnail(
 
     if let Some(tmb) = tmb {
         let img = tokio::task::spawn_blocking(move || {
-            let img = tmb.get_image(ThumbnailSize::get_appropriate_size(width), &dir)?;
+            let img = tmb.get_image(thumbnail_size, &dir)?;
             Ok(img)
         })
         .await
@@ -126,7 +129,7 @@ pub async fn image_thumbnail(
             .await?
             .look(|e| dbg!(e))
             .bad_err("coule not get an image from the uri")?;
-        let img = tmb.get_image(ThumbnailSize::get_appropriate_size(width), &dir)?;
+        let img = tmb.get_image(thumbnail_size, &dir)?;
         Ok((tmb, img))
     })
     .await
@@ -252,9 +255,9 @@ impl Thumbnail {
 
         if size.value().map(|v| v < self.width).unwrap_or(false) {
             // thumbnail
-            dbg!("creating new thumbnail!!!");
             let thumbnail = path.join(size.as_ref());
             if !thumbnail.exists() {
+                dbg!("creating new thumbnail!!!");
                 let s = size
                     .value()
                     .expect("this should have a value as it is not Thumnail::Original");

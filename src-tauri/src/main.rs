@@ -56,6 +56,7 @@ fn main() {
             images::search_images,
             images::save_images_in_appdir,
             images::image_thumbnail,
+            images::get_thumbnail_size,
             tag::search_tags,
             tag::save_tag,
             tag::save_alias_tag,

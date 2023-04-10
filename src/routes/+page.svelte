@@ -31,6 +31,12 @@
 <h>
     <a href="/tachi/sources">Tachidesk sources</a>
 </h>
+<h>
+    <a href="/tachi/extensions_virtual_test">Tachidesk extensions virtual scroll test</a>
+</h>
+<h>
+    <a href="/tachi/sources_virtual_test">Tachidesk sources virtual test</a>
+</h>
 
 <style>
     h {
