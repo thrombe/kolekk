@@ -103,11 +103,11 @@
     <pad style="height: {top_padding}px; width: 100%;" />
     {#each visible as item, i (item.id)}
         {#if (selected == i + start*columns) || (i + start*columns == items.length - 1 && selected >= items.length)}
-            <sel bind:this={selected_item} >
+            <sel bind:this={selected_item} style="width: {item_width}px; height: {item_height}px;">
                 <slot {item_width} {root} item={item.data} index={i + start*columns} selected={true} />
             </sel>
         {:else}
-            <clk on:click={() => {selected = i + start*columns}} on:keydown={() => {}} >
+            <clk on:click={() => {selected = i + start*columns}} on:keydown={() => {}} style="width: {item_width}px; height: {item_height}px;" >
                 <slot {item_width} {root} item={item.data} index={i + start*columns} selected={false} />
             </clk>
         {/if}
@@ -128,6 +128,11 @@
         flex-direction: row;
         flex-wrap: wrap;
         overflow: auto;
+        width: 100%;
+        height: 100%;
+    }
+
+    sel,clk {
         width: 100%;
         height: 100%;
     }
