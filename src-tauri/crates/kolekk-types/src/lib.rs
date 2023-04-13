@@ -215,7 +215,7 @@ pub mod api {
             pub name: String,
             pub pkg_name: String,
             pub version_name: String,
-            pub version_code: u32,
+            pub version_code: u64,
             pub lang: String,
             pub is_nsfw: bool,
             pub apk_name: String,
@@ -241,29 +241,38 @@ pub mod api {
         #[derive(Serialize, Deserialize, TS, Debug, Clone)]
         #[serde(rename_all = "camelCase")]
         pub struct Chapter {
-            pub id: u32,
+            pub id: u64,
             pub url: String,
             pub name: String,
-            pub upload_date: u32,
-            pub chapter_number: u32,
-            pub scanlator: String,
-            pub manga_id: u32,
+            pub upload_date: u64,
+            pub chapter_number: f64,
+            pub scanlator: Option<String>,
+            pub manga_id: u64,
             pub read: bool,
             pub bookmarked: bool,
-            pub last_page_read: u32,
-            pub last_read_at: u32,
-            pub index: u32,
-            pub fetched_at: u32,
-            pub chapter_count: u32,
-            pub page_count: u32,
+            pub last_page_read: u64,
+            pub last_read_at: u64,
+            pub index: u64,
+            pub fetched_at: u64,
+            pub chapter_count: u64,
+            #[serde(deserialize_with = "deser_page_count")]
+            pub page_count: Option<u64>,
             pub downloaded: bool,
             pub meta: HashMap<String, MetaValue>,
+        }
+        fn deser_page_count<'de, D>(deserializer: D) -> Result<Option<u64>, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            let value = i64::deserialize(deserializer)?;
+            let v = (value>0).then_some(value as _);
+            Ok(v)
         }
 
         #[derive(Serialize, Deserialize, TS, Debug, Clone)]
         #[serde(rename_all = "camelCase")]
         pub struct Manga {
-            pub id: u32,
+            pub id: u64,
             pub source_id: String,
 
             pub url: String,
@@ -283,19 +292,19 @@ pub mod api {
 
             pub real_url: Option<String>,
             pub fresh_data: bool,
-            pub unread_count: Option<u32>,
-            pub download_count: Option<u32>,
+            pub unread_count: Option<u64>,
+            pub download_count: Option<u64>,
 
-            pub age: u32,
-            pub chapters_age: u32,
-            pub chapter_count: Option<u32>,
-            pub chapters_last_fetched_at: u32,
-            pub in_library_at: u32,
+            pub age: u64,
+            pub chapters_age: u64,
+            pub chapter_count: Option<u64>,
+            pub chapters_last_fetched_at: u64,
+            pub in_library_at: u64,
             pub initialized: bool,
             pub last_chapter_read: Option<Chapter>,
-            pub last_fetched_at: u32,
-            pub last_read_at: Option<u32>,
-            pub thumbnail_url_last_fetched: u32,
+            pub last_fetched_at: u64,
+            pub last_read_at: Option<u64>,
+            pub thumbnail_url_last_fetched: u64,
             pub update_strategy: String,
         }
 
@@ -311,7 +320,7 @@ pub mod api {
         pub enum MetaValue {
             String(String),
             Bool(bool),
-            U32(u32),
+            U64(u64),
             None,
         }
     }
@@ -447,7 +456,7 @@ impl ThumbnailSize {
             Self::W350 => Some(350),
             Self::W500 => Some(500),
             Self::W750 => Some(750),
-            Self::W1000 => Some(100),
+            Self::W1000 => Some(1000),
             Self::W1920 => Some(1920),
         }
     }

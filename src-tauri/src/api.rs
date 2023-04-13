@@ -116,7 +116,7 @@ pub mod commands {
     #[tauri::command]
     pub async fn tachidesk_get_manga_chapter_list(
         tachi: tauri::State<'_, TachideskClient>,
-        manga_id: u32,
+        manga_id: u64,
     ) -> Result<Vec<Chapter>, Error> {
         tachi.get_manga_chapter_list(manga_id).await
     }
@@ -124,18 +124,18 @@ pub mod commands {
     #[tauri::command]
     pub fn tachidesk_get_manga_page_url(
         tachi: tauri::State<'_, TachideskClient>,
-        manga_id: u32,
-        chapter: u32,
-        page: u32,
+        manga_id: u64,
+        chapter_index: u64,
+        page: u64,
     ) -> Result<String, Error> {
-        let u = tachi.get_manga_page_url(manga_id, chapter, page);
+        let u = tachi.get_manga_page_url(manga_id, chapter_index, page);
         Ok(u)
     }
 
     #[tauri::command]
     pub fn tachidesk_get_manga_thumbnail_url(
         tachi: tauri::State<'_, TachideskClient>,
-        manga_id: u32,
+        manga_id: u64,
     ) -> Result<String, Error> {
         let u = tachi.get_manga_thumbnail_url(manga_id);
         Ok(u)
@@ -144,7 +144,7 @@ pub mod commands {
     #[tauri::command]
     pub async fn tachidesk_get_manga(
         tachi: tauri::State<'_, TachideskClient>,
-        manga_id: u32,
+        manga_id: u64,
     ) -> Result<Manga, Error> {
         tachi.get_manga(manga_id).await
     }
@@ -160,7 +160,7 @@ pub mod commands {
     pub async fn tachidesk_get_latest_manga_list(
         tachi: tauri::State<'_, TachideskClient>,
         source_id: String,
-        page: u32,
+        page: u64,
     ) -> Result<MangaListPage, Error> {
         tachi.get_latest_manga_list(source_id, page).await
     }
@@ -169,7 +169,7 @@ pub mod commands {
     pub async fn tachidesk_get_popular_manga_list(
         tachi: tauri::State<'_, TachideskClient>,
         source_id: String,
-        page: u32,
+        page: u64,
     ) -> Result<MangaListPage, Error> {
         tachi.get_popular_manga_list(source_id, page).await
     }
@@ -179,7 +179,7 @@ pub mod commands {
         tachi: tauri::State<'_, TachideskClient>,
         source_id: String,
         query: String,
-        page: u32,
+        page: u64,
     ) -> Result<MangaListPage, Error> {
         tachi.search_manga_in(source_id, query, page).await
     }
@@ -768,23 +768,23 @@ pub mod tachidesk {
             Ok(())
         }
 
-        pub async fn get_manga_chapter_list(&self, manga_id: u32) -> Result<Vec<Chapter>, Error> {
+        pub async fn get_manga_chapter_list(&self, manga_id: u64) -> Result<Vec<Chapter>, Error> {
             self.get_parsed(format!("{}/api/v1/manga/{}/chapters", BASE_URL, manga_id))
                 .await
         }
 
-        pub fn get_manga_page_url(&self, manga_id: u32, chapter: u32, page: u32) -> String {
+        pub fn get_manga_page_url(&self, manga_id: u64, chapter_index: u64, page: u64) -> String {
             format!(
                 "{}/api/v1/manga/{}/chapter/{}/page/{}",
-                BASE_URL, manga_id, chapter, page
+                BASE_URL, manga_id, chapter_index, page
             )
         }
 
-        pub fn get_manga_thumbnail_url(&self, manga_id: u32) -> String {
+        pub fn get_manga_thumbnail_url(&self, manga_id: u64) -> String {
             format!("{}/api/v1/manga/{}/thumbnail", BASE_URL, manga_id)
         }
 
-        pub async fn get_manga(&self, manga_id: u32) -> Result<Manga, Error> {
+        pub async fn get_manga(&self, manga_id: u64) -> Result<Manga, Error> {
             self.get_parsed(format!("{}/api/v1/manga/{}", BASE_URL, manga_id))
                 .await
         }
@@ -797,7 +797,7 @@ pub mod tachidesk {
         pub async fn get_latest_manga_list(
             &self,
             source_id: impl AsRef<str>,
-            page: u32,
+            page: u64,
         ) -> Result<MangaListPage, Error> {
             self.get_parsed(format!(
                 "{}/api/v1/source/{}/latest/{}",
@@ -811,7 +811,7 @@ pub mod tachidesk {
         pub async fn get_popular_manga_list(
             &self,
             source_id: impl AsRef<str>,
-            page: u32,
+            page: u64,
         ) -> Result<MangaListPage, Error> {
             self.get_parsed(format!(
                 "{}/api/v1/source/{}/popular/{}",
@@ -826,7 +826,7 @@ pub mod tachidesk {
             &self,
             source_id: impl AsRef<str>,
             query: impl AsRef<str>,
-            page: u32,
+            page: u64,
         ) -> Result<MangaListPage, Error> {
             self.get_parsed(
                 Url::parse_with_params(
