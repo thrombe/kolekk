@@ -150,6 +150,15 @@ pub mod commands {
     }
 
     #[tauri::command]
+    pub async fn tachidesk_get_chapter(
+        tachi: tauri::State<'_, TachideskClient>,
+        manga_id: u64,
+        chapter_index: u64,
+    ) -> Result<Chapter, Error> {
+        tachi.get_chapter(manga_id, chapter_index).await
+    }
+
+    #[tauri::command]
     pub async fn tachidesk_get_source_list(
         tachi: tauri::State<'_, TachideskClient>,
     ) -> Result<Vec<Source>, Error> {
@@ -770,6 +779,11 @@ pub mod tachidesk {
 
         pub async fn get_manga_chapter_list(&self, manga_id: u64) -> Result<Vec<Chapter>, Error> {
             self.get_parsed(format!("{}/api/v1/manga/{}/chapters", BASE_URL, manga_id))
+                .await
+        }
+
+        pub async fn get_chapter(&self, manga_id: u64, chapter_index: u64) -> Result<Chapter, Error> {
+            self.get_parsed(format!("{}/api/v1/manga/{}/chapter/{}", BASE_URL, manga_id, chapter_index))
                 .await
         }
 

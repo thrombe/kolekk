@@ -75,6 +75,7 @@ fn main() {
             api::commands::tachidesk_get_popular_manga_list,
             api::commands::tachidesk_extension_action,
             api::commands::tachidesk_search_manga_in,
+            api::commands::tachidesk_get_chapter,
         ])
         .setup(|app| {
             app.handle().manage(app.handle());
