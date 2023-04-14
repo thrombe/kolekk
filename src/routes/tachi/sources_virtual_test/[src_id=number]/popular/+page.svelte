@@ -68,6 +68,7 @@
                     page: page_num_fetched
                 });
             }
+            let hasNextPage = new_res.mangaList.length > 0;
             new_res.mangaList = new_res.mangaList.filter((item) => {
                 if (id_set.has(item.id)) {
                     collisions.push(item);
@@ -81,7 +82,7 @@
                 page_num_fetched,
                 new_res.mangaList.map((e) => e.id)
             );
-            search_results.hasNextPage = new_res.hasNextPage;
+            search_results.hasNextPage = new_res.hasNextPage && hasNextPage;
             search_results.mangaList.push(...new_res.mangaList);
             search_results = search_results;
 
