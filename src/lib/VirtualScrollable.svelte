@@ -95,6 +95,7 @@
     };
     $: if (selected) {
         try_scroll_into_view();
+        console.log(items[selected]);
     }
 </script>
 

@@ -126,8 +126,8 @@ pub async fn image_thumbnail(
     let u = uri.clone();
     let (tmb, img) = tokio::task::spawn_blocking(move || async move {
         let tmb = Thumbnail::new(&u, &dir, &client)
-            .await?
-            .look(|e| dbg!(e))
+            .await
+            .look(|e| dbg!(e))?
             .bad_err("coule not get an image from the uri")?;
         let img = tmb.get_image(thumbnail_size, &dir)?;
         Ok((tmb, img))
@@ -201,7 +201,8 @@ impl Thumbnail {
                     .with_guessed_format()
                     .infer_err()?
                     .into_dimensions()
-                    .infer_err()?;
+                    .infer_err()
+                    .look(|e| dbg!(e))?;
 
                 return Ok(Some(Self {
                     width: img_dimensions.0,
@@ -216,24 +217,29 @@ impl Thumbnail {
                     resp.headers()
                         .look(|e| dbg!(e))
                         .get(reqwest::header::CONTENT_TYPE)
-                        .bad_err("no content type in response")?
+                        .bad_err("no content type in response")
+                        .look(|e| dbg!(e))?
                         .to_str()
                         .infer_err()?
                         .contains("image")
                         .then_some(())
-                        .bad_err("response is not an image")?; // bail out if not an image
+                        .bad_err("response is not an image")
+                        .look(|e| dbg!(e))?; // bail out if not an image
                     dbg!("fetching image!!!!!");
                     let bytes = resp.bytes().await.infer_err()?;
                     dbg!("got image!!!!");
 
                     // TODO:? sync or async file io ?
                     let mut file = BufWriter::new(File::create(&p).infer_err()?);
-                    file.write(&bytes).infer_err().look(|e| dbg!(e))?;
+                    file.write(&bytes)
+                        .infer_err()
+                        .look(|e| dbg!(e))?;
                     let img_dimensions = Reader::new(Cursor::new(&bytes))
                         .with_guessed_format()
                         .expect("Cursor io never fails")
                         .into_dimensions()
-                        .infer_err()?;
+                        .infer_err()
+                        .look(|e| dbg!(e))?;
 
                     return Ok(Some(Self {
                         width: img_dimensions.0,
