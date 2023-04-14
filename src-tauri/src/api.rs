@@ -649,6 +649,12 @@ pub mod tachidesk {
             let jre = jre.as_ref();
             let tachidesk_jar = tachidesk_jar.as_ref();
             let root_dir = tachidesk_root_dir.as_ref();
+            let cache_dir = root_dir.join("cache");
+            let thumbnails_dir = root_dir.join("thumbnails");
+
+            let _ = std::fs::remove_dir_all(&thumbnails_dir).look(|e| dbg!(e));
+            let _ = std::fs::remove_dir_all(&cache_dir).look(|e| dbg!(e));
+            // let _ = std::fs::remove_file(&root_dir.join("database.mv.db")).look(|e| dbg!(e));
 
             jre.exists()
                 .then_some(())
@@ -668,10 +674,7 @@ pub mod tachidesk {
                 .arg("-Dsuwayomi.tachidesk.config.server.webUIEnabled=false")
                 .arg("-Dsuwayomi.tachidesk.config.server.systemTrayEnabled=false")
                 .arg("-Dsuwayomi.tachidesk.config.server.debugLogsEnabled=false")
-                .arg(format!(
-                    "-Djava.io.tmpdir={}",
-                    root_dir.join("cache").to_string_lossy()
-                ))
+                .arg(format!("-Djava.io.tmpdir={}", cache_dir.to_string_lossy()))
                 .arg("-jar")
                 .arg(tachidesk_jar);
 
