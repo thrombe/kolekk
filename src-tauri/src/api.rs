@@ -667,6 +667,11 @@ pub mod tachidesk {
                 ))
                 .arg("-Dsuwayomi.tachidesk.config.server.webUIEnabled=false")
                 .arg("-Dsuwayomi.tachidesk.config.server.systemTrayEnabled=false")
+                .arg("-Dsuwayomi.tachidesk.config.server.debugLogsEnabled=false")
+                .arg(format!(
+                    "-Djava.io.tmpdir={}",
+                    root_dir.join("cache").to_string_lossy()
+                ))
                 .arg("-jar")
                 .arg(tachidesk_jar);
 
