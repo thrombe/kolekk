@@ -269,6 +269,7 @@ pub mod api {
             Ok(v)
         }
 
+        // tachiyomi => domain/src/main/java/tachiyomi/domain/manga/model/Manga.kt
         #[derive(Serialize, Deserialize, TS, Debug, Clone)]
         #[serde(rename_all = "camelCase")]
         pub struct Manga {
@@ -322,6 +323,75 @@ pub mod api {
             Bool(bool),
             U64(u64),
             None,
+        }
+
+        // tachiyomi => source-api/src/commonMain/kotlin/eu/kanade/tachiyomi/source/model/Filter.kt
+        // https://serde.rs/enum-representations.html#adjacently-tagged
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        #[serde(tag = "type", content = "filter")]
+        pub enum SourceFilter {
+            CheckBox {
+                name: String,
+                state: bool,
+                // iso_code: Option<String>, // language has this one too in mangadex
+                // value: Option<String>, // content rating has this one too in mangadex
+            },
+            Group {
+                name: String,
+                state: Vec<Self>,
+            },
+            Sort {
+                name: String,
+                state: SortFilter,
+                #[serde(rename = "values")]
+                sort_categories: Vec<String>,
+            },
+            Select {
+                name: String,
+                #[serde(rename = "state")]
+                selected_index: usize,
+                #[serde(rename = "displayValues")]
+                display_values: Vec<String>,
+                values: Vec<SelectableItem>,
+            },
+            TriState {
+                id: String,
+                name: String,
+                state: usize,
+                excluded: bool,
+                ignored: bool,
+                included: bool,
+            },
+            Text {
+                name: String,
+                #[serde(rename = "state")]
+                text_value: String,
+            },
+            Header {
+                name: String,
+                state: usize,
+            },
+            Separator {
+                name: String,
+                state: usize,
+            },
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct SortFilter {
+            #[serde(rename = "index")]
+            selected_index: usize,
+            ascending: bool,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        #[serde(untagged)]
+        pub enum SelectableItem {
+            Type1 {
+                title: String,
+                value: String,
+            },
+            Type2(String),
         }
     }
 }

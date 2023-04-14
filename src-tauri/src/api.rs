@@ -2,7 +2,9 @@ pub mod commands {
     use std::time::Duration;
 
     use kolekk_types::api::{
-        tachidesk::{Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source},
+        tachidesk::{
+            Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source, SourceFilter,
+        },
         tmdb::{ExternalIDs, ListResults, MultiSearchResult},
     };
     use reqwest::Client;
@@ -163,6 +165,14 @@ pub mod commands {
         tachi: tauri::State<'_, TachideskClient>,
     ) -> Result<Vec<Source>, Error> {
         tachi.get_source_list().await
+    }
+
+    #[tauri::command]
+    pub async fn tachidesk_get_source_filters(
+        tachi: tauri::State<'_, TachideskClient>,
+        source_id: String,
+    ) -> Result<Vec<SourceFilter>, Error> {
+        tachi.get_source_filters(source_id).await
     }
 
     #[tauri::command]
@@ -579,7 +589,7 @@ pub mod tachidesk {
 
     use flate2::bufread::MultiGzDecoder;
     use kolekk_types::api::tachidesk::{
-        About, Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source,
+        About, Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source, SourceFilter,
     };
     use reqwest::{Client, Url};
     use serde::{de::DeserializeOwned, Deserialize};
@@ -590,6 +600,17 @@ pub mod tachidesk {
 
     const BASE_URL: &str = "http://0.0.0.0:4567";
 
+    // /api/v1/source/{source id}/preferences
+    // /api/v1/source/{source id}/filters
+    // /api/v1/source/{source id}/filters?reset=true
+    // /api/v1/category ???
+    // /api/v1/category/reorder ???
+    // /api/v1/backup/import/file
+    // /api/v1/backup/export/file
+    // /api/v1/update/recentChapters/{page num or something}
+    // api/v1/meta ??
+    // /api/v1/manga/{mangaid}/library ? add to library or somethin
+    // /api/v1/manga/{mangaid}/category ??
     #[derive(Debug)]
     pub struct TachideskClient {
         pub child: Mutex<Child>,
@@ -782,9 +803,16 @@ pub mod tachidesk {
                 .await
         }
 
-        pub async fn get_chapter(&self, manga_id: u64, chapter_index: u64) -> Result<Chapter, Error> {
-            self.get_parsed(format!("{}/api/v1/manga/{}/chapter/{}", BASE_URL, manga_id, chapter_index))
-                .await
+        pub async fn get_chapter(
+            &self,
+            manga_id: u64,
+            chapter_index: u64,
+        ) -> Result<Chapter, Error> {
+            self.get_parsed(format!(
+                "{}/api/v1/manga/{}/chapter/{}",
+                BASE_URL, manga_id, chapter_index
+            ))
+            .await
         }
 
         pub fn get_manga_page_url(&self, manga_id: u64, chapter_index: u64, page: u64) -> String {
@@ -806,6 +834,18 @@ pub mod tachidesk {
         pub async fn get_source_list(&self) -> Result<Vec<Source>, Error> {
             self.get_parsed(format!("{}/api/v1/source/list", BASE_URL))
                 .await
+        }
+
+        pub async fn get_source_filters(
+            &self,
+            source_id: impl AsRef<str>,
+        ) -> Result<Vec<SourceFilter>, Error> {
+            self.get_parsed(format!(
+                "{}/api/v1/source/{}/filters?reset=false",
+                BASE_URL,
+                source_id.as_ref()
+            ))
+            .await
         }
 
         pub async fn get_latest_manga_list(

@@ -76,6 +76,7 @@ fn main() {
             api::commands::tachidesk_extension_action,
             api::commands::tachidesk_search_manga_in,
             api::commands::tachidesk_get_chapter,
+            api::commands::tachidesk_get_source_filters,
         ])
         .setup(|app| {
             app.handle().manage(app.handle());
