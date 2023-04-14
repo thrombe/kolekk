@@ -38,11 +38,14 @@
             let things = Array.from({ length: Number(chapter.pageCount) }).map(async (_, i) => {
                 return {
                     id: i,
-                    data: await invoke<string>('tachidesk_get_manga_page_url', {
-                        mangaId: chapter.mangaId,
-                        chapterIndex: chapter.index,
-                        page: i
-                    })
+                    data: {
+                        uri: await invoke<string>('tachidesk_get_manga_page_url', {
+                            mangaId: chapter.mangaId,
+                            chapterIndex: chapter.index,
+                            page: i
+                        }),
+                        fetched: false
+                    }
                 };
             });
             items = await Promise.all(things);
@@ -50,6 +53,19 @@
         }
     };
     $: get_page_urls(chapter);
+    $: if (items) {
+        let start = Math.max(0, selected - 5);
+        let end = Math.min(selected + 10, items.length + 1);
+        for (let ch of items.slice(start, end)) {
+            if (!ch.data.fetched) {
+                console.log('fetching new');
+                ch.data.fetched = true;
+                invoke('image_thumbnail', { uri: ch.data.uri, thumbnailSize: 'original' }).then(
+                    (e) => console.log(e)
+                );
+            }
+        }
+    }
 </script>
 
 <cl>
@@ -61,7 +77,7 @@
         bind:selected
         {on_keydown}
         bind:end_is_visible
-        let:item={page_url}
+        let:item={page}
         let:index={i}
         let:selected={s}
         let:item_width
@@ -71,7 +87,7 @@
             width={item_width}
             height={item_height}
             lazy={false}
-            img_source={page_url}
+            img_source={page.uri}
             scale="98%"
         />
     </VirtualScrollable>
