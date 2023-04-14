@@ -3,7 +3,7 @@
     import { tick } from 'svelte';
 
     export let width: number;
-    export let item_aspect_ratio: number;
+    export let item_height: number;
     export let columns: number;
     export let items: Array<any>;
     export let selected: number;
@@ -15,7 +15,6 @@
 
 
     $: item_width = width / columns;
-    $: item_height = item_width / item_aspect_ratio;
     $: margin = item_height * 2;
 
     let start = 0;
@@ -104,11 +103,11 @@
     {#each visible as item, i (item.id)}
         {#if (selected == i + start*columns) || (i + start*columns == items.length - 1 && selected >= items.length)}
             <sel bind:this={selected_item} style="width: {item_width}px; height: {item_height}px;">
-                <slot {item_width} {root} item={item.data} index={i + start*columns} selected={true} />
+                <slot {item_width} {item_height} {root} item={item.data} index={i + start*columns} selected={true} />
             </sel>
         {:else}
             <clk on:click={() => {selected = i + start*columns}} on:keydown={() => {}} style="width: {item_width}px; height: {item_height}px;" >
-                <slot {item_width} {root} item={item.data} index={i + start*columns} selected={false} />
+                <slot {item_width} {item_height} {root} item={item.data} index={i + start*columns} selected={false} />
             </clk>
         {/if}
     {/each}

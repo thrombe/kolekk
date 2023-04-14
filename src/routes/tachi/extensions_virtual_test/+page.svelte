@@ -38,7 +38,7 @@
         columns={5}
         bind:items={$extensions}
         width={window_width}
-        {item_aspect_ratio}
+        item_height={window_width / 5 / item_aspect_ratio}
         bind:selected
         {on_keydown}
         let:item_width={width}

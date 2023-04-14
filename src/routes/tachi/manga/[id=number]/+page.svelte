@@ -68,11 +68,11 @@
             bind:items
             columns={1}
             width={window_width}
-            {item_aspect_ratio}
+            item_height={window_width / item_aspect_ratio}
             bind:selected
             {on_keydown}
             bind:end_is_visible
-            let:item_width={width}
+            let:item_width
             let:root
             let:item={chapter}
             let:index={i}

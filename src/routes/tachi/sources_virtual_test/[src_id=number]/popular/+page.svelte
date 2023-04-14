@@ -112,6 +112,7 @@
     $: items = search_results.mangaList.map(e => {
         return {id: e.id, data: e};
     })
+    search();
 </script>
 
 <cl class={'inputs'}>
@@ -148,7 +149,7 @@
         bind:items={items}
         columns={5}
         width={window_width}
-        {item_aspect_ratio}
+        item_height={window_width / 5 / item_aspect_ratio}
         {end_reached}
         bind:selected
         {on_keydown}

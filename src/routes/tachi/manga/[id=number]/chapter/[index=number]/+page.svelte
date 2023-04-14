@@ -3,7 +3,7 @@
     import { invoke } from '@tauri-apps/api/tauri';
     import { page } from '$app/stores';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
-    import ImageCard from '$lib/ImageCard.svelte';
+    import Image from '$lib/Image.svelte';
     import type { Chapter } from 'types';
 
     let end_is_visible = true;
@@ -24,8 +24,6 @@
         }
     };
 
-    $: item_aspect_ratio = 2 / 3;
-
     let chapter: Chapter;
     let items: any[];
     invoke('tachidesk_get_chapter', {
@@ -33,6 +31,7 @@
         chapterIndex: parseInt($page.params.index)
     }).then((c) => {
         chapter = c as Chapter;
+        console.log(chapter);
     });
     let get_page_urls = async (chapter: Chapter | undefined) => {
         if (chapter) {
@@ -47,6 +46,7 @@
                 };
             });
             items = await Promise.all(things);
+            console.log(items);
         }
     };
     $: get_page_urls(chapter);
@@ -57,21 +57,22 @@
         bind:items
         columns={1}
         width={window_width}
-        {item_aspect_ratio}
+        item_height={window_height}
         bind:selected
         {on_keydown}
         bind:end_is_visible
-        let:item_width={width}
-        let:root
         let:item={page_url}
         let:index={i}
         let:selected={s}
+        let:item_width
+        let:item_height
     >
-        <ImageCard
-            {width}
-            aspect_ratio={item_aspect_ratio}
+        <Image
+            width={item_width}
+            height={item_height}
             lazy={false}
             img_source={page_url}
+            scale="98%"
         />
     </VirtualScrollable>
 </cl>
@@ -83,39 +84,6 @@
         --manga-info-height: 300px;
     }
 
-    .read-button {
-        text-decoration: none;
-        color: #cccccc;
-    }
-
-    manga {
-        height: var(--manga-info-height);
-        position: relative;
-        width: 100%;
-        display: flex;
-        overflow: hidden;
-    }
-
-    bg {
-        background-color: #28282888;
-        position: absolute;
-        top: 0px;
-        left: 0px;
-        width: 100vw;
-        height: var(--manga-info-height);
-        z-index: 2;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: blur(4px);
-        background-image: radial-gradient(#00000000, #000000ee);
-        display: flex;
-        flex-direction: column;
-    }
-
-    text-box {
-        color: #888888;
-        font-size: 2rem;
-    }
-
     cl {
         display: flex;
         flex-direction: row;
@@ -123,12 +91,5 @@
         overflow: hidden;
         width: 100%;
         height: 100%;
-    }
-
-    .body {
-        overflow: auto;
-    }
-    .body::-webkit-scrollbar {
-        display: none;
     }
 </style>

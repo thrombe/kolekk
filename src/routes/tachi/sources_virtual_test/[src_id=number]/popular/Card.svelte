@@ -45,11 +45,46 @@
                     </title-box>
                 {/if}
             </card-insides>
+
+            <a href="/tachi/manga/{manga.id}">
+                read
+            </a>
         </card-div>
     </cl>
 </this-helps-position-the-title>
 
 <style>
+    a {
+        --width: 40px;
+        --height: 20px;
+        position: absolute;
+        z-index: 2;
+        float: left;
+        height: var(--height);
+        width: var(--width);
+        top: calc(var(--height) / 2);
+        left: calc(var(--height) / 2);
+        border: 2px solid;
+        border-radius: 8px;
+        border-color: var(--color);
+        padding: 0px;
+        margin: 0px;
+        transition: width 0.2s ease;
+        text-align: center;
+        line-height: calc(var(--height) / 2);
+        font-size: 1.57ch;
+        font-weight: 700;
+        color: #282828;
+        background-color: var(--color);
+        line-height: 2.5ch;
+        text-decoration: none;
+    }
+
+    a:hover {
+        color: #d8d8d8;
+        background-color: #558855af;
+    }
+
     this-helps-position-the-title {
         position: relative;
     }
