@@ -355,7 +355,7 @@ pub mod api {
                 values: Vec<SelectableItem>,
             },
             TriState {
-                id: String,
+                // id: Option<String>, // is in mangadex
                 name: String,
                 state: usize,
                 excluded: bool,
