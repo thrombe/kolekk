@@ -7,7 +7,8 @@ use std::{
 use kolekk_types::{
     api::{
         tachidesk::{
-            About, Chapter, Extension, ExtensionAction, Manga, MangaListPage, MetaValue, Source,
+            About, Chapter, Extension, ExtensionAction, Manga, MangaListPage, MetaValue,
+            SelectableItem, SortFilter, Source, SourceFilter,
         },
         tmdb::{
             AllInfo, AltTitles, ExternalIDs, ExternalIdSearchResult, Genre, ImageInfo, Images,
@@ -15,7 +16,8 @@ use kolekk_types::{
             TvListResult,
         },
     },
-    Bookmark, ByteArrayFile, Content, DragDropPaste, FilderKind, Group, Image, Object, Tag, TS, ThumbnailSize,
+    Bookmark, ByteArrayFile, Content, DragDropPaste, FilderKind, Group, Image, Object, Tag,
+    ThumbnailSize, TS,
 };
 
 fn main() {
@@ -89,6 +91,9 @@ fn main() {
         MangaListPage,
         About,
         MetaValue,
+        SourceFilter,
+        SortFilter,
+        SelectableItem,
     );
 
     remove_dir(cache_dir).unwrap();
