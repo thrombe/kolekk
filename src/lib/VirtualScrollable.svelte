@@ -26,6 +26,9 @@
     let top_padding = 0;
     let bottom_padding = 0;
     let on_update = async () => {
+        if (!items) {
+            return;
+        }
         // console.log(root.scrollTop, root.clientHeight, start, end, top_padding, bottom_padding);
         let s = Math.floor(root.scrollTop/item_height);
         top_padding = s*item_height;
@@ -80,6 +83,9 @@
     let selected_item: HTMLElement;
     let try_scroll_into_view = async () => {
         await tick();
+        if (!(selected === undefined) && items) {
+            console.log(items[selected]);
+        }
         if (selected_item) {
             selected_item.scrollIntoView({ block: "nearest" });
         } else {
@@ -93,9 +99,8 @@
             on_update();
         }
     };
-    $: if (selected) {
+    $: if (!(selected === undefined)) {
         try_scroll_into_view();
-        console.log(items[selected]);
     }
 </script>
 
