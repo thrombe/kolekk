@@ -3,7 +3,7 @@ pub mod commands {
 
     use kolekk_types::api::{
         tachidesk::{
-            Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source, SourceFilter,
+            Chapter, Extension, ExtensionAction, Manga, MangaListPage, MangaSource, SourceFilter,
         },
         tmdb::{ExternalIDs, ListResults, MultiSearchResult},
     };
@@ -163,7 +163,7 @@ pub mod commands {
     #[tauri::command]
     pub async fn tachidesk_get_source_list(
         tachi: tauri::State<'_, TachideskClient>,
-    ) -> Result<Vec<Source>, Error> {
+    ) -> Result<Vec<MangaSource>, Error> {
         tachi.get_source_list().await
     }
 
@@ -589,7 +589,7 @@ pub mod tachidesk {
 
     use flate2::bufread::MultiGzDecoder;
     use kolekk_types::api::tachidesk::{
-        About, Chapter, Extension, ExtensionAction, Manga, MangaListPage, Source, SourceFilter,
+        About, Chapter, Extension, ExtensionAction, Manga, MangaListPage, MangaSource, SourceFilter,
     };
     use reqwest::{Client, Url};
     use serde::{de::DeserializeOwned, Deserialize};
@@ -839,7 +839,7 @@ pub mod tachidesk {
                 .await
         }
 
-        pub async fn get_source_list(&self) -> Result<Vec<Source>, Error> {
+        pub async fn get_source_list(&self) -> Result<Vec<MangaSource>, Error> {
             self.get_parsed(format!("{}/api/v1/source/list", BASE_URL))
                 .await
         }

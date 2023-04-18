@@ -1,4 +1,4 @@
 import { writable, type Writable } from 'svelte/store';
-import type { Source } from 'types';
+import type { MangaSource } from 'types';
 
-export let sources: Writable<Source[]> = writable(new Array());
+export let sources: Writable<MangaSource[]> = writable(new Array());

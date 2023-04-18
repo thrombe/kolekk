@@ -8,7 +8,7 @@ use kolekk_types::{
     api::{
         tachidesk::{
             About, Chapter, Extension, ExtensionAction, Manga, MangaListPage, MetaValue,
-            SelectableItem, SortFilter, Source, SourceFilter,
+            SelectableItem, SortFilter, MangaSource, SourceFilter,
         },
         tmdb::{
             AllInfo, AltTitles, ExternalIDs, ExternalIdSearchResult, Genre, ImageInfo, Images,
@@ -86,7 +86,7 @@ fn main() {
         Extension,
         Manga,
         Chapter,
-        Source,
+        MangaSource,
         ExtensionAction,
         MangaListPage,
         About,

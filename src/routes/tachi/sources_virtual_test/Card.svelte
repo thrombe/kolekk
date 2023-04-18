@@ -1,10 +1,10 @@
 <script lang="ts">
     import ImageCard from '$lib/ImageCard.svelte';
-    import type { Source } from 'types';
+    import type { MangaSource } from 'types';
 
     export let width: number;
     export let aspect_ratio: number;
-    export let source: Source;
+    export let source: MangaSource;
 
     export let selected = false;
     export let on_click: any = () => {};

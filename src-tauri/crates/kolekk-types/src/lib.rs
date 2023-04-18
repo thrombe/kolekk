@@ -227,7 +227,7 @@ pub mod api {
 
         #[derive(Serialize, Deserialize, TS, Debug, Clone)]
         #[serde(rename_all = "camelCase")]
-        pub struct Source {
+        pub struct MangaSource {
             pub id: String,
             pub name: String,
             pub lang: String,
@@ -287,7 +287,7 @@ pub mod api {
             pub status: String,
 
             pub in_library: bool,
-            pub source: Option<Source>,
+            pub source: Option<MangaSource>,
 
             pub meta: HashMap<String, MetaValue>,
 
