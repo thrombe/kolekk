@@ -110,9 +110,9 @@
     };
 
     let item_aspect_ratio = 2 / 3;
-    $: items = search_results.mangaList.map(e => {
-        return {id: e.id, data: e};
-    })
+    $: items = search_results.mangaList.map((e) => {
+        return { id: e.id, data: e };
+    });
     search();
 </script>
 
@@ -161,13 +161,7 @@
         let:index={i}
         let:selected={s}
     >
-        <Card
-            {width}
-            aspect_ratio={item_aspect_ratio}
-            selected={s}
-            {manga}
-            {root}
-        />
+        <Card {width} aspect_ratio={item_aspect_ratio} selected={s} {manga} {root} />
     </VirtualScrollable>
 </cl>
 

@@ -177,7 +177,7 @@ pub mod api {
     pub mod tachidesk {
         use std::collections::HashMap;
 
-        use serde::{Serialize, Deserialize};
+        use serde::{Deserialize, Serialize};
         use ts_rs::TS;
 
         #[derive(Serialize, Deserialize, TS, Debug, Clone)]
@@ -265,7 +265,7 @@ pub mod api {
             D: serde::Deserializer<'de>,
         {
             let value = i64::deserialize(deserializer)?;
-            let v = (value>0).then_some(value as _);
+            let v = (value > 0).then_some(value as _);
             Ok(v)
         }
 
@@ -387,10 +387,7 @@ pub mod api {
         #[derive(Serialize, Deserialize, TS, Debug, Clone)]
         #[serde(untagged)]
         pub enum SelectableItem {
-            Type1 {
-                title: String,
-                value: String,
-            },
+            Type1 { title: String, value: String },
             Type2(String),
         }
     }
