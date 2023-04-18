@@ -1,16 +1,35 @@
 <script lang="ts">
     import { invoke } from '@tauri-apps/api/tauri';
     import { onMount } from 'svelte';
-    import { extensions } from './state';
+    import { extensions, search_query } from './state';
     import Card from './Card.svelte';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
-    import type { Extension } from 'types';
+    import type { Extension, JsonObject } from 'types';
 
-    // TODO: make extensions searchable
+    const facet = '/temp/tachi/extension';
+
     const get_all_extensions = async () => {
         let exts: Extension[] = await invoke('tachidesk_get_all_extensions');
-        $extensions = exts.map((e) => {return {data: e, id: e.pkgName}});
-        console.log($extensions);
+        await invoke('delete_facet_objects', { facet });
+        await invoke('enter_searchable', {
+            facet,
+            data: exts.map((e) => {
+                return { obj: e, search_context: [e.name] };
+            })
+        });
+        search();
+    };
+    const search = async () => {
+        let exts: JsonObject<Extension>[] = await invoke('search_jsml', {
+            query: $search_query,
+            facet,
+            limit: 50,
+            offset: 0
+        });
+        $extensions = exts.map((e) => {
+            return { data: e, id: e.id };
+        });
+        // console.log($extensions.map(e => e.data.obj.name));
     };
 
     onMount(async () => {
@@ -31,6 +50,7 @@
 <svelte:window bind:innerWidth={window_width} />
 <cl class={'inputs'}>
     <button on:click={get_all_extensions}>get all extensions</button>
+    <input bind:value={$search_query} on:input={search} />
 </cl>
 
 <cl>
@@ -47,13 +67,7 @@
         let:index={i}
         let:selected={s}
     >
-        <Card
-            {width}
-            aspect_ratio={item_aspect_ratio}
-            selected={s}
-            {ext}
-            {root}
-        />
+        <Card {width} aspect_ratio={item_aspect_ratio} selected={s} ext={ext.obj} {root} />
     </VirtualScrollable>
 </cl>
 

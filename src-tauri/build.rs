@@ -17,7 +17,7 @@ use kolekk_types::{
         },
     },
     Bookmark, ByteArrayFile, Content, DragDropPaste, FilderKind, Group, Image, Object, Tag,
-    ThumbnailSize, TS,
+    ThumbnailSize, TS, SearchableEntry, JsonObject,
 };
 
 fn main() {
@@ -64,6 +64,8 @@ fn main() {
         Group,
         Content,
         ThumbnailSize,
+        SearchableEntry,
+        JsonObject<()>,
     );
     export!(
         AllInfo<()>,
