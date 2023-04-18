@@ -20,6 +20,10 @@
     let start = 0;
     let end = 0;
     let visible = new Array();
+    let edited = false;
+    $: if (items) {
+        edited = true;
+    }
 
     let root: HTMLElement;
 
@@ -35,9 +39,10 @@
         let e = start + Math.ceil(root.clientHeight/item_height) + 1;
         bottom_padding = (Math.ceil(items.length/columns) - e)*item_height;
 
-        if ((start != s || end != e) && items.length != 0) {
+        if ((start != s || end != e || edited) && items.length != 0) {
             start = s;
             end = e;
+            edited = false;
             visible = items.slice(start*columns, Math.ceil(end)*columns);
         }
         // console.log("update", end, start, e, s, visible.length, items.length);
