@@ -486,6 +486,19 @@ pub enum Tag {
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+pub struct SearchableEntry {
+    pub obj: Json,
+    pub search_context: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[serde(tag = "content_type")]
+pub struct JsonObject<T> {
+    pub id: u32,
+    pub obj: T,
+    pub tags: Vec<u32>,
+}
+
 #[serde(rename_all = "camelCase")]
 pub enum ThumbnailSize {
     Original,

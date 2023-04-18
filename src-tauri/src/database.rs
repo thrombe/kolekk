@@ -7,7 +7,7 @@ use std::{
     sync::{atomic::AtomicU32, Mutex},
 };
 
-use kolekk_types::{Bookmark, Image, Tag};
+use kolekk_types::{Bookmark, Image, JsonObject, SearchableEntry, Tag};
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection};
 use tantivy::{
     collector::TopDocs,
@@ -15,11 +15,79 @@ use tantivy::{
     schema::{Facet, FacetOptions, Field, IndexRecordOption, FAST, INDEXED, STORED, TEXT},
     DocAddress, Document, Index, IndexReader, IndexWriter, Term,
 };
+use tauri::State;
 
 use crate::{
     bad_error::{BadError, Error, InferBadError, Inspectable},
     config::AppConfig,
 };
+
+#[tauri::command]
+pub fn new_temp_facet() -> String {
+    let id = uuid::Uuid::new_v4();
+    let uuid = format!("/temp/{}", id.hyphenated());
+    uuid
+}
+
+#[tauri::command]
+pub async fn delete_facet_objects(db: State<'_, AppDatabase>, facet: String) -> Result<(), Error> {
+    let mut writer = db.index_writer.lock().infer_err()?;
+    let _opstamp = writer.delete_term(Term::from_facet(
+        db.get_field(Fields::ObjectType),
+        &Facet::from_text(&facet).infer_err()?,
+    ));
+    let _opstamp = writer.commit().infer_err()?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn enter_searchable(
+    db: State<'_, AppDatabase>,
+    data: Vec<SearchableEntry>,
+    facet: String,
+) -> Result<(), Error> {
+    data.into_iter().try_for_each(|e| {
+        let mut doc = Document::new();
+        let id = db.new_id();
+        doc.add_facet(db.get_field(Fields::ObjectType), &facet);
+        doc.add_u64(db.get_field(Fields::Id), id as _);
+        let v = JsonObject {
+            id: id as _,
+            obj: e.obj,
+            tags: vec![],
+        };
+        let v = match serde_json::to_value(v).infer_err()? {
+            serde_json::Value::Object(o) => o,
+            _ => return None.bad_err("bad json object :/"),
+        };
+        doc.add_json_object(db.get_field(Fields::Json), v);
+        e.search_context.into_iter().for_each(|e| {
+            doc.add_text(db.get_field(Fields::Title), e); // ? title?
+        });
+        // TODO: too much locking and unlocking too quickly
+        db.index_writer
+            .lock()
+            .infer_err()?
+            .add_document(doc)
+            .look(|e| dbg!(e))
+            .infer_err()?;
+        // TODO: if err, do i remove all those that succeeded?
+        Ok(())
+    })?;
+    db.index_writer.lock().infer_err()?.commit().infer_err()?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn search_jsml(
+    db: State<'_, AppDatabase>,
+    query: String,
+    facet: String,
+    limit: usize,
+    offset: usize,
+) -> Result<Vec<serde_json::Map<String, serde_json::Value>>, Error> {
+    crate::database::search_object(db.inner(), ObjectType::Temp(facet), query, limit, offset)
+}
 
 // is async cuz the other db might require it in future
 pub async fn add_image(db: &AppDatabase, img: Image) -> Result<(), Error> {
@@ -432,11 +500,13 @@ impl AsRef<str> for Fields {
     }
 }
 
+#[derive(Clone)]
 pub enum ObjectType {
     Image,
     Bookmark,
     Tag,
     Group,
+    Temp(String),
 }
 
 impl Deref for ObjectType {
@@ -448,6 +518,7 @@ impl Deref for ObjectType {
             Self::Bookmark => "/bookmark",
             Self::Tag => "/tag",
             Self::Group => "/group",
+            Self::Temp(s) => s,
         }
     }
 }

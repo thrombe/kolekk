@@ -77,6 +77,10 @@ fn main() {
             api::commands::tachidesk_search_manga_in,
             api::commands::tachidesk_get_chapter,
             api::commands::tachidesk_get_source_filters,
+            database::enter_searchable,
+            database::search_jsml,
+            database::delete_facet_objects,
+            database::new_temp_facet,
         ])
         .setup(|app| {
             app.handle().manage(app.handle());
