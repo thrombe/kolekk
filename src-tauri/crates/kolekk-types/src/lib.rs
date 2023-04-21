@@ -1,7 +1,10 @@
 use derivative::Derivative;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::{
+    collections::{BTreeMap, HashMap},
+    fmt::Debug,
+};
 pub use ts_rs::TS;
 
 pub mod api {
@@ -455,6 +458,7 @@ pub enum Object {
     Group(Group),
     Tag(Tag),
     Content(Content),
+    JsonObject(JsonObject<Json>),
 }
 
 #[derive(Serialize, Deserialize, TS, Debug, Clone)]
@@ -496,6 +500,74 @@ pub struct JsonObject<T> {
     pub tags: Vec<u32>,
 }
 
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[serde(untagged)]
+pub enum Json { // this was needed just because serde_json::Value is not TS and that is needed in Object::JsonObject
+    Null,
+    Bool(bool),
+    Number(Number),
+    String(String),
+    Array(Vec<Self>),
+    Object(BTreeMap<String, Self>),
+}
+
+impl From<serde_json::Value> for Json {
+    fn from(value: serde_json::Value) -> Self {
+        match value {
+            serde_json::Value::Null => Self::Null,
+            serde_json::Value::Bool(b) => Self::Bool(b),
+            serde_json::Value::Number(n) => Self::Number(
+                n.as_f64()
+                    .map(Number::Float)
+                    .or_else(|| n.as_u64().map(|e| Number::Int(e as _)))
+                    .or_else(|| n.as_i64().map(|e| Number::Int(e as _)))
+                    .expect("should never fail"),
+            ),
+            serde_json::Value::String(s) => Self::String(s),
+            serde_json::Value::Array(a) => Self::Array(a.into_iter().map(|e| e.into()).collect()),
+            serde_json::Value::Object(o) => {
+                Self::Object(o.into_iter().map(|(k, v)| (k, v.into())).collect())
+            }
+        }
+    }
+}
+
+impl From<Json> for serde_json::Value {
+    fn from(val: Json) -> Self {
+        match val {
+            Json::Null => serde_json::Value::Null,
+            Json::Bool(b) => serde_json::Value::Bool(b),
+            Json::Number(n) => match n {
+                Number::Float(f) => serde_json::Number::from_f64(f)
+                    .map(serde_json::Value::Number)
+                    .unwrap_or(serde_json::Value::Null),
+                // Number::Int(i) => serde_json::from_str(&i.to_string()).unwrap(),
+                // TODO: lossy
+                Number::Int(i) => {
+                    if i >= 0 {
+                        serde_json::Value::Number(serde_json::Number::from(i as u32))
+                    } else {
+                        serde_json::Value::Number(serde_json::Number::from(i as i32))
+                    }
+                }
+            },
+            Json::String(s) => serde_json::Value::String(s),
+            Json::Array(a) => serde_json::Value::Array(a.into_iter().map(|e| e.into()).collect()),
+            Json::Object(o) => {
+                serde_json::Value::Object(o.into_iter().map(|(k, e)| (k, e.into())).collect())
+            }
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
+#[serde(untagged)]
+pub enum Number {
+    Float(f64),
+    Int(i128),
+}
+
+#[derive(Serialize, Deserialize, TS, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum ThumbnailSize {
     Original,
