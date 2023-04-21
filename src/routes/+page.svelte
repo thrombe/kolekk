@@ -26,10 +26,10 @@
     <a href="/watch">Watch stuff</a>
 </h>
 <h>
-    <a href="/tachi/extensions_virtual_test">Tachidesk extensions virtual scroll test</a>
+    <a href="/tachi/extensions">Tachidesk extensions</a>
 </h>
 <h>
-    <a href="/tachi/sources_virtual_test">Tachidesk sources virtual test</a>
+    <a href="/tachi/sources">Tachidesk sources</a>
 </h>
 
 <style>

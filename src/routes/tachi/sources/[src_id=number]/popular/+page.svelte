@@ -114,6 +114,24 @@
         return { id: e.id, data: e };
     });
     search();
+    invoke('tachidesk_get_source_filters', { sourceId: $page.params.src_id }).then(async (e) => {
+        console.log(e);
+        // https://github.com/Suwayomi/Tachidesk-Server/blob/cde5dc5bfa4ce6cce6d565b41589672a754460c0/server/src/main/kotlin/suwayomi/tachidesk/manga/impl/Search.kt#L137
+        // let r = await fetch(`http://localhost:4567/api/v1/source/${$page.params.src_id}/filters`, {
+        //     method: 'POST',
+        //     body: JSON.stringify({
+        //         position: 2,
+        //         state: JSON.stringify({
+        //             position: 3,
+        //             state: true
+        //         })
+        //     }),
+        //     headers: {
+        //         'Content-type': 'application/json'
+        //     }
+        // });
+        // console.log(r);
+    });
 </script>
 
 <cl class={'inputs'}>

@@ -49,9 +49,9 @@
                 </cropper>
 
                 <buttons-box>
-                    <a href={'/tachi/sources_virtual_test/' + source.id + '/popular/'}>{'browse'}</a>
+                    <a href={'/tachi/sources/' + source.id + '/popular/'}>{'browse'}</a>
                     {#if source.supportsLatest}
-                        <a href={'/tachi/sources_virtual_test/' + source.id + '/latest'}>{'latest'}</a>
+                        <a href={'/tachi/sources/' + source.id + '/latest'}>{'latest'}</a>
                     {/if}
                 </buttons-box>
             </card-insides>
