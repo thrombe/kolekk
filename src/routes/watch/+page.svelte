@@ -1,7 +1,20 @@
+<script lang="ts" context="module">
+    import { writable, type Writable } from 'svelte/store';
+    import type { ListResults, MultiSearchResult } from 'types';
+
+    let search_results: Writable<ListResults<MultiSearchResult>> = writable({
+        results: new Array(),
+        page: null,
+        total_results: null,
+        total_pages: null
+    });
+    let search_query = writable('');
+    let include_adult = writable(false);
+</script>
+
+
 <script lang="ts">
     import { invoke } from '@tauri-apps/api/tauri';
-    import type { ListResults, MultiSearchResult } from 'types';
-    import { search_results, search_query, include_adult } from './state';
     import { tick } from 'svelte';
     import Card from './Card.svelte';
     import Scrollable from '$lib/Scrollable.svelte';

@@ -1,10 +1,21 @@
+<script lang="ts" context="module">
+    import { writable, type Writable } from 'svelte/store';
+    import type { Extension, JsonObject } from 'types';
+
+    interface Item<E, K> {
+      data: E,
+      id: K,
+    }
+    export let extensions: Writable<Item<JsonObject<Extension>, any>[]> = writable(new Array());
+    export let search_query = writable('');
+</script>
+
+
 <script lang="ts">
     import { invoke } from '@tauri-apps/api/tauri';
     import { onMount } from 'svelte';
-    import { extensions, search_query } from './state';
     import Card from './Card.svelte';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
-    import type { Extension, JsonObject } from 'types';
 
     const facet = '/temp/tachi/extension';
 

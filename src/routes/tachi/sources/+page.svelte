@@ -1,7 +1,13 @@
+<script lang="ts" context="module">
+    import { writable, type Writable } from 'svelte/store';
+    import type { MangaSource } from 'types';
+
+    let sources: Writable<MangaSource[]> = writable(new Array());
+</script>
+
 <script lang="ts">
     import { invoke } from '@tauri-apps/api/tauri';
     import { onMount } from 'svelte';
-    import { sources } from './state';
     import Scrollable from '$lib/Scrollable.svelte';
     import Card from './Card.svelte';
     import Virtual from '$lib/Virtual.svelte';

@@ -1,3 +1,10 @@
+<script lang="ts" context="module">
+    import { writable } from 'svelte/store';
+
+    let scroll_pos = writable(0);
+    let selected = writable(0);
+</script>
+
 <script lang="ts">
     import DataListener from '$lib/DataListener.svelte';
     import { files_to_bytearrays } from '$lib/data_listener';
@@ -7,7 +14,6 @@
     import { invoke } from '@tauri-apps/api/tauri';
     import { onMount, tick } from 'svelte';
     import type { Bookmark, DragDropPaste, Tag } from 'types';
-    import { scroll_pos, selected } from './state';
 
     let new_bookmarks = new Array<Bookmark>();
     const on_receive = async (e: DragDropPaste<File>) => {
