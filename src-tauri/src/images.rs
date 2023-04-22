@@ -283,58 +283,6 @@ pub async fn get_images(
     Ok(imgs)
 }
 
-// #[tauri::command]
-// pub async fn save_images_in_appdir(
-//     data: DragDropPaste<ByteArrayFile>,
-//     config: State<'_, AppConfig>,
-//     db: State<'_, AppDatabase>,
-//     client: State<'_, Client>,
-// ) -> Result<(), Error> {
-//     let res = save_images(&data, client.inner(), &config)
-//         .await
-//         .look(|e| dbg!(e))?;
-
-//     // TODO: if file is already in database, then remove the file that was just saved
-
-//     let ctime = db.now_time().infer_err()?;
-//     res.into_iter()
-//         .map(|file| {
-//             let mdata = file_mdata(&get_path(&file.dest, config.inner()))?;
-//             let mut doc = Document::new();
-//             doc.add_facet(db.get_field(Fields::Type), ObjectType::Image);
-//             let img = Image {
-//                 src: file.src,
-//                 title: file.title,
-//                 path: file.dest,
-//                 chksum: mdata.chksum.into(),
-//                 size: mdata.size as _,
-//             };
-//             let j = Meta {
-//                 id: db.new_id(),
-//                 ctime,
-//                 last_update: ctime,
-//                 data: Taggable {
-//                     data: img,
-//                     tags: vec![],
-//                 },
-//             };
-//             j.add(db.inner(), &mut doc)?;
-
-//             // TODO: too much locking and unlocking too quickly
-//             let _opstamp = db.index_writer
-//                 .lock()
-//                 .infer_err()?
-//                 .add_document(doc)
-//                 .look(|e| dbg!(e))
-//                 .infer_err()?;
-//             // TODO: if err, do i remove all those that succeeded?
-//             Ok(())
-//         })
-//         .collect::<Result<Vec<_>, _>>()?;
-//     let _opstamp = db.index_writer.lock().infer_err()?.commit().infer_err()?;
-//     Ok(())
-// }
-
 pub async fn save_images<F: Debug + Filable>(
     data: &DragDropPaste<F>,
     client: &Client,
