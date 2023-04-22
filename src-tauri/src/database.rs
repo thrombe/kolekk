@@ -522,7 +522,7 @@ impl AppDatabase {
         let _ = fields.insert(Fields::Mtime, mtime);
         let last_interaction =
             schema_builder.add_u64_field(&Fields::LastInteraction, STORED | FAST | INDEXED);
-        let _ = fields.insert(Fields::Mtime, last_interaction);
+        let _ = fields.insert(Fields::LastInteraction, last_interaction);
 
         let schema = schema_builder.build();
         let dir = ManagedDirectory::wrap(Box::new(MmapDirectory::open(tantivy_dir).infer_err()?))
