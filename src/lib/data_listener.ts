@@ -1,4 +1,3 @@
-import { BaseDirectory, writeBinaryFile } from '@tauri-apps/api/fs';
 import type { ByteArrayFile, DragDropPaste } from 'types';
 
 export interface DropEvent {
@@ -69,26 +68,5 @@ export const files_to_bytearrays = async (
         text_html: e.text_html,
         uri_list: e.uri_list,
         file_uris: e.file_uris
-    };
-};
-
-export const _files_to_disk = async (e: DragDropPaste<File>): Promise<DragDropPaste<string>> => {
-    // e.file_uris = Array();
-    let files = Array();
-    if (e.files) {
-        for (let file of e.files) {
-            // TODO:
-            writeBinaryFile(file.name, await file.slice().arrayBuffer(), {
-                dir: BaseDirectory.AppCache
-            });
-            // e.file_uris = [...e.file_uris, file.name]; // !!! need to change file name to full path
-        }
-    }
-    return {
-        text: e.text,
-        file_uris: e.file_uris,
-        text_html: e.text_html,
-        files,
-        uri_list: e.uri_list
     };
 };
