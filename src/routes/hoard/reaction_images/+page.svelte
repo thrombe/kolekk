@@ -1,48 +1,55 @@
+<script lang="ts" context="module">
+    import { writable } from 'svelte/store';
+
+    let searcher = writable(new Searcher<Image>("Image", 50));
+</script>
+
 <script lang="ts">
-    import { convertFileSrc, invoke } from '@tauri-apps/api/tauri';
-    import type { DragDropPaste, Image } from 'types';
+    import { invoke } from '@tauri-apps/api/tauri';
+    import type { DragDropPaste, Image, Indexed } from 'types';
     import DataListener from '$lib/DataListener.svelte';
     import { files_to_bytearrays } from '$lib/data_listener';
-
-    let images = new Array<Image>();
+    import { get_path, Searcher } from '$lib/commands';
 
     const file_drop = async (e: DragDropPaste<File>) => {
-        console.log(e);
-        // e.file_uris?.forEach(async (path: string) => {
-        //     console.log(convertFileSrc(path));
-        //     await invoke('add_image_from_path', { path: path, title: 'test' });
-        //     await get_images();
-        // });
-        await invoke('save_images_in_appdir', { data: await files_to_bytearrays(e) });
-        await search_images();
+        let images: Image[] = await invoke('get_images', { data: await files_to_bytearrays(e) });
+        console.log(images);
+        $searcher.add_item(...images.map(img => {
+            let searchable: Indexed[] = img.title ? [{ data: img.title, field: "Text" }] : [];
+            return { data: img , searchable }
+        }));
     };
 
-    let query = '';
-    const search_images = async () => {
-        let list: [Image] = await invoke('search_images', { query: query, limit: 50, offset: 0 });
-        console.log(list);
-        images = list;
-    };
-
-    search_images();
+    $searcher.next_page();
 
     let tag_name = '';
     const add_tag = async () => {
         if (tag_name == '') {
             return;
         }
-        await invoke('add_tag_to_image', { img: images[0], tag: tag_name });
-        search_images();
+        // await invoke('add_tag_to_image', { img: images[0], tag: tag_name });
+        // search_images();
     };
     const remove_tag = async () => {
         if (tag_name == '') {
             return;
         }
-        await invoke('remove_tag_from_image', { img: images[0], tag: tag_name });
-        search_images();
+        // await invoke('remove_tag_from_image', { img: images[0], tag: tag_name });
+        // search_images();
     };
 
     let width = 100;
+    let query = '';
+    let search_images = () => {
+        $searcher.query = query;
+        console.log(images, $searcher.search_results.map(e => e.data.data.title), $searcher.search_results.map(e => e.id))
+    };
+    let images = new Array();
+
+    $: $searcher.query = query;
+    $: console.log($searcher.search_results.map(e => e.data.data.title));
+    $: images = $searcher.search_results;
+    $: console.log(images);
 </script>
 
 <DataListener on_receive={file_drop} />
@@ -58,21 +65,25 @@
         <button on:click={add_tag}>add tag</button>
         <button on:click={remove_tag}>remove tag</button>
     </buttons>
-    {#each images as img}
+    {#each images as img (img.id)}
         <card-div draggable="true" style="height:{width / 5}px; width: {width / 5}px">
             <card-insides draggable="true">
                 <image-div>
-                    <img draggable="false" src={convertFileSrc(img.db_path)} alt="" />
+                    {#await get_path(img.data.data.path)}
+                        <img draggable="false" src={''} alt="" />
+                    {:then path} 
+                        <img draggable="false" src={path} alt="" />
+                    {/await}
                 </image-div>
-                {#if img.title.length > 0}
+                {#if img.data.data.title.length > 0}
                     <span class="title">
-                        {img.title}
+                        {img.data.data.title}
                     </span>
                 {/if}
-                {#if img.tags.length > 0}
+                {#if img.data.tags.length > 0}
                     <tags-div>
                         <tag-padding>{'a'}</tag-padding>
-                        {#each img.tags as tag}
+                        {#each img.data.tags as tag}
                             <tag>{tag}</tag>
                         {/each}
                     </tags-div>
