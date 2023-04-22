@@ -1,12 +1,13 @@
 #[allow(unused_imports)]
 use crate::{dbg, debug, error};
 
-use tantivy::{collector::TopDocs, query::TermQuery, schema::IndexRecordOption, Term};
+use kolekk_types::objects::{Fields, Id, Meta, Tag, TypeFacet};
+use tantivy::{collector::TopDocs, query::TermQuery, schema::IndexRecordOption, Document, Term};
 use tauri::State;
 
 use crate::{
     bad_error::{BadError, Error, InferBadError, Inspectable},
-    database::{add_tag, AppDatabase, Fields, ObjectType},
+    database::{AppDatabase, DbAble, FacetFrom},
 };
 
 #[tauri::command]
@@ -16,24 +17,27 @@ pub async fn search_tags(
     limit: usize,
     offset: usize,
 ) -> Result<Vec<serde_json::Map<String, serde_json::Value>>, Error> {
-    crate::database::search_object(db.inner(), ObjectType::Tag, query, limit, offset)
+    crate::database::search_object(db.inner(), TypeFacet::Tag, query, limit, offset)
 }
 
 #[tauri::command]
-pub async fn save_tag(db: State<'_, AppDatabase>, name: String) -> Result<u32, Error> {
-    let id = db.new_id();
-    add_tag(db.inner(), kolekk_types::Tag::Main { id, name }).await?;
-    Ok(id)
-}
+pub async fn save_new_tag(db: State<'_, AppDatabase>, tag: Tag) -> Result<Id, Error> {
+    let mut doc = Document::new();
+    doc.add_facet(db.get_field(Fields::Type), TypeFacet::Tag.facet());
 
-#[tauri::command]
-pub async fn save_alias_tag(
-    db: State<'_, AppDatabase>,
-    name: String,
-    alias_to: u32,
-) -> Result<u32, Error> {
+    let ctime = db.now_time().infer_err()?;
     let id = db.new_id();
-    add_tag(db.inner(), kolekk_types::Tag::Alias { id, name, alias_to }).await?;
+    let v = Meta {
+        id,
+        data: tag,
+        ctime,
+        last_update: ctime,
+        last_interaction: ctime,
+    };
+    v.add(db.inner(), &mut doc)?;
+    let mut writer = db.index_writer.lock().infer_err()?;
+    let _opstamp = writer.add_document(doc).infer_err()?;
+    let _opstamp = writer.commit().infer_err()?;
     Ok(id)
 }
 

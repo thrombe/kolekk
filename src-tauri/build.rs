@@ -1,14 +1,14 @@
 use std::{
     fs::{create_dir_all, remove_dir, remove_file, File},
     io::{Read, Write},
-    path::Path,
+    path,
 };
 
 use kolekk_types::{
     api::{
         tachidesk::{
-            About, Chapter, Extension, ExtensionAction, Manga, MangaListPage, MetaValue,
-            SelectableItem, SortFilter, MangaSource, SourceFilter,
+            About, Chapter, Extension, ExtensionAction, Manga, MangaListPage, MangaSource,
+            MetaValue, SelectableItem, SortFilter, SourceFilter,
         },
         tmdb::{
             AllInfo, AltTitles, ExternalIDs, ExternalIdSearchResult, Genre, ImageInfo, Images,
@@ -16,15 +16,19 @@ use kolekk_types::{
             TvListResult,
         },
     },
-    Bookmark, ByteArrayFile, Content, DragDropPaste, FilderKind, Group, Image, Object, Tag,
-    ThumbnailSize, TS, SearchableEntry, JsonObject,
+    objects::{
+        Bookmark, Content, Fields, Group, Image, Indexed, Meta, Notes, SearchableEntry, Tag,
+        Taggable, TypeFacet,
+    },
+    utility::{BasePath, ByteArrayFile, DragDropPaste, Path, Source, ThumbnailSize},
+    FilderKind, TS,
 };
 
 fn main() {
     println!("cargo:rerun-if-changed=./crates/kolekk-types/src/lib.rs");
 
-    let cache_dir = Path::new("../cache/ts_bindings");
-    let output_file = Path::new("../src/rs_bindings.ts");
+    let cache_dir = path::Path::new("../cache/ts_bindings");
+    let output_file = path::Path::new("../src/rs_bindings.ts");
 
     create_dir_all(cache_dir).unwrap();
     let mut contents = String::new();
@@ -54,18 +58,25 @@ fn main() {
     // TODO: no 2 types can have the same name T-T
     // have each call to export macro output stuff in a different file
     export!(
-        Bookmark,
         Image,
+        Bookmark,
+        Content,
+        Notes,
+        Tag,
+        Group,
+        Meta<()>,
+        Taggable<()>,
+        Fields,
+        TypeFacet,
+        Path,
+        BasePath,
+        Source,
+        ThumbnailSize,
+        SearchableEntry<()>,
+        Indexed,
         DragDropPaste<()>,
         ByteArrayFile,
         FilderKind,
-        Object,
-        Tag,
-        Group,
-        Content,
-        ThumbnailSize,
-        SearchableEntry,
-        JsonObject<()>,
     );
     export!(
         AllInfo<()>,

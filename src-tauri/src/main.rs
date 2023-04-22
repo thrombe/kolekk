@@ -22,7 +22,7 @@ use tauri::Manager;
 
 pub use logg::{debug, error};
 
-use crate::{api::tmdb::TmdbClient, database::AppDatabase, images::Thumbnailer};
+use crate::{api::tmdb::TmdbClient, database::AppDatabase, images::thumbnails::Thumbnailer};
 
 #[derive(PartialEq, Eq)]
 pub enum AppInitialisationStatus {
@@ -43,23 +43,13 @@ fn main() {
             player::seek_perc,
             player::set_stat,
             player::stop_song,
-            // orm::add_image_from_path,
-            // orm::get_images,
-            // orm::add_tag_to_image,
-            // orm::remove_tag_from_image,
-            bookmarks::save_bookmarks_from_drop,
-            bookmarks::save_bookmarks,
             bookmarks::get_bookmarks,
-            bookmarks::add_tag_to_bookmark,
-            bookmarks::remove_tag_from_bookmark,
             bookmarks::search_bookmarks,
-            images::search_images,
-            images::save_images_in_appdir,
-            images::image_thumbnail,
-            images::get_thumbnail_size,
+            images::get_images,
+            images::thumbnails::image_thumbnail,
+            images::thumbnails::get_thumbnail_size,
             tag::search_tags,
-            tag::save_tag,
-            tag::save_alias_tag,
+            tag::save_new_tag,
             tag::get_tags_from_ids,
             api::commands::search_tmdb_multi,
             api::commands::tmdb_get_external_ids,
@@ -78,9 +68,12 @@ fn main() {
             api::commands::tachidesk_get_chapter,
             api::commands::tachidesk_get_source_filters,
             database::enter_searchable,
-            database::search_jsml,
+            database::search_jsml_object,
+            database::add_tag_to_object,
+            database::remove_tag_from_object,
             database::delete_facet_objects,
             database::new_temp_facet,
+            database::get_path,
         ])
         .setup(|app| {
             app.handle().manage(app.handle());

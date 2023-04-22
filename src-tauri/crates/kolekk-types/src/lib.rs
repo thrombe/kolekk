@@ -1,10 +1,5 @@
-use derivative::Derivative;
-use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{BTreeMap, HashMap},
-    fmt::Debug,
-};
+use std::fmt::Debug;
 pub use ts_rs::TS;
 
 pub mod api {
@@ -392,239 +387,303 @@ pub mod api {
         pub enum SelectableItem {
             Type1 { title: String, value: String },
             Type2(String),
+            Type3(HashMap<String, String>),
         }
     }
 }
 
-#[derive(Serialize, Deserialize, TS, Derivative, Clone)]
-#[derivative(Debug)]
-pub struct ByteArrayFile {
-    pub name: String,
-    #[derivative(Debug = "ignore")]
-    pub data: Vec<u8>,
-}
+pub mod objects {
+    use std::ops::Deref;
 
-#[derive(Serialize, Deserialize, TS, Debug, Clone)]
-pub struct DragDropPaste<F: Debug> {
-    // priority in the same order
-    pub file_uris: Option<Vec<String>>, // "http://" "ftp://" "smb://" "/home/"
-    pub text: Option<String>,           // anything. links, just text, whatever
-    pub text_html: Option<String>,      // <img href=""> <span>
-    pub files: Option<Vec<F>>,          // File data
+    use serde::{Deserialize, Serialize};
+    use ts_rs::TS;
 
-    pub uri_list: Option<String>, // link drops. (link is also available in self.text)
-}
+    use crate::{
+        api,
+        utility::{Path, Source},
+    };
 
-#[derive(Serialize, Deserialize, TS, Debug, Clone)]
-#[serde(tag = "object_type")]
-// #[serde(rename = "image")]
-pub struct Image {
-    pub id: u32,
-    pub title: String,
-    pub src_path: String,
-    pub db_path: String,
-    pub chksum: Vec<u8>,
-    pub size: usize,
-    pub urls: Vec<String>,
-    pub tags: Vec<u32>,
-}
+    pub type Id = u32;
 
-#[derive(Serialize, Deserialize, TS, Debug, Clone)]
-#[serde(tag = "object_type")]
-pub struct Bookmark {
-    pub id: u32,
-    pub title: Option<String>,
-    pub url: String,
-    pub tags: Vec<u32>,
-    pub description: Option<String>,
-    pub related: Vec<u32>,
-}
+    // #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    // #[serde(untagged)]
+    // #[allow(clippy::large_enum_variant)]
+    // pub enum Object<T = ()> {
+    //     Image(Image),
+    //     Bookmark(Bookmark),
+    //     Group(Group),
+    //     Tag(Tag),
+    //     Content(Content),
+    //     Unknown(T),
+    // }
 
-#[derive(Serialize, Deserialize, TS, Debug, Clone)]
-#[serde(tag = "object_type")]
-pub struct Group {
-    pub id: u32,
-    pub main: Option<u32>,
-    pub items: Vec<u32>,
-    pub tags: Vec<u32>,
-}
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    #[serde(tag = "object_type")]
+    pub struct Image {
+        pub title: Option<String>,
+        pub src: Option<Source>,
+        pub path: Path,
+        pub chksum: Vec<u8>,
+        pub size: usize,
+    }
 
-#[derive(Serialize, Deserialize, TS, Debug, Clone)]
-#[serde(untagged)]
-#[allow(clippy::large_enum_variant)]
-pub enum Object {
-    Image(Image),
-    Bookmark(Bookmark),
-    Group(Group),
-    Tag(Tag),
-    Content(Content),
-    JsonObject(JsonObject<Json>),
-}
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    #[serde(tag = "object_type")]
+    pub struct Bookmark {
+        pub title: Option<String>,
+        pub url: String,
+        pub description: Option<String>,
+    }
 
-#[derive(Serialize, Deserialize, TS, Debug, Clone)]
-#[serde(tag = "content_type")]
-#[allow(clippy::large_enum_variant)]
-pub enum Content {
-    TmdbTv(api::tmdb::AllInfo<api::tmdb::Movie>),
-    TmdbMovie(api::tmdb::AllInfo<api::tmdb::Tv>),
-    TachiManga(api::tachidesk::Manga),
-}
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    #[serde(tag = "object_type")]
+    pub struct Group {
+        pub main: Option<Id>,
+        pub items: Vec<Id>,
+    }
 
-#[derive(Serialize, Deserialize, TS, Debug, Clone)]
-#[serde(tag = "object_type")]
-pub enum Tag {
-    #[serde(rename = "main_tag")]
-    Main {
-        id: u32,
-        name: String,
-    },
-    #[serde(rename = "alias_tag")]
-    Alias {
-        id: u32,
-        name: String,
-        alias_to: u32,
-    },
-}
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    #[serde(tag = "content_type", content = "content")]
+    #[allow(clippy::large_enum_variant)]
+    pub enum Content {
+        TmdbTv(api::tmdb::AllInfo<api::tmdb::Movie>),
+        TmdbMovie(api::tmdb::AllInfo<api::tmdb::Tv>),
+        TachiManga(api::tachidesk::Manga),
+    }
 
-#[derive(Serialize, Deserialize, TS, Debug, Clone)]
-pub struct SearchableEntry {
-    pub obj: Json,
-    pub search_context: Vec<String>,
-}
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    #[serde(tag = "object_type")]
+    pub enum Tag {
+        #[serde(rename = "main_tag")]
+        Main { name: String },
+        #[serde(rename = "alias_tag")]
+        Alias { name: String, alias_to: Id },
+    }
 
-#[derive(Serialize, Deserialize, TS, Debug, Clone)]
-#[serde(tag = "content_type")]
-pub struct JsonObject<T> {
-    pub id: u32,
-    pub obj: T,
-    pub tags: Vec<u32>,
-}
+    // add a notes object and link it to other objects to give some more context to them
+    // the linking can be done using the Group ojject
+    // like: this show was recommended by this person
+    //   this image is related to this meme
+    //   i read this link on this date
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    #[serde(tag = "object_type")]
+    pub struct Notes {
+        pub data: String,
+    }
 
-#[derive(Serialize, Deserialize, TS, Debug, Clone)]
-#[serde(untagged)]
-pub enum Json { // this was needed just because serde_json::Value is not TS and that is needed in Object::JsonObject
-    Null,
-    Bool(bool),
-    Number(Number),
-    String(String),
-    Array(Vec<Self>),
-    Object(BTreeMap<String, Self>),
-}
+    // to insert a random json object in database to make it searchable
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct SearchableEntry<T> {
+        pub data: T,
+        pub searchable: Vec<Indexed>,
+    }
 
-impl From<serde_json::Value> for Json {
-    fn from(value: serde_json::Value) -> Self {
-        match value {
-            serde_json::Value::Null => Self::Null,
-            serde_json::Value::Bool(b) => Self::Bool(b),
-            serde_json::Value::Number(n) => Self::Number(
-                n.as_f64()
-                    .map(Number::Float)
-                    .or_else(|| n.as_u64().map(|e| Number::Int(e as _)))
-                    .or_else(|| n.as_i64().map(|e| Number::Int(e as _)))
-                    .expect("should never fail"),
-            ),
-            serde_json::Value::String(s) => Self::String(s),
-            serde_json::Value::Array(a) => Self::Array(a.into_iter().map(|e| e.into()).collect()),
-            serde_json::Value::Object(o) => {
-                Self::Object(o.into_iter().map(|(k, v)| (k, v.into())).collect())
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct Indexed {
+        pub field: Fields,
+        #[ts(type = "any")]
+        pub data: serde_json::Value,
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct Taggable<T> {
+        pub data: T,
+        pub tags: Vec<Id>,
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct Meta<T> {
+        pub id: Id,
+        pub data: T,
+        pub ctime: u64,
+        pub last_update: u64,
+        pub last_interaction: u64,
+    }
+
+    #[derive(
+        Serialize, Deserialize, TS, Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash,
+    )]
+    pub enum Fields {
+        Id,    // unique id
+        Type,  // facet
+        Text,  // any indexed text
+        Ctime, // sort by this if same score
+        Mtime, // sort by this if same score
+        LastInteraction,
+        Chksum, // to check if file or some data is already in db or no
+        Tag,
+        Json,
+    }
+    impl Deref for Fields {
+        type Target = str;
+
+        fn deref(&self) -> &Self::Target {
+            match self {
+                Self::Id => "id",
+                Self::Type => "type",
+                Self::Text => "text",
+                Self::Ctime => "ctime",
+                Self::Mtime => "mtime",
+                Self::LastInteraction => "last_interaction",
+                Self::Chksum => "chksum",
+                Self::Tag => "tag",
+                Self::Json => "json",
+            }
+        }
+    }
+
+    impl AsRef<str> for Fields {
+        fn as_ref(&self) -> &str {
+            self.deref()
+        }
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub enum TypeFacet {
+        Image,
+        Bookmark,
+        Tag,
+        Group,
+        Content,
+        Notes,
+        Temp(String),
+    }
+
+    impl AsRef<str> for TypeFacet {
+        fn as_ref(&self) -> &str {
+            match self {
+                Self::Image => "/image",
+                Self::Bookmark => "/bookmark",
+                Self::Tag => "/tag",
+                Self::Group => "/group",
+                Self::Content => "/content",
+                Self::Notes => "/notes",
+                Self::Temp(s) => s,
             }
         }
     }
 }
 
-impl From<Json> for serde_json::Value {
-    fn from(val: Json) -> Self {
-        match val {
-            Json::Null => serde_json::Value::Null,
-            Json::Bool(b) => serde_json::Value::Bool(b),
-            Json::Number(n) => match n {
-                Number::Float(f) => serde_json::Number::from_f64(f)
-                    .map(serde_json::Value::Number)
-                    .unwrap_or(serde_json::Value::Null),
-                // Number::Int(i) => serde_json::from_str(&i.to_string()).unwrap(),
-                // TODO: lossy
-                Number::Int(i) => {
-                    if i >= 0 {
-                        serde_json::Value::Number(serde_json::Number::from(i as u32))
-                    } else {
-                        serde_json::Value::Number(serde_json::Number::from(i as i32))
-                    }
-                }
-            },
-            Json::String(s) => serde_json::Value::String(s),
-            Json::Array(a) => serde_json::Value::Array(a.into_iter().map(|e| e.into()).collect()),
-            Json::Object(o) => {
-                serde_json::Value::Object(o.into_iter().map(|(k, e)| (k, e.into())).collect())
+pub mod utility {
+    use derivative::Derivative;
+    use serde::{Deserialize, Serialize};
+    use ts_rs::TS;
+
+    use std::{fmt::Debug, path::PathBuf};
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct Path {
+        pub base: BasePath,
+        #[ts(type = "string")]
+        pub path: PathBuf,
+    }
+    impl Path {
+        pub fn join(&self, p: impl AsRef<std::path::Path>) -> Self {
+            Self {
+                base: self.base,
+                path: self.path.join(p.as_ref()),
             }
         }
     }
-}
 
-#[derive(Serialize, Deserialize, TS, Debug, Clone)]
-#[serde(untagged)]
-pub enum Number {
-    Float(f64),
-    Int(i128),
-}
-
-#[derive(Serialize, Deserialize, TS, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub enum ThumbnailSize {
-    Original,
-    W50,
-    W100,
-    W150,
-    W200,
-    W350,
-    W500,
-    W750,
-    W1000,
-    W1920,
-}
-impl AsRef<str> for ThumbnailSize {
-    fn as_ref(&self) -> &str {
-        match self {
-            Self::Original => "original",
-            Self::W50 => "w50",
-            Self::W100 => "w100",
-            Self::W150 => "w150",
-            Self::W200 => "w200",
-            Self::W350 => "w350",
-            Self::W500 => "w500",
-            Self::W750 => "w750",
-            Self::W1000 => "w1000",
-            Self::W1920 => "w1920",
-        }
-    }
-}
-impl ThumbnailSize {
-    pub fn value(&self) -> Option<u32> {
-        match self {
-            Self::Original => None,
-            Self::W50 => Some(50),
-            Self::W100 => Some(100),
-            Self::W150 => Some(150),
-            Self::W200 => Some(200),
-            Self::W350 => Some(350),
-            Self::W500 => Some(500),
-            Self::W750 => Some(750),
-            Self::W1000 => Some(1000),
-            Self::W1920 => Some(1920),
-        }
+    #[derive(Serialize, Deserialize, TS, Debug, Clone, Copy)]
+    pub enum BasePath {
+        AppDataDir,
+        AppCacheDir,
+        AbsolutePath,
     }
 
-    pub fn get_appropriate_size(u: u32) -> Self {
-        match u {
-            0..=75 => Self::W50,
-            76..=125 => Self::W100,
-            126..=250 => Self::W200,
-            251..=400 => Self::W350,
-            401..=600 => Self::W500,
-            601..=800 => Self::W750,
-            801..=1400 => Self::W1000,
-            1401..=2100 => Self::W1920,
-            2101.. => Self::Original,
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    #[serde(tag = "type", content = "src")]
+    pub enum Source {
+        Path(Path),
+        Url(String),
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    #[serde(rename_all = "camelCase")]
+    pub enum ThumbnailSize {
+        Original,
+        W50,
+        W100,
+        W150,
+        W200,
+        W350,
+        W500,
+        W750,
+        W1000,
+        W1920,
+    }
+    impl AsRef<str> for ThumbnailSize {
+        fn as_ref(&self) -> &str {
+            match self {
+                Self::Original => "original",
+                Self::W50 => "w50",
+                Self::W100 => "w100",
+                Self::W150 => "w150",
+                Self::W200 => "w200",
+                Self::W350 => "w350",
+                Self::W500 => "w500",
+                Self::W750 => "w750",
+                Self::W1000 => "w1000",
+                Self::W1920 => "w1920",
+            }
         }
+    }
+    impl ThumbnailSize {
+        pub fn value(&self) -> Option<u32> {
+            match self {
+                Self::Original => None,
+                Self::W50 => Some(50),
+                Self::W100 => Some(100),
+                Self::W150 => Some(150),
+                Self::W200 => Some(200),
+                Self::W350 => Some(350),
+                Self::W500 => Some(500),
+                Self::W750 => Some(750),
+                Self::W1000 => Some(1000),
+                Self::W1920 => Some(1920),
+            }
+        }
+
+        pub fn get_appropriate_size(u: u32) -> Self {
+            match u {
+                0..=75 => Self::W50,
+                76..=125 => Self::W100,
+                126..=250 => Self::W200,
+                251..=400 => Self::W350,
+                401..=600 => Self::W500,
+                601..=800 => Self::W750,
+                801..=1400 => Self::W1000,
+                1401..=2100 => Self::W1920,
+                2101.. => Self::Original,
+            }
+        }
+    }
+
+    #[derive(Serialize, Deserialize, TS, Derivative, Clone)]
+    #[derivative(Debug)]
+    pub struct ByteArrayFile {
+        pub name: String,
+        #[derivative(Debug = "ignore")]
+        pub data: Vec<u8>,
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct DragDropPaste<F: Debug> {
+        // priority in the same order
+        pub file_uris: Option<Vec<String>>, // "http://" "ftp://" "smb://" "/home/"
+        pub text: Option<String>,           // anything. links, just text, whatever
+        pub text_html: Option<String>,      // <img href=""> <span>
+        pub files: Option<Vec<F>>,          // File data
+
+        pub uri_list: Option<String>, // link drops. (link is also available in self.text)
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, PartialEq, Eq, Clone)]
+    pub struct FileMetadata {
+        pub chksum: [u8; 16],
+        pub size: u64,
     }
 }
 
@@ -640,168 +699,3 @@ pub struct Filder {
     pub files: Option<Vec<Filder>>,
     pub kind: FilderKind,
 }
-
-#[derive(Serialize, Deserialize, TS, Debug, PartialEq, Eq, Clone)]
-pub struct FileMetadata {
-    pub chksum: [u8; 16],
-    pub size: u64,
-}
-
-// impl Image {
-//     pub async fn all_from_db(db: &DatabaseConnection) -> Vec<Self> {
-//         let img = images::Entity::find().all(db).await.unwrap();
-//         let mut images = vec![];
-//         for e in img.into_iter() {
-//             let e = Self {
-//                 id: e.id,
-//                 title: e.title,
-//                 src_path: e.src_path,
-//                 db_path: e.db_path,
-//                 chksum: e.chksum,
-//                 size: e.size as _,
-//                 urls: urls::Entity::find_by_id(e.id)
-//                     .all(db)
-//                     .await
-//                     .unwrap()
-//                     .into_iter()
-//                     .map(|e| e.url)
-//                     .collect(),
-//                 tags: tags::Entity::find()
-//                     .filter(tags::Column::Id.eq(e.id))
-//                     .all(db)
-//                     .await
-//                     .unwrap()
-//                     .into_iter()
-//                     .map(|e| e.tag)
-//                     .collect(),
-//             };
-//             images.push(e);
-//         }
-//         images
-//     }
-
-//     pub async fn add_tag(&mut self, db: &DatabaseConnection, tag: String) {
-//         if tags::Entity::find()
-//             .filter(tags::Column::Id.eq(self.id))
-//             .filter(tags::Column::Tag.eq(tag.clone()))
-//             .one(db)
-//             .await
-//             .unwrap()
-//             .is_some()
-//         {
-//             return;
-//         }
-
-//         let tag = tags::ActiveModel {
-//             id: sea_orm::Set(self.id),
-//             tag: sea_orm::Set(tag),
-//         };
-//         let tag = tag.insert(db).await.unwrap();
-//         self.tags.push(tag.tag);
-//     }
-
-//     pub async fn remove_tag(&mut self, db: &DatabaseConnection, tag: String) {
-//         self.tags
-//             .remove(self.tags.iter().position(|e| *e == tag).unwrap());
-//         let tag = tags::ActiveModel {
-//             id: sea_orm::Set(self.id),
-//             tag: sea_orm::Set(tag),
-//         };
-//         let _ = tags::Entity::delete(tag).exec(db).await.unwrap();
-//     }
-// }
-
-// pub mod bookmarks {
-//     use super::*;
-
-//     #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-//     #[sea_orm(table_name = "bookmarks")]
-//     pub struct Model {
-//         #[sea_orm(primary_key)]
-//         pub id: u32,
-//         pub title: String,
-//         pub url: String,
-//     }
-
-//     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-//     pub enum Relation {}
-
-//     impl ActiveModelBehavior for ActiveModel {}
-// }
-
-// pub mod images {
-//     use super::*;
-
-//     #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-//     #[sea_orm(table_name = "images")]
-//     pub struct Model {
-//         #[sea_orm(primary_key)]
-//         pub id: u32,
-//         // #[sea_orm(primary_key)]
-//         // #[sea_orm(unique)]
-//         pub chksum: Vec<u8>,
-//         pub size: u32,
-//         pub title: String,
-//         pub src_path: String,
-//         pub db_path: String,
-//     }
-
-//     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-//     pub enum Relation {}
-
-//     impl ActiveModelBehavior for ActiveModel {}
-// }
-
-// pub mod tags {
-//     use super::*;
-
-//     #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-//     #[sea_orm(table_name = "tags")]
-//     pub struct Model {
-//         #[sea_orm(primary_key)]
-//         pub id: u32,
-//         #[sea_orm(primary_key)]
-//         pub tag: String,
-//     }
-
-//     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-//     pub enum Relation {}
-
-//     impl ActiveModelBehavior for ActiveModel {}
-// }
-
-// pub mod urls {
-//     use super::*;
-
-//     #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-//     #[sea_orm(table_name = "urls")]
-//     pub struct Model {
-//         #[sea_orm(primary_key)]
-//         pub id: u32,
-//         #[sea_orm(unique)]
-//         pub url: String,
-//     }
-
-//     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-//     pub enum Relation {}
-
-//     impl ActiveModelBehavior for ActiveModel {}
-// }
-
-// pub mod metadata {
-//     use super::*;
-
-//     #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-//     #[sea_orm(table_name = "metadata")]
-//     pub struct Model {
-//         #[sea_orm(primary_key)]
-//         pub id: u32,
-//         // pub added_ts: datetime?,
-//         // pub last_edit: ts?,
-//     }
-
-//     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-//     pub enum Relation {}
-
-//     impl ActiveModelBehavior for ActiveModel {}
-// }

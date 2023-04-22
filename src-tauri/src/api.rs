@@ -583,7 +583,6 @@ pub mod tachidesk {
         fs::File,
         io::{BufReader, Cursor, Write},
         path::{Path, PathBuf},
-        str::FromStr,
         sync::Mutex,
     };
 
