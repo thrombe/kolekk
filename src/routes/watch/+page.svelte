@@ -1,7 +1,7 @@
 <script lang="ts">
     import { invoke } from '@tauri-apps/api/tauri';
     import type { ListResults, MultiSearchResult } from 'types';
-    import { search_results, search_query, include_adult } from './media';
+    import { search_results, search_query, include_adult } from './state';
     import { tick } from 'svelte';
     import Card from './Card.svelte';
     import Scrollable from '$lib/Scrollable.svelte';
