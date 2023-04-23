@@ -1,3 +1,12 @@
+<script lang="ts" context="module">
+    import { writable } from 'svelte/store';
+
+    let selected = writable(0);
+    let search_results = writable({ mangaList: new Array(), hasNextPage: false });
+    let search_query = writable('');
+    let page_num_fetched = writable(1);
+</script>
+
 <script lang="ts">
     import { tick } from 'svelte';
     import Card from './Card.svelte';
@@ -6,31 +15,28 @@
     import type { MangaListPage } from 'types';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
 
-    let search_query = '';
-    let search_results = { mangaList: new Array(), hasNextPage: false };
-    let page_num_fetched = 1;
     let include_adult = false;
     const search = async () => {
-        if (search_query == '') {
-            page_num_fetched = 1;
-            search_results = await invoke('tachidesk_get_popular_manga_list', {
+        if ($search_query == '') {
+            $page_num_fetched = 1;
+            $search_results = await invoke('tachidesk_get_popular_manga_list', {
                 sourceId: $page.params.src_id,
                 page: 1
             });
-            console.log(search_results);
+            console.log($search_results);
         } else {
-            page_num_fetched = 1;
-            search_results = await invoke('tachidesk_search_manga_in', {
+            $page_num_fetched = 1;
+            $search_results = await invoke('tachidesk_search_manga_in', {
                 sourceId: $page.params.src_id,
                 query: search_query,
                 page: 1
             });
-            console.log(search_results);
+            console.log($search_results);
         }
 
         id_set = new Set();
         collisions = new Array();
-        search_results.mangaList = search_results.mangaList.filter((item) => {
+        $search_results.mangaList = $search_results.mangaList.filter((item) => {
             if (id_set.has(item.id)) {
                 collisions.push(item);
                 return false;
@@ -53,19 +59,19 @@
             return;
         }
 
-        if (search_results.hasNextPage) {
+        if ($search_results.hasNextPage) {
             let new_res: MangaListPage;
-            page_num_fetched += 1;
-            if (search_query == '') {
+            $page_num_fetched += 1;
+            if ($search_query == '') {
                 new_res = await invoke('tachidesk_get_popular_manga_list', {
                     sourceId: $page.params.src_id,
-                    page: page_num_fetched
+                    page: $page_num_fetched
                 });
             } else {
                 new_res = await invoke('tachidesk_search_manga_in', {
                     sourceId: $page.params.src_id,
                     query: search_query,
-                    page: page_num_fetched
+                    page: $page_num_fetched
                 });
             }
             let hasNextPage = new_res.mangaList.length > 0;
@@ -79,12 +85,12 @@
                 }
             });
             console.log(
-                page_num_fetched,
+                $page_num_fetched,
                 new_res.mangaList.map((e) => e.id)
             );
-            search_results.hasNextPage = new_res.hasNextPage && hasNextPage;
-            search_results.mangaList.push(...new_res.mangaList);
-            search_results = search_results;
+            $search_results.hasNextPage = new_res.hasNextPage && hasNextPage;
+            $search_results.mangaList.push(...new_res.mangaList);
+            $search_results = $search_results;
 
             setTimeout(end_reached, 500);
         }
@@ -93,27 +99,29 @@
     let end_is_visible = true;
     let window_width = 100;
     let window_height = 100;
-    let selected = 0;
     let search_input: any;
     const on_keydown = async (event: KeyboardEvent, scroll_selected_into_view: any) => {
         if (event.key == 'a') {
             // await add_tag_button();
             // event.preventDefault();
         } else if (event.key == '/') {
-            selected = 0;
+            $selected = 0;
             await tick();
             await scroll_selected_into_view();
-            search_query = '';
+            $search_query = '';
             search_input.focus();
             event.preventDefault();
         }
     };
 
     let item_aspect_ratio = 2 / 3;
-    $: items = search_results.mangaList.map((e) => {
+    $: items = $search_results.mangaList.map((e) => {
         return { id: e.id, data: e };
     });
-    search();
+
+    if ($search_results.mangaList.length == 0) {
+        search();
+    }
     invoke('tachidesk_get_source_filters', { sourceId: $page.params.src_id }).then(async (e) => {
         console.log(e);
         // https://github.com/Suwayomi/Tachidesk-Server/blob/cde5dc5bfa4ce6cce6d565b41589672a754460c0/server/src/main/kotlin/suwayomi/tachidesk/manga/impl/Search.kt#L137
@@ -135,7 +143,7 @@
 </script>
 
 <cl class={'inputs'}>
-    <input bind:value={search_query} on:input={search} bind:this={search_input} />
+    <input bind:value={$search_query} on:input={search} bind:this={search_input} />
     <button on:click={search}>Search</button>
     <button
         on:click={() => {
@@ -149,7 +157,7 @@
         on:click={() => {
             let id_set = new Set();
             let collisions = new Array();
-            search_results.mangaList.forEach((m) => {
+            $search_results.mangaList.forEach((m) => {
                 if (id_set.has(m.id)) {
                     collisions.push(m.id);
                 } else {
@@ -159,7 +167,7 @@
             console.log(collisions);
         }}
     >
-        {search_results.mangaList.length} | end visible: {end_is_visible}
+        {$search_results.mangaList.length} | end visible: {end_is_visible}
     </button>
 </cl>
 
@@ -170,13 +178,12 @@
         width={window_width}
         item_height={window_width / 5 / item_aspect_ratio}
         {end_reached}
-        bind:selected
+        bind:selected={$selected}
         {on_keydown}
         bind:end_is_visible
         let:item_width={width}
         let:root
         let:item={manga}
-        let:index={i}
         let:selected={s}
     >
         <Card {width} aspect_ratio={item_aspect_ratio} selected={s} {manga} {root} />
