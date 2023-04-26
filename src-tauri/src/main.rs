@@ -115,7 +115,7 @@ async fn setup(app_handle: &tauri::AppHandle) -> Result<(), Error> {
     app_handle.manage(Player(std::sync::Mutex::new(
         musiplayer::Player::new().unwrap(),
     )));
-    app_handle.manage(Thumbnailer::new(&conf.app_data_dir)?);
+    images::thumbnails::init_thumbnailer(app_handle, &conf, client.clone()).await?;
     app_handle.manage(conf);
     Ok(())
 }

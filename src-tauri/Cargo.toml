@@ -16,7 +16,7 @@ tauri = { version = "1.2.4", features = ["api-all", "config-toml"] }
 anyhow = "1.0.68"
 ts-rs = "6.2.1"
 tauri-specta = "0.0.2"
-tokio = { version = "1", features = ["full", "process"] }
+tokio = { version = "1", features = ["full", "process", "sync"] }
 sea-orm = { version = "0.11", features = [ "sqlx-sqlite", "runtime-tokio-native-tls", "macros" ] }
 kolekk-types = { path = "./crates/kolekk-types" }
 uuid = { version = "1.3.0", features = ["v4", "fast-rng"] }
@@ -33,6 +33,9 @@ tar = "0.4.38"
 image = "0.24.6"
 lru = "0.10.0"
 stretto = { version = "0.7.2", features = ["async", "serde_json", "serde", "serilization"] }
+caches = "0.2.3"
+rayon = "1.7.0"
+derivative = "2.2.0"
 
 [dependencies.musiplayer]
 # version = "0.1"

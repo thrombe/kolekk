@@ -481,6 +481,7 @@ pub mod objects {
     #[derive(Serialize, Deserialize, TS, Debug, Clone)]
     pub struct Indexed {
         pub field: Fields,
+        // - [TS in ts_rs](https://docs.rs/ts-rs/latest/ts_rs/trait.TS.html#container-attributes)
         #[ts(type = "any")]
         pub data: serde_json::Value,
     }
@@ -600,19 +601,21 @@ pub mod utility {
         Url(String),
     }
 
-    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    #[derive(
+        Serialize, Deserialize, TS, Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash,
+    )]
     #[serde(rename_all = "camelCase")]
     pub enum ThumbnailSize {
-        Original,
-        W50,
-        W100,
-        W150,
-        W200,
-        W350,
-        W500,
-        W750,
-        W1000,
-        W1920,
+        Original = 9,
+        W50 = 0,
+        W100 = 1,
+        W150 = 2,
+        W200 = 3,
+        W350 = 4,
+        W500 = 5,
+        W750 = 6,
+        W1000 = 7,
+        W1920 = 8,
     }
     impl AsRef<str> for ThumbnailSize {
         fn as_ref(&self) -> &str {

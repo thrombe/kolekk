@@ -1,12 +1,7 @@
 #[allow(unused_imports)]
 use crate::{dbg, debug, error};
 
-use std::{
-    collections::HashSet,
-    fmt::Debug,
-    path::PathBuf,
-    str::FromStr,
-};
+use std::{collections::HashSet, fmt::Debug, path::PathBuf, str::FromStr};
 
 use kolekk_types::{
     objects::Image,
@@ -31,18 +26,75 @@ pub mod thumbnails {
         io::{BufWriter, Cursor, Write},
         path::{Path, PathBuf},
         str::FromStr,
+        sync::Mutex,
     };
 
+    use caches::{AdaptiveCache, Cache};
+    use derivative::Derivative;
     use image::io::Reader;
-    use kolekk_types::utility::ThumbnailSize;
+    use kolekk_types::{objects::TypeFacet, utility::ThumbnailSize};
+    use rayon::ThreadPoolBuilder;
     use reqwest::{Client, Url};
+    use serde::{Deserialize, Serialize};
     use stretto::AsyncCache;
-    use tauri::State;
+    use tantivy::Document;
+    use tauri::{AppHandle, Manager, State, WindowEvent};
+    use tokio::select;
 
     use crate::{
         bad_error::{BadError, Error, InferBadError, Inspectable},
-        database::AppDatabase,
+        config::AppConfig,
+        database::{AppDatabase, AutoDbAble, DbAble, FacetFrom},
     };
+
+    // TODO:
+    // thumbnailer using single threaded cache without mutex
+    // spawn a tokio task for doing the cache + channel stuff
+    // spawn a threadpool for the processing itself
+    // use async channels to communicate to all the requesters that a thumbnail has been created, and these requesters can wait on these
+    //   channels to respond to javascript
+    // when threadpool creates thumbnails, the main task can fill in the cache entry and respond via channels
+    // if an entry is already found, just return the required thumbnail
+    // benefits:
+    //   - easy to delete requests
+    //     - delete_thumbnail_requests can just decrement a counter of a url in a fifo queue
+    //   - multiple requests -> single action (multiple requests for the same url in quick succession do not create
+    //     a bunch of different thumbnails)
+    //   - can save thumbnails to a db
+    // cons:
+    //   - no stretto's LFU cache
+    //   - thumbnail weights should be based on their size (which stretto can handle nicely)
+    pub async fn init_thumbnailer(
+        app_handle: &AppHandle,
+        conf: &AppConfig,
+        client: Client,
+    ) -> Result<(), Error> {
+        let handle = app_handle.app_handle();
+        app_handle.manage(Thumbnailer::new(&conf.app_data_dir, client).await?);
+        // TODO: ugly unwraps :(
+        app_handle
+            // .get_window("kolekk")
+            .windows()
+            .into_values()
+            .next()
+            .expect("no window?")
+            .on_window_event(move |e| match e {
+                WindowEvent::Destroyed | WindowEvent::CloseRequested { .. } => {
+                    let thumbnailer = handle.state::<Thumbnailer>().inner();
+                    let db = handle.state::<AppDatabase>().inner();
+                    let cache = thumbnailer.shut_down().unwrap();
+                    let v = cache.frequent_iter().collect::<Vec<_>>();
+                    // let v = LruCacheStore {
+                    //     v: v.into_iter().map(|e| (e.0.clone(), e.1.clone())).collect(),
+                    // };
+                    // let mut doc = Document::new();
+                    // doc.add_facet(db.get_field(kolekk_types::objects::Fields::Type), TypeFacet::Temp("/cache/".into()).facet());
+                    // v.add(db, &mut doc).unwrap();
+                }
+                _ => {}
+            });
+        Ok(())
+    }
 
     #[tauri::command]
     pub fn get_thumbnail_size(width: f64) -> ThumbnailSize {
@@ -65,77 +117,456 @@ pub mod thumbnails {
         client: State<'_, Client>,
         uri: String,
         thumbnail_size: ThumbnailSize,
-    ) -> Result<String, Error> {
-        // - [Tokio decide how many threads](https://github.com/tokio-rs/tokio/discussions/3858)
-        let dir = thumbnailer.dir.clone();
+    ) -> Result<PathBuf, Error> {
+        // // - [Tokio decide how many threads](https://github.com/tokio-rs/tokio/discussions/3858)
+        // let dir = thumbnailer.dir.clone();
 
-        // let tmb = { thumbnailer.cache.lock().infer_err()?.get(&uri).cloned()  };
-        // dbg!(&tmb);
-        let tmb = { thumbnailer.cache.get(&uri).map(|v| v.value().clone()) };
-        dbg!(&tmb, thumbnailer.cache.len());
+        // // let tmb = { thumbnailer.cache.lock().infer_err()?.get(&uri).cloned()  };
+        // // dbg!(&tmb);
+        // let tmb = { thumbnailer.cache.get(&uri).map(|v| v.value().clone()) };
+        // dbg!(&tmb, thumbnailer.cache.len());
 
-        if let Some(tmb) = tmb {
-            let img = tokio::task::spawn_blocking(move || {
-                let img = tmb.get_image(thumbnail_size, &dir)?;
-                Ok(img)
-            })
-            .await
-            .infer_err()??;
-            return Ok(img.to_string_lossy().to_string());
+        // if let Some(tmb) = tmb {
+        //     let img = tokio::task::spawn_blocking(move || {
+        //         let img = tmb.get_image(thumbnail_size, &dir)?;
+        //         Ok(img)
+        //     })
+        //     .await
+        //     .infer_err()??;
+        //     return Ok(img);
+        // }
+
+        // let client = client.inner().clone();
+        // let u = uri.clone();
+        // // TODO: no thumbnail new img if the folder already exists. if fail, remove the folder
+        // let (tmb, img) = tokio::task::spawn_blocking(move || async move {
+        //     let tmb = Thumbnail::new(&u, &dir, &client)
+        //         .await
+        //         .look(|e| dbg!(e))?
+        //         .bad_err("coule not get an image from the uri")?;
+        //     let img = tmb.get_image(thumbnail_size, &dir)?;
+        //     Ok((tmb, img))
+        // })
+        // .await
+        // .infer_err()?
+        // .await?;
+
+        // // { thumbnailer.cache.lock().infer_err()?.push(uri, tmb) }.look(|e| dbg!(e));
+        // { thumbnailer.cache.insert(uri.clone(), tmb, 1).await }.look(|e| dbg!(e));
+        // thumbnailer.cache.wait().await.infer_err()?;
+        // {
+        //     thumbnailer
+        //         .cache
+        //         .get(&uri)
+        //         .map(|v| v.value().clone())
+        //         .look(|e| dbg!(e, thumbnailer.cache.len()));
+        // }
+
+        // Ok(img)
+
+        dbg!(&uri, &thumbnail_size);
+        thumbnailer.image_thumbnail(thumbnail_size, uri).await
+    }
+
+    // - a ton of requests get made from the frontend
+    // - must not save dulpicate thumbnails
+    // - must not do duplicate work to create thumbnails
+    // - must return the appropriate thumbnail path to each call (no matter if it is dulpicate or no)
+    //
+    // - need to cache what thumbnail sizes are created
+    // - need to be able to wait for results of computation of other requests
+    //
+    // - thumbnailer creates a unique id for each unique thumbnail request (uri + size)
+    // - thumbnail stores what sizes already have an image
+    // - if i see a new uri, immediately insert some object in cache then start processing on it
+    //   - Cache<_, Tmb>, enum Tmb { WaitingMultipleNew(Vec<Sender<_>>), WaitingNew(Sender<_>), Completed(Thumbnail) }
+    //   - if WaitingNew or WaitingMultipleNew, swap the varient with Completed, and send the appropriate path from these senders
+    // - if old uri new size
+    //   - Completed(Thumbnail, Box<[Size, Status]>), enum Status { None, Waiting(Sender<_>), WaitingMultiple(Sender<_>), Completed }
+    //
+    // - have a oneshot channel in Thumbnailer to send Cache from this seperate task to somewhere - where it can be shoved in db
+    //
+    // - [tokio::sync - Rust](https://docs.rs/tokio/latest/tokio/sync/index.html#mpsc-channel)
+
+    #[derive(Derivative)]
+    #[derivative(Debug)]
+    pub struct ThumbnailRequest {
+        size: ThumbnailSize,
+        uri: String,
+        #[derivative(Debug = "ignore")]
+        tx: tokio::sync::oneshot::Sender<Result<PathBuf, Error>>,
+    }
+
+    // #[derive(Deserialize, Serialize)]
+    pub enum ThumbnailStatus {
+        // #[serde(skip)]
+        Waiting(Vec<ThumbnailRequest>),
+        Completed {
+            tmb: Thumbnail,
+            sizes: Box<[ThumbnailSizeStatus; 8]>,
+        },
+    }
+    // #[derive(Deserialize, Serialize)]
+    #[derive(Derivative)]
+    #[derivative(Debug)]
+    pub enum ThumbnailSizeStatus {
+        None,
+        // #[serde(deserialize_with = "none_status", skip_serializing)]
+        Waiting(
+            #[derivative(Debug = "ignore")]
+            Vec<tokio::sync::oneshot::Sender<Result<PathBuf, Error>>>,
+        ),
+        Completed,
+    }
+    impl Default for ThumbnailSizeStatus {
+        fn default() -> Self {
+            Self::None
         }
+    }
+    // fn none_status<'de, D>(deserializer: D) -> Result<, D::Error>
+    // where
+    //     D: serde::Deserializer<'de>,
+    // {
+    //     let value = i64::deserialize(deserializer)?;
+    //     let v = (value > 0).then_some(value as _);
+    //     Ok(v)
+    // }
 
-        let client = client.inner().clone();
-        let u = uri.clone();
-        // TODO: no thumbnail new img if the folder already exists. if fail, remove the folder
-        let (tmb, img) = tokio::task::spawn_blocking(move || async move {
-            let tmb = Thumbnail::new(&u, &dir, &client)
-                .await
-                .look(|e| dbg!(e))?
-                .bad_err("coule not get an image from the uri")?;
-            let img = tmb.get_image(thumbnail_size, &dir)?;
-            Ok((tmb, img))
-        })
-        .await
-        .infer_err()?
-        .await?;
-
-        // { thumbnailer.cache.lock().infer_err()?.push(uri, tmb) }.look(|e| dbg!(e));
-        { thumbnailer.cache.insert(uri.clone(), tmb, 1).await }.look(|e| dbg!(e));
-        thumbnailer.cache.wait().await.infer_err()?;
-        {
-            thumbnailer
-                .cache
-                .get(&uri)
-                .map(|v| v.value().clone())
-                .look(|e| dbg!(e, thumbnailer.cache.len()));
-        }
-
-        Ok(img.to_string_lossy().to_string())
+    pub struct Thumbnailinator {
+        dir: PathBuf,
+        // cache: Mutex<LruCache<String, Thumbnail>>,
+        // cache: AsyncCache<String, Thumbnail>,
+        tx: tokio::sync::broadcast::Sender<Result<Thumbnail, Error>>,
+        rx: tokio::sync::broadcast::Receiver<Result<ThumbnailRequest, Error>>,
     }
 
     pub struct Thumbnailer {
-        dir: PathBuf,
-        // cache: Mutex<LruCache<String, Thumbnail>>,
-        cache: AsyncCache<String, Thumbnail>,
+        // pool: rayon::ThreadPool,
+        // cache: AdaptiveCache<String, Thumbnail>,
+        // rx: tokio::sync::broadcast::Receiver<Result<PathBuf, Error>>,
+        tx: tokio::sync::mpsc::UnboundedSender<ThumbnailRequest>,
+
+        close_tx: Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
+        cache_rx:
+            Mutex<Option<tokio::sync::oneshot::Receiver<AdaptiveCache<String, ThumbnailStatus>>>>,
     }
+
+    pub enum CachedThumbnail<C, T> {
+        Processing(C),
+        Completed(T),
+    }
+
+    // #[derive(Deserialize, Serialize)]
+    pub struct LruCacheStore {
+        v: Vec<(String, ThumbnailStatus)>,
+    }
+    // impl AutoDbAble for LruCacheStore {}
+    // impl AutoDbAble for ThumbnailStatus {}
+
+    #[derive(Debug)]
+    pub enum ThumbnailWorkResult {
+        NewThumbnail {
+            tmb: Thumbnail,
+            uri: String,
+        },
+        NewSize {
+            uri: String,
+            size: ThumbnailSize,
+            path: PathBuf,
+        },
+    }
+
     impl Thumbnailer {
-        pub fn new(dir: impl AsRef<Path>) -> Result<Self, Error> {
+        pub async fn new(dir: impl AsRef<Path>, client: Client) -> Result<Self, Error> {
             let dir = dir.as_ref().join("thumbnails");
+            // let pool = ThreadPoolBuilder::new().num_threads(0).build().infer_err()?;
+            // pool.spawn(|| {
+            // let resp_channels: std::collections::HashMap<String, Vec<tokio::sync::broadcast::Sender<Result<PathBuf, Error>>>> = todo!();
             if !dir.exists() {
                 std::fs::create_dir(&dir).infer_err()?;
             }
+
+            // receive requests through this
+            let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<ThumbnailRequest>();
+
+            // exit signal
+            let (close_tx, mut close_rx) = tokio::sync::oneshot::channel::<()>();
+
+            // send cache through this
+            let (cache_tx, cache_rx) =
+                tokio::sync::oneshot::channel::<AdaptiveCache<String, ThumbnailStatus>>(); // exit signal
+            let mut cache: AdaptiveCache<String, ThumbnailStatus> =
+                AdaptiveCache::new(10_000).infer_err()?;
+
+            // receive work results from work tasks through this
+            let (work_tx, mut work_rx) =
+                tokio::sync::mpsc::unbounded_channel::<ThumbnailWorkResult>();
+
+            let requests_tx = tx.clone();
+            let _r = tokio::task::spawn(async move {
+                loop {
+                    select! {
+                        biased;
+                        // another channel to see if app is to be shut down
+                        _ = &mut close_rx => {
+                            dbg!("shutting down thumbnailer!");
+                            let _ = cache_tx.send(cache);
+                            break;
+                        }
+
+                        // results of tasks
+                        c = work_rx.recv() => {
+                            dbg!(&c);
+                            match c {
+                                Some(t) => {
+                                    // TODO: bad unwrap
+                                    Self::handle_results(t, &requests_tx, &mut cache, &dir, &work_tx, &client).await.unwrap();
+                                }
+                                None => {
+                                    // channel closed
+                                    todo!();
+                                }
+                            }
+                        }
+                        // new requests from Thumbnailer
+                        r = rx.recv() => {
+                            dbg!(&r);
+                            match r {
+                                Some(r) => {
+                                    // TODO: bad unwrap
+                                    Self::handle_requests(r, &mut cache, &dir, &work_tx, &client).await.unwrap();
+                                }
+                                None => {
+                                    // channel closed
+                                    todo!();
+                                }
+                            }
+                        }
+                    }
+                }
+                // while let Some(u) = rx.recv().await {}
+                Result::<_, Error>::Ok(())
+            });
+
             Ok(Self {
-                dir,
+                tx,
+                close_tx: Mutex::new(Some(close_tx)),
+                cache_rx: Mutex::new(Some(cache_rx)),
+                // dir,
                 // cache: Mutex::new(LruCache::new(NonZeroUsize::new(5000).unwrap())),
-                cache: AsyncCache::builder(50000, 5000)
-                    .set_ignore_internal_cost(true)
-                    .finalize(tokio::spawn)
-                    .infer_err()?,
+                // cache: AsyncCache::builder(50000, 5000)
+                //     .set_ignore_internal_cost(true)
+                //     .finalize(tokio::spawn)
+                //     .infer_err()?,
             })
+        }
+
+        async fn handle_results(
+            t: ThumbnailWorkResult,
+            request_tx: &tokio::sync::mpsc::UnboundedSender<ThumbnailRequest>,
+            cache: &mut AdaptiveCache<String, ThumbnailStatus>,
+            dir: &std::path::Path,
+            work_tx: &tokio::sync::mpsc::UnboundedSender<ThumbnailWorkResult>,
+            client: &Client,
+        ) -> Result<(), Error> {
+            match t {
+                ThumbnailWorkResult::NewThumbnail { tmb, uri } => {
+                    let k = cache.get_mut(&uri).expect("unreachable!");
+                    match k {
+                        ThumbnailStatus::Waiting(v) => {
+                            // it is okay to send first and then set cache, as this part is not really concurrent
+                            while let Some(r) = v.pop() {
+                                // send the same request again, as the requested size might not be available yet
+                                request_tx.send(r).expect("cannot send through channel");
+                            }
+                            cache.put(
+                                uri,
+                                ThumbnailStatus::Completed {
+                                    tmb,
+                                    // TODO: can mark completed for the ones with higher resolution than the original image
+                                    sizes: Box::new([
+                                        ThumbnailSizeStatus::None,
+                                        ThumbnailSizeStatus::None,
+                                        ThumbnailSizeStatus::None,
+                                        ThumbnailSizeStatus::None,
+                                        ThumbnailSizeStatus::None,
+                                        ThumbnailSizeStatus::None,
+                                        ThumbnailSizeStatus::None,
+                                        ThumbnailSizeStatus::None,
+                                    ]),
+                                },
+                            );
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                ThumbnailWorkResult::NewSize { uri, size, path } => {
+                    let k = cache.get_mut(&uri).expect("unreachable");
+                    match k {
+                        ThumbnailStatus::Completed { tmb, sizes } => {
+                            match &mut sizes[size as usize] {
+                                ThumbnailSizeStatus::Waiting(v) => {
+                                    while let Some(s) = v.pop() {
+                                        s.send(Ok(path.clone()))
+                                            .expect("cannot send through channel");
+                                    }
+                                    sizes[size as usize] = ThumbnailSizeStatus::Completed;
+                                }
+                                _ => unreachable!(),
+                            }
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            }
+            Ok(())
+        }
+
+        async fn handle_requests(
+            r: ThumbnailRequest,
+            cache: &mut AdaptiveCache<String, ThumbnailStatus>,
+            dir: &std::path::Path,
+            work_tx: &tokio::sync::mpsc::UnboundedSender<ThumbnailWorkResult>,
+            client: &Client,
+        ) -> Result<(), Error> {
+            let uri = r.uri.clone();
+            let t = cache.get_mut(&uri);
+            match t {
+                Some(t) => {
+                    match t {
+                        ThumbnailStatus::Waiting(v) => {
+                            v.push(r);
+                        }
+                        ThumbnailStatus::Completed { tmb, .. }
+                            if r.size == ThumbnailSize::Original =>
+                        {
+                            r.tx.send(Ok(dir.join(&tmb.uuid).join(r.size.as_ref())))
+                                .expect("could not send through channel");
+                        }
+                        ThumbnailStatus::Completed { tmb, sizes } => {
+                            // check if the required size is available or not and spawn a task if required
+                            match &mut sizes[r.size as usize] {
+                                ThumbnailSizeStatus::None => {
+                                    sizes[r.size as usize] =
+                                        ThumbnailSizeStatus::Waiting(vec![r.tx]);
+                                    let work_tx = work_tx.clone();
+                                    let uri = r.uri.clone();
+                                    let dir = dir.to_path_buf();
+                                    let size = r.size;
+                                    let tmb = tmb.clone();
+                                    let _r = tokio::task::spawn(async move {
+                                        let _r = tokio::task::spawn_blocking(move || {
+                                            // TODO: bad unwrap
+                                            let path = tmb.get_image(size, dir).unwrap();
+                                            work_tx
+                                                .send(ThumbnailWorkResult::NewSize {
+                                                    uri,
+                                                    size,
+                                                    path,
+                                                })
+                                                .expect("channel closed or something");
+                                        })
+                                        .await;
+                                    });
+                                }
+                                ThumbnailSizeStatus::Waiting(v) => {
+                                    v.push(r.tx);
+                                }
+                                ThumbnailSizeStatus::Completed => {
+                                    r.tx.send(Ok(dir
+                                        .join(&tmb.uuid)
+                                        .join(tmb.get_appropriate_size(r.size).as_ref())))
+                                        .expect("could not send");
+                                }
+                            }
+                        }
+                    }
+                }
+                None => {
+                    dbg!(&r);
+                    let uri = r.uri.clone();
+                    // TODO: delete the evicted thumbnails
+                    match cache.put(r.uri.clone(), ThumbnailStatus::Waiting(vec![r])) {
+                        caches::PutResult::Put => (),
+                        caches::PutResult::Update(_) => todo!(),
+                        caches::PutResult::Evicted { key, value } => todo!(),
+                        caches::PutResult::EvictedAndUpdate { evicted, update } => todo!(),
+                    }
+                    let work_tx = work_tx.clone();
+
+                    // download | copy image to thumbnail dir
+                    let dir = dir.to_path_buf();
+                    let client = client.clone();
+                    let _r = tokio::task::spawn(async move {
+                        dbg!(&uri);
+                        // TODO: bad unwraps
+                        let tmb = Thumbnail::new(&uri, &dir, &client)
+                            .await
+                            .look(|e| dbg!(e))
+                            .unwrap()
+                            .bad_err("coule not get an image from the uri")
+                            .unwrap();
+                        // let img = tmb.get_image(thumbnail_size, &dir)?;
+                        work_tx
+                            .send(ThumbnailWorkResult::NewThumbnail { tmb, uri })
+                            .expect("channel closed or something");
+                    });
+                }
+            }
+            Ok(())
+        }
+
+        pub async fn image_thumbnail(
+            &self,
+            size: ThumbnailSize,
+            uri: String,
+        ) -> Result<PathBuf, Error> {
+            // this needs 2 kinds of operations
+            // one is IO heavy (downloading an image or copying an image)
+            //   - this operation can be performed here ig
+            // other is cpu heavy (generating thumbnail or required size from saved image)
+
+            // TODO: check if
+            //  - required thumbnail already exists
+            // if yes, then return
+            // if no, then wait | send new request
+            // TODO: check if
+            //  - image is being downloaded/copied
+            //  - image thumbnail is being created
+            // if yes, then have to somwhow wait for that operation to get completed and return the same thing that the other operation
+            //   returns
+            // if no, then send a request for new thumbnail
+            let (tx, rx) = tokio::sync::oneshot::channel();
+            self.tx
+                .send(ThumbnailRequest { size, uri, tx }.look(|e| dbg!(e)))
+                .infer_err()?;
+            rx.await.infer_err()?.look(|e| dbg!(e, size))
+            // TODO: maybe some kinda timeout?
+        }
+
+        // TODO: how do i enforce that calling image_thumbnail after calling this method fails
+        pub fn shut_down(&self) -> Result<AdaptiveCache<String, ThumbnailStatus>, Error> {
+            // TODO: unwrap??
+            self.close_tx
+                .lock()
+                .infer_err()?
+                .take()
+                .unwrap()
+                .send(())
+                .unwrap();
+            let cache = self
+                .cache_rx
+                .lock()
+                .infer_err()?
+                .take()
+                .unwrap()
+                .blocking_recv()
+                .infer_err()?;
+            Ok(cache)
         }
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Serialize, Deserialize, Debug, Clone)]
     pub struct Thumbnail {
         width: u32,
         uuid: String,
@@ -212,6 +643,18 @@ pub mod thumbnails {
             Ok(None)
         }
 
+        fn needs_new_thumbnail(&self, size: ThumbnailSize) -> bool {
+            size.value().map(|v| v < self.width).unwrap_or(false)
+        }
+
+        pub fn get_appropriate_size(&self, size: ThumbnailSize) -> ThumbnailSize {
+            if self.needs_new_thumbnail(size) {
+                size
+            } else {
+                ThumbnailSize::Original
+            }
+        }
+
         pub fn get_image(
             &self,
             size: ThumbnailSize,
@@ -220,7 +663,7 @@ pub mod thumbnails {
             let path = thumbnail_dir.as_ref().join(&self.uuid);
             let original_img = path.join(ThumbnailSize::Original.as_ref());
 
-            if size.value().map(|v| v < self.width).unwrap_or(false) {
+            if self.needs_new_thumbnail(size) {
                 // thumbnail
                 let thumbnail = path.join(size.as_ref());
                 if !thumbnail.exists() {
