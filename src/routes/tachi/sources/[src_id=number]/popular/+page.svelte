@@ -28,7 +28,7 @@
             $page_num_fetched = 1;
             $search_results = await invoke('tachidesk_search_manga_in', {
                 sourceId: $page.params.src_id,
-                query: search_query,
+                query: $search_query,
                 page: 1
             });
             console.log($search_results);
@@ -70,7 +70,7 @@
             } else {
                 new_res = await invoke('tachidesk_search_manga_in', {
                     sourceId: $page.params.src_id,
-                    query: search_query,
+                    query: $search_query,
                     page: $page_num_fetched
                 });
             }
