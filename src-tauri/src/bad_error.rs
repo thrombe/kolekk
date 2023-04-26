@@ -8,7 +8,7 @@ use std::{
 
 use serde::Serialize;
 
-#[derive(Serialize, Debug, thiserror::Error)]
+#[derive(Serialize, Debug, Clone, thiserror::Error)]
 #[error("something went wrong: {0}")]
 pub struct Error(pub Cow<'static, str>);
 
