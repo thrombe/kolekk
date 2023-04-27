@@ -145,7 +145,7 @@ pub mod thumbnails {
         Waiting(Vec<ThumbnailRequest>),
         Completed {
             tmb: Thumbnail,
-            sizes: Box<[ThumbnailSizeStatus; 8]>,
+            sizes: Box<[ThumbnailSizeStatus; 9]>,
         },
     }
     // #[derive(Deserialize, Serialize)]
@@ -159,6 +159,7 @@ pub mod thumbnails {
             Vec<tokio::sync::oneshot::Sender<Result<PathBuf, Error>>>,
         ),
         Completed,
+        Original,
     }
     impl Default for ThumbnailSizeStatus {
         fn default() -> Self {
@@ -292,21 +293,29 @@ pub mod thumbnails {
                                 // send the same request again, as the requested size might not be available yet
                                 request_tx.send(r).expect("dead channel");
                             }
+                            let init_size = |size| {
+                                if tmb.get_appropriate_size(size).eq(&ThumbnailSize::Original) {
+                                    ThumbnailSizeStatus::Original
+                                } else {
+                                    ThumbnailSizeStatus::None
+                                }
+                            };
                             match cache.put(
                                 uri,
                                 ThumbnailStatus::Completed {
-                                    tmb,
-                                    // TODO: can mark completed for the ones with higher resolution than the original image
+                                    // don't try to generate thumbnails for images with less pixels than what the size asks for
                                     sizes: Box::new([
-                                        ThumbnailSizeStatus::None,
-                                        ThumbnailSizeStatus::None,
-                                        ThumbnailSizeStatus::None,
-                                        ThumbnailSizeStatus::None,
-                                        ThumbnailSizeStatus::None,
-                                        ThumbnailSizeStatus::None,
-                                        ThumbnailSizeStatus::None,
-                                        ThumbnailSizeStatus::None,
+                                        init_size(ThumbnailSize::W50),
+                                        init_size(ThumbnailSize::W100),
+                                        init_size(ThumbnailSize::W150),
+                                        init_size(ThumbnailSize::W200),
+                                        init_size(ThumbnailSize::W350),
+                                        init_size(ThumbnailSize::W500),
+                                        init_size(ThumbnailSize::W750),
+                                        init_size(ThumbnailSize::W1000),
+                                        init_size(ThumbnailSize::W1920),
                                     ]),
+                                    tmb,
                                 },
                             ) {
                                 caches::PutResult::Update(_) => (),
@@ -366,7 +375,8 @@ pub mod thumbnails {
                     match k {
                         ThumbnailStatus::Waiting(mut v) => {
                             while let Some(s) = v.pop() {
-                                s.tx.send(None.bad_err("could not get an image from the uri")).expect("dead channel");
+                                s.tx.send(None.bad_err("could not get an image from the uri"))
+                                    .expect("dead channel");
                             }
                         }
                         _ => unreachable!(),
@@ -410,10 +420,12 @@ pub mod thumbnails {
                                     let _r = tokio::task::spawn(async move {
                                         let uri_for_err = uri.clone();
                                         let res = match tokio::task::spawn_blocking(move || {
-                                            match tmb.get_image(size, dir) {
-                                                Ok(path) => {
-                                                    ThumbnailWorkResult::NewSize { uri, size, path }
-                                                }
+                                            match tmb.create_thumbnail(size, &dir) {
+                                                Ok(()) => ThumbnailWorkResult::NewSize {
+                                                    uri,
+                                                    size,
+                                                    path: dir.join(&tmb.uuid).join(size.as_ref()),
+                                                },
                                                 Err(err) => ThumbnailWorkResult::NewSizeError {
                                                     err,
                                                     uri,
@@ -438,9 +450,13 @@ pub mod thumbnails {
                                     v.push(r.tx);
                                 }
                                 ThumbnailSizeStatus::Completed => {
+                                    r.tx.send(Ok(dir.join(&tmb.uuid).join(r.size.as_ref())))
+                                        .expect("dead channel");
+                                }
+                                ThumbnailSizeStatus::Original => {
                                     r.tx.send(Ok(dir
                                         .join(&tmb.uuid)
-                                        .join(tmb.get_appropriate_size(r.size).as_ref())))
+                                        .join(ThumbnailSize::Original.as_ref())))
                                         .expect("dead channel");
                                 }
                             }
@@ -628,37 +644,29 @@ pub mod thumbnails {
             }
         }
 
-        pub fn get_image(
+        pub fn create_thumbnail(
             &self,
             size: ThumbnailSize,
             thumbnail_dir: impl AsRef<Path>,
-        ) -> Result<PathBuf, Error> {
+        ) -> Result<(), Error> {
             let path = thumbnail_dir.as_ref().join(&self.uuid);
             let original_img = path.join(ThumbnailSize::Original.as_ref());
+            let thumbnail = path.join(size.as_ref());
 
-            if self.needs_new_thumbnail(size) {
-                // thumbnail
-                let thumbnail = path.join(size.as_ref());
-                if !thumbnail.exists() {
-                    dbg!("creating new thumbnail!!!");
-                    let s = size
-                        .value()
-                        .expect("this should have a value as it is not Thumnail::Original");
+            dbg!("creating new thumbnail!!!");
+            let s = size
+                .value()
+                .bad_err("cannot create a thumbnail for size Thumnail::Original")?;
 
-                    let reader = Reader::open(&original_img)
-                        .infer_err()?
-                        .with_guessed_format()
-                        .infer_err()?;
-                    let img = reader.decode().infer_err()?;
-                    img.thumbnail(s, u32::MAX)
-                        .save_with_format(&thumbnail, image::ImageFormat::Jpeg)
-                        .infer_err()?;
-                }
-                Ok(thumbnail)
-            } else {
-                // original image
-                Ok(original_img)
-            }
+            let reader = Reader::open(original_img)
+                .infer_err()?
+                .with_guessed_format()
+                .infer_err()?;
+            let img = reader.decode().infer_err()?;
+            img.thumbnail(s, u32::MAX)
+                .save_with_format(thumbnail, image::ImageFormat::Jpeg)
+                .infer_err()?;
+            Ok(())
         }
 
         pub fn delete(self, thumbnail_dir: impl AsRef<Path>) -> Result<(), Error> {
