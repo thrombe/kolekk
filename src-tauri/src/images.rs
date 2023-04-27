@@ -190,6 +190,7 @@ pub mod thumbnails {
     // impl AutoDbAble for ThumbnailStatus {}
 
     #[derive(Debug)]
+    #[allow(clippy::enum_variant_names)]
     pub enum ThumbnailWorkResult {
         NewThumbnail {
             tmb: Thumbnail,
@@ -199,6 +200,18 @@ pub mod thumbnails {
             uri: String,
             size: ThumbnailSize,
             path: PathBuf,
+        },
+        NewSizeError {
+            err: Error,
+            uri: String,
+            size: ThumbnailSize,
+        },
+        NewThumbnailError {
+            err: Error,
+            uri: String,
+        },
+        NewThumbnailNone {
+            uri: String,
         },
     }
 
@@ -232,6 +245,7 @@ pub mod thumbnails {
                         biased;
                         // another channel to see if app is to be shut down
                         _ = &mut close_rx => {
+                            // NOTE: this also executes if this channel is dead - which is fine
                             dbg!("shutting down thumbnailer!");
                             let _ = cache_tx.send(cache);
                             break;
@@ -240,34 +254,17 @@ pub mod thumbnails {
                         // results of tasks
                         c = work_rx.recv() => {
                             dbg!(&c);
-                            match c {
-                                Some(t) => {
-                                    // TODO: bad unwrap
-                                    Self::handle_results(t, &requests_tx, &mut cache, &dir, &work_tx, &client).await.unwrap();
-                                }
-                                None => {
-                                    // channel closed
-                                    todo!();
-                                }
-                            }
+                            let t = c.expect("dead channel");
+                            Self::handle_results(t, &requests_tx, &mut cache, &dir, &work_tx, &client).await;
                         }
                         // new requests from Thumbnailer
                         r = rx.recv() => {
                             dbg!(&r);
-                            match r {
-                                Some(r) => {
-                                    // TODO: bad unwrap
-                                    Self::handle_requests(r, &mut cache, &dir, &work_tx, &client).await.unwrap();
-                                }
-                                None => {
-                                    // channel closed
-                                    todo!();
-                                }
-                            }
+                            let r = r.expect("dead channel");
+                            Self::handle_requests(r, &mut cache, &dir, &work_tx, &client).await;
                         }
                     }
                 }
-                Result::<_, Error>::Ok(())
             });
 
             Ok(Self {
@@ -284,7 +281,7 @@ pub mod thumbnails {
             dir: &std::path::Path,
             work_tx: &tokio::sync::mpsc::UnboundedSender<ThumbnailWorkResult>,
             client: &Client,
-        ) -> Result<(), Error> {
+        ) {
             match t {
                 ThumbnailWorkResult::NewThumbnail { tmb, uri } => {
                     let k = cache.get_mut(&uri).expect("unreachable!");
@@ -293,9 +290,9 @@ pub mod thumbnails {
                             // it is okay to send first and then set cache, as this part is not really concurrent
                             while let Some(r) = v.pop() {
                                 // send the same request again, as the requested size might not be available yet
-                                request_tx.send(r).expect("cannot send through channel");
+                                request_tx.send(r).expect("dead channel");
                             }
-                            cache.put(
+                            match cache.put(
                                 uri,
                                 ThumbnailStatus::Completed {
                                     tmb,
@@ -311,20 +308,22 @@ pub mod thumbnails {
                                         ThumbnailSizeStatus::None,
                                     ]),
                                 },
-                            );
+                            ) {
+                                caches::PutResult::Update(_) => (),
+                                _ => unreachable!(),
+                            }
                         }
                         _ => unreachable!(),
                     }
                 }
                 ThumbnailWorkResult::NewSize { uri, size, path } => {
-                    let k = cache.get_mut(&uri).expect("unreachable");
+                    let k = cache.get_mut(&uri).expect("unreachable!");
                     match k {
                         ThumbnailStatus::Completed { tmb, sizes } => {
                             match &mut sizes[size as usize] {
                                 ThumbnailSizeStatus::Waiting(v) => {
                                     while let Some(s) = v.pop() {
-                                        s.send(Ok(path.clone()))
-                                            .expect("cannot send through channel");
+                                        s.send(Ok(path.clone())).expect("dead channel");
                                     }
                                     sizes[size as usize] = ThumbnailSizeStatus::Completed;
                                 }
@@ -334,8 +333,46 @@ pub mod thumbnails {
                         _ => unreachable!(),
                     }
                 }
+                ThumbnailWorkResult::NewSizeError { uri, size, err } => {
+                    let k = cache.get_mut(&uri).expect("unreachable!");
+                    match k {
+                        ThumbnailStatus::Completed { tmb, sizes } => {
+                            match &mut sizes[size as usize] {
+                                ThumbnailSizeStatus::Waiting(v) => {
+                                    while let Some(s) = v.pop() {
+                                        s.send(Err(err.clone())).expect("dead channel");
+                                    }
+                                    sizes[size as usize] = ThumbnailSizeStatus::None;
+                                }
+                                _ => unreachable!(),
+                            }
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                ThumbnailWorkResult::NewThumbnailError { uri, err } => {
+                    let k = cache.remove(&uri).expect("unreachable!");
+                    match k {
+                        ThumbnailStatus::Waiting(mut v) => {
+                            while let Some(s) = v.pop() {
+                                s.tx.send(Err(err.clone())).expect("dead channel");
+                            }
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                ThumbnailWorkResult::NewThumbnailNone { uri } => {
+                    let k = cache.remove(&uri).expect("unreachable!");
+                    match k {
+                        ThumbnailStatus::Waiting(mut v) => {
+                            while let Some(s) = v.pop() {
+                                s.tx.send(None.bad_err("could not get an image from the uri")).expect("dead channel");
+                            }
+                        }
+                        _ => unreachable!(),
+                    }
+                }
             }
-            Ok(())
         }
 
         async fn handle_requests(
@@ -344,7 +381,7 @@ pub mod thumbnails {
             dir: &std::path::Path,
             work_tx: &tokio::sync::mpsc::UnboundedSender<ThumbnailWorkResult>,
             client: &Client,
-        ) -> Result<(), Error> {
+        ) {
             let uri = r.uri.clone();
             let t = cache.get_mut(&uri);
             match t {
@@ -357,7 +394,7 @@ pub mod thumbnails {
                             if r.size == ThumbnailSize::Original =>
                         {
                             r.tx.send(Ok(dir.join(&tmb.uuid).join(r.size.as_ref())))
-                                .expect("could not send through channel");
+                                .expect("dead channel");
                         }
                         ThumbnailStatus::Completed { tmb, sizes } => {
                             // check if the required size is available or not and spawn a task if required
@@ -371,18 +408,30 @@ pub mod thumbnails {
                                     let size = r.size;
                                     let tmb = tmb.clone();
                                     let _r = tokio::task::spawn(async move {
-                                        let _r = tokio::task::spawn_blocking(move || {
-                                            // TODO: bad unwrap
-                                            let path = tmb.get_image(size, dir).unwrap();
-                                            work_tx
-                                                .send(ThumbnailWorkResult::NewSize {
+                                        let uri_for_err = uri.clone();
+                                        let res = match tokio::task::spawn_blocking(move || {
+                                            match tmb.get_image(size, dir) {
+                                                Ok(path) => {
+                                                    ThumbnailWorkResult::NewSize { uri, size, path }
+                                                }
+                                                Err(err) => ThumbnailWorkResult::NewSizeError {
+                                                    err,
                                                     uri,
                                                     size,
-                                                    path,
-                                                })
-                                                .expect("channel closed or something");
+                                                },
+                                            }
                                         })
-                                        .await;
+                                        .await
+                                        .infer_err()
+                                        {
+                                            Ok(res) => res,
+                                            Err(err) => ThumbnailWorkResult::NewSizeError {
+                                                err,
+                                                uri: uri_for_err,
+                                                size,
+                                            },
+                                        };
+                                        work_tx.send(res).expect("dead channel");
                                     });
                                 }
                                 ThumbnailSizeStatus::Waiting(v) => {
@@ -392,7 +441,7 @@ pub mod thumbnails {
                                     r.tx.send(Ok(dir
                                         .join(&tmb.uuid)
                                         .join(tmb.get_appropriate_size(r.size).as_ref())))
-                                        .expect("could not send");
+                                        .expect("dead channel");
                                 }
                             }
                         }
@@ -402,6 +451,14 @@ pub mod thumbnails {
                     dbg!(&r);
                     let uri = r.uri.clone();
                     // TODO: delete the evicted thumbnails
+                    // TODO: bad bad bad. all the .expect("unreachable!") used above can actually fail because of these evictions.
+                    //       but it should be quite rare, as the items should get bumped up in the LRU cache when a new request is put up
+                    //       for it. also the limit is high enough that requests will hopefully get resolved quicker than the ThumbnailStatus
+                    //       associated with it gets evicted
+                    //   - this can be dealt with by
+                    //     - sending some kinda Evicted error through the channels in the evicted items
+                    //     - ignoring the ThumbnailWorkResult for the evicted items
+                    //       - NOTE: make sure to delete any files that might have been created or undo anything that needs to be undone
                     match cache.put(r.uri.clone(), ThumbnailStatus::Waiting(vec![r])) {
                         caches::PutResult::Put => (),
                         caches::PutResult::Update(_) => todo!(),
@@ -415,21 +472,18 @@ pub mod thumbnails {
                     let client = client.clone();
                     let _r = tokio::task::spawn(async move {
                         dbg!(&uri);
-                        // TODO: bad unwraps
-                        let tmb = Thumbnail::new(&uri, &dir, &client)
-                            .await
-                            .look(|e| dbg!(e))
-                            .unwrap()
-                            .bad_err("coule not get an image from the uri")
-                            .unwrap();
-                        // let img = tmb.get_image(thumbnail_size, &dir)?;
-                        work_tx
-                            .send(ThumbnailWorkResult::NewThumbnail { tmb, uri })
-                            .expect("channel closed or something");
+                        let res = match Thumbnail::new(&uri, &dir, &client).await.look(|e| dbg!(e))
+                        {
+                            Ok(t) => match t {
+                                Some(tmb) => ThumbnailWorkResult::NewThumbnail { tmb, uri },
+                                None => ThumbnailWorkResult::NewThumbnailNone { uri },
+                            },
+                            Err(err) => ThumbnailWorkResult::NewThumbnailError { err, uri },
+                        };
+                        work_tx.send(res).expect("dead channel");
                     });
                 }
             }
-            Ok(())
         }
 
         pub async fn image_thumbnail(
