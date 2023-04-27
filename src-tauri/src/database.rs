@@ -140,10 +140,6 @@ pub fn get_path(config: State<'_, AppConfig>, path: Path) -> std::path::PathBuf 
     crate::filesystem::get_path(&path, config.inner())
 }
 
-// this won't work
-// Meta adds Id to whatever, but it also needs to define how to fetch it back
-// when searching, the functions should now return Meta<Taggable<any>>
-//  which then get serialised into the correct json again
 pub trait DbAble
 where
     Self: Sized,
