@@ -24,18 +24,19 @@ pub mod thumbnails {
     use std::{
         fs::File,
         io::{BufWriter, Cursor, Write},
+        num::NonZeroUsize,
         path::{Path, PathBuf},
         str::FromStr,
         sync::Mutex,
     };
 
-    use caches::{AdaptiveCache, Cache};
     use derivative::Derivative;
     use image::io::Reader;
     use kolekk_types::{
         objects::{Fields, TypeFacet},
         utility::ThumbnailSize,
     };
+    use lru::LruCache;
     use reqwest::{Client, Url};
     use serde::{Deserialize, Serialize};
     use tantivy::{
@@ -70,13 +71,9 @@ pub mod thumbnails {
                     let thumbnailer = handle.state::<Thumbnailer>().inner();
                     let db = handle.state::<AppDatabase>().inner();
                     let cache = thumbnailer.shut_down().unwrap();
-                    let v = cache
-                        .frequent_iter()
-                        .chain(cache.recent_iter())
-                        .chain(cache.frequent_evict_iter())
-                        .chain(cache.recent_evict_iter());
+                    let v = cache.into_iter(); // mru order
                     let v = LruCacheStore {
-                        v: v.filter_map(|e| e.1.kinda_clone().map(|t| (e.0.clone(), t)))
+                        v: v.filter_map(|e| e.1.kinda_clone().map(|t| (e.0, t)))
                             .collect(),
                     };
 
@@ -233,8 +230,7 @@ pub mod thumbnails {
         tx: tokio::sync::mpsc::UnboundedSender<ThumbnailRequest>,
 
         close_tx: Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
-        cache_rx:
-            Mutex<Option<tokio::sync::oneshot::Receiver<AdaptiveCache<String, ThumbnailStatus>>>>,
+        cache_rx: Mutex<Option<tokio::sync::oneshot::Receiver<LruCache<String, ThumbnailStatus>>>>,
     }
 
     #[derive(Deserialize, Serialize, Default)]
@@ -288,9 +284,9 @@ pub mod thumbnails {
 
             // send cache through this
             let (cache_tx, cache_rx) =
-                tokio::sync::oneshot::channel::<AdaptiveCache<String, ThumbnailStatus>>(); // exit signal
-            let mut cache: AdaptiveCache<String, ThumbnailStatus> =
-                AdaptiveCache::new(10_000).infer_err()?;
+                tokio::sync::oneshot::channel::<LruCache<String, ThumbnailStatus>>(); // exit signal
+            let mut cache: LruCache<String, ThumbnailStatus> =
+                LruCache::new(NonZeroUsize::new(10_000).unwrap());
             let searcher = db.get_searcher();
             let cache_store: LruCacheStore = searcher
                 .search(
@@ -309,7 +305,7 @@ pub mod thumbnails {
                 .and_then(|mut doc| DbAble::take(db, &mut doc).look_err(|e| dbg!(e)).ok())
                 .unwrap_or_default();
             cache_store.v.into_iter().rev().for_each(|(k, v)| {
-                if !matches!(cache.put(k, v), caches::PutResult::Put) {
+                if !matches!(cache.put(k, v), None) {
                     unreachable!();
                 }
             });
@@ -357,7 +353,7 @@ pub mod thumbnails {
         async fn handle_results(
             t: ThumbnailWorkResult,
             request_tx: &tokio::sync::mpsc::UnboundedSender<ThumbnailRequest>,
-            cache: &mut AdaptiveCache<String, ThumbnailStatus>,
+            cache: &mut LruCache<String, ThumbnailStatus>,
             dir: &std::path::Path,
             work_tx: &tokio::sync::mpsc::UnboundedSender<ThumbnailWorkResult>,
             client: &Client,
@@ -397,7 +393,7 @@ pub mod thumbnails {
                                     tmb,
                                 },
                             ) {
-                                caches::PutResult::Update(_) => (),
+                                Some(_) => (),
                                 _ => unreachable!(),
                             }
                         }
@@ -439,7 +435,7 @@ pub mod thumbnails {
                     }
                 }
                 ThumbnailWorkResult::NewThumbnailError { uri, err } => {
-                    let k = cache.remove(&uri).expect("unreachable!");
+                    let k = cache.pop(&uri).expect("unreachable!");
                     match k {
                         ThumbnailStatus::Waiting(mut v) => {
                             while let Some(s) = v.pop() {
@@ -450,7 +446,7 @@ pub mod thumbnails {
                     }
                 }
                 ThumbnailWorkResult::NewThumbnailNone { uri } => {
-                    let k = cache.remove(&uri).expect("unreachable!");
+                    let k = cache.pop(&uri).expect("unreachable!");
                     match k {
                         ThumbnailStatus::Waiting(mut v) => {
                             while let Some(s) = v.pop() {
@@ -466,7 +462,7 @@ pub mod thumbnails {
 
         async fn handle_requests(
             r: ThumbnailRequest,
-            cache: &mut AdaptiveCache<String, ThumbnailStatus>,
+            cache: &mut LruCache<String, ThumbnailStatus>,
             dir: &std::path::Path,
             work_tx: &tokio::sync::mpsc::UnboundedSender<ThumbnailWorkResult>,
             client: &Client,
@@ -554,11 +550,8 @@ pub mod thumbnails {
                     //     - sending some kinda Evicted error through the channels in the evicted items
                     //     - ignoring the ThumbnailWorkResult for the evicted items
                     //       - NOTE: make sure to delete any files that might have been created or undo anything that needs to be undone
-                    match cache.put(r.uri.clone(), ThumbnailStatus::Waiting(vec![r])) {
-                        caches::PutResult::Put => (),
-                        caches::PutResult::Update(_) => todo!(),
-                        caches::PutResult::Evicted { key, value } => todo!(),
-                        caches::PutResult::EvictedAndUpdate { evicted, update } => todo!(),
+                    if let Some(v) = cache.put(r.uri.clone(), ThumbnailStatus::Waiting(vec![r])) {
+                        todo!();
                     }
                     let work_tx = work_tx.clone();
 
@@ -595,7 +588,7 @@ pub mod thumbnails {
         }
 
         // TODO: how do i enforce that calling image_thumbnail after calling this method fails
-        pub fn shut_down(&self) -> Result<AdaptiveCache<String, ThumbnailStatus>, Error> {
+        pub fn shut_down(&self) -> Result<LruCache<String, ThumbnailStatus>, Error> {
             self.close_tx
                 .lock()
                 .infer_err()?
