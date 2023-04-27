@@ -32,38 +32,18 @@ pub mod thumbnails {
     use caches::{AdaptiveCache, Cache};
     use derivative::Derivative;
     use image::io::Reader;
-    use kolekk_types::{objects::TypeFacet, utility::ThumbnailSize};
-    use rayon::ThreadPoolBuilder;
+    use kolekk_types::utility::ThumbnailSize;
     use reqwest::{Client, Url};
     use serde::{Deserialize, Serialize};
-    use stretto::AsyncCache;
-    use tantivy::Document;
     use tauri::{AppHandle, Manager, State, WindowEvent};
     use tokio::select;
 
     use crate::{
         bad_error::{BadError, Error, InferBadError, Inspectable},
         config::AppConfig,
-        database::{AppDatabase, AutoDbAble, DbAble, FacetFrom},
+        database::AppDatabase,
     };
 
-    // TODO:
-    // thumbnailer using single threaded cache without mutex
-    // spawn a tokio task for doing the cache + channel stuff
-    // spawn a threadpool for the processing itself
-    // use async channels to communicate to all the requesters that a thumbnail has been created, and these requesters can wait on these
-    //   channels to respond to javascript
-    // when threadpool creates thumbnails, the main task can fill in the cache entry and respond via channels
-    // if an entry is already found, just return the required thumbnail
-    // benefits:
-    //   - easy to delete requests
-    //     - delete_thumbnail_requests can just decrement a counter of a url in a fifo queue
-    //   - multiple requests -> single action (multiple requests for the same url in quick succession do not create
-    //     a bunch of different thumbnails)
-    //   - can save thumbnails to a db
-    // cons:
-    //   - no stretto's LFU cache
-    //   - thumbnail weights should be based on their size (which stretto can handle nicely)
     pub async fn init_thumbnailer(
         app_handle: &AppHandle,
         conf: &AppConfig,
@@ -101,15 +81,6 @@ pub mod thumbnails {
         ThumbnailSize::get_appropriate_size(width.round() as _)
     }
 
-    // fetching thumbnail for an uri
-    // - check if the uri already has a an associated dir using LruCache<uri, _> else create one and copy original image in it
-    //   - can store id for thumbnail Object in the lru cache
-    //     - fetch thumbnail object from db and get the uuid from object
-    //   - can store uuid for thumbnail dir in the lru cache
-    //     - fetch the thumbnail object from db using uuid
-    //   - store thumbnail object in lru cache
-    // - check if the required size is smaller than the original image, create a thumbnail if required. else return original img
-    // #[allow(clippy::await_holding_lock)] // clippy does not detect the drop(cache) calls?
     #[tauri::command]
     pub async fn image_thumbnail(
         db: State<'_, AppDatabase>,
@@ -118,56 +89,28 @@ pub mod thumbnails {
         uri: String,
         thumbnail_size: ThumbnailSize,
     ) -> Result<PathBuf, Error> {
-        // // - [Tokio decide how many threads](https://github.com/tokio-rs/tokio/discussions/3858)
-        // let dir = thumbnailer.dir.clone();
-
-        // // let tmb = { thumbnailer.cache.lock().infer_err()?.get(&uri).cloned()  };
-        // // dbg!(&tmb);
-        // let tmb = { thumbnailer.cache.get(&uri).map(|v| v.value().clone()) };
-        // dbg!(&tmb, thumbnailer.cache.len());
-
-        // if let Some(tmb) = tmb {
-        //     let img = tokio::task::spawn_blocking(move || {
-        //         let img = tmb.get_image(thumbnail_size, &dir)?;
-        //         Ok(img)
-        //     })
-        //     .await
-        //     .infer_err()??;
-        //     return Ok(img);
-        // }
-
-        // let client = client.inner().clone();
-        // let u = uri.clone();
-        // // TODO: no thumbnail new img if the folder already exists. if fail, remove the folder
-        // let (tmb, img) = tokio::task::spawn_blocking(move || async move {
-        //     let tmb = Thumbnail::new(&u, &dir, &client)
-        //         .await
-        //         .look(|e| dbg!(e))?
-        //         .bad_err("coule not get an image from the uri")?;
-        //     let img = tmb.get_image(thumbnail_size, &dir)?;
-        //     Ok((tmb, img))
-        // })
-        // .await
-        // .infer_err()?
-        // .await?;
-
-        // // { thumbnailer.cache.lock().infer_err()?.push(uri, tmb) }.look(|e| dbg!(e));
-        // { thumbnailer.cache.insert(uri.clone(), tmb, 1).await }.look(|e| dbg!(e));
-        // thumbnailer.cache.wait().await.infer_err()?;
-        // {
-        //     thumbnailer
-        //         .cache
-        //         .get(&uri)
-        //         .map(|v| v.value().clone())
-        //         .look(|e| dbg!(e, thumbnailer.cache.len()));
-        // }
-
-        // Ok(img)
-
+        // - [Tokio decide how many threads](https://github.com/tokio-rs/tokio/discussions/3858)
         dbg!(&uri, &thumbnail_size);
         thumbnailer.image_thumbnail(thumbnail_size, uri).await
     }
 
+    // thumbnailer using single threaded cache without mutex
+    // spawn a tokio task for doing the cache + channel stuff
+    // spawn a threadpool for the processing itself
+    // use async channels to communicate to all the requesters that a thumbnail has been created, and these requesters can wait on these
+    //   channels to respond to javascript
+    // when threadpool creates thumbnails, the main task can fill in the cache entry and respond via channels
+    // if an entry is already found, just return the required thumbnail
+    // benefits:
+    //   - easy to delete requests
+    //     - delete_thumbnail_requests can just decrement a counter of a url in a fifo queue
+    //   - multiple requests -> single action (multiple requests for the same url in quick succession do not create
+    //     a bunch of different thumbnails)
+    //   - can save thumbnails to a db
+    // cons:
+    //   - no stretto's LFU cache
+    //   - thumbnail weights should be based on their size (which stretto can handle nicely)
+    //
     // - a ton of requests get made from the frontend
     // - must not save dulpicate thumbnails
     // - must not do duplicate work to create thumbnails
@@ -176,7 +119,6 @@ pub mod thumbnails {
     // - need to cache what thumbnail sizes are created
     // - need to be able to wait for results of computation of other requests
     //
-    // - thumbnailer creates a unique id for each unique thumbnail request (uri + size)
     // - thumbnail stores what sizes already have an image
     // - if i see a new uri, immediately insert some object in cache then start processing on it
     //   - Cache<_, Tmb>, enum Tmb { WaitingMultipleNew(Vec<Sender<_>>), WaitingNew(Sender<_>), Completed(Thumbnail) }
@@ -232,28 +174,12 @@ pub mod thumbnails {
     //     Ok(v)
     // }
 
-    pub struct Thumbnailinator {
-        dir: PathBuf,
-        // cache: Mutex<LruCache<String, Thumbnail>>,
-        // cache: AsyncCache<String, Thumbnail>,
-        tx: tokio::sync::broadcast::Sender<Result<Thumbnail, Error>>,
-        rx: tokio::sync::broadcast::Receiver<Result<ThumbnailRequest, Error>>,
-    }
-
     pub struct Thumbnailer {
-        // pool: rayon::ThreadPool,
-        // cache: AdaptiveCache<String, Thumbnail>,
-        // rx: tokio::sync::broadcast::Receiver<Result<PathBuf, Error>>,
         tx: tokio::sync::mpsc::UnboundedSender<ThumbnailRequest>,
 
         close_tx: Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
         cache_rx:
             Mutex<Option<tokio::sync::oneshot::Receiver<AdaptiveCache<String, ThumbnailStatus>>>>,
-    }
-
-    pub enum CachedThumbnail<C, T> {
-        Processing(C),
-        Completed(T),
     }
 
     // #[derive(Deserialize, Serialize)]
@@ -279,9 +205,6 @@ pub mod thumbnails {
     impl Thumbnailer {
         pub async fn new(dir: impl AsRef<Path>, client: Client) -> Result<Self, Error> {
             let dir = dir.as_ref().join("thumbnails");
-            // let pool = ThreadPoolBuilder::new().num_threads(0).build().infer_err()?;
-            // pool.spawn(|| {
-            // let resp_channels: std::collections::HashMap<String, Vec<tokio::sync::broadcast::Sender<Result<PathBuf, Error>>>> = todo!();
             if !dir.exists() {
                 std::fs::create_dir(&dir).infer_err()?;
             }
@@ -344,7 +267,6 @@ pub mod thumbnails {
                         }
                     }
                 }
-                // while let Some(u) = rx.recv().await {}
                 Result::<_, Error>::Ok(())
             });
 
@@ -352,12 +274,6 @@ pub mod thumbnails {
                 tx,
                 close_tx: Mutex::new(Some(close_tx)),
                 cache_rx: Mutex::new(Some(cache_rx)),
-                // dir,
-                // cache: Mutex::new(LruCache::new(NonZeroUsize::new(5000).unwrap())),
-                // cache: AsyncCache::builder(50000, 5000)
-                //     .set_ignore_internal_cost(true)
-                //     .finalize(tokio::spawn)
-                //     .infer_err()?,
             })
         }
 
@@ -521,21 +437,6 @@ pub mod thumbnails {
             size: ThumbnailSize,
             uri: String,
         ) -> Result<PathBuf, Error> {
-            // this needs 2 kinds of operations
-            // one is IO heavy (downloading an image or copying an image)
-            //   - this operation can be performed here ig
-            // other is cpu heavy (generating thumbnail or required size from saved image)
-
-            // TODO: check if
-            //  - required thumbnail already exists
-            // if yes, then return
-            // if no, then wait | send new request
-            // TODO: check if
-            //  - image is being downloaded/copied
-            //  - image thumbnail is being created
-            // if yes, then have to somwhow wait for that operation to get completed and return the same thing that the other operation
-            //   returns
-            // if no, then send a request for new thumbnail
             let (tx, rx) = tokio::sync::oneshot::channel();
             self.tx
                 .send(ThumbnailRequest { size, uri, tx }.look(|e| dbg!(e)))
