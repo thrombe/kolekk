@@ -517,20 +517,20 @@ pub mod thumbnails {
 
         // TODO: how do i enforce that calling image_thumbnail after calling this method fails
         pub fn shut_down(&self) -> Result<AdaptiveCache<String, ThumbnailStatus>, Error> {
-            // TODO: unwrap??
             self.close_tx
                 .lock()
                 .infer_err()?
                 .take()
-                .unwrap()
+                .bad_err("no close channel found")?
                 .send(())
-                .unwrap();
+                .ok()
+                .bad_err("dead channel")?;
             let cache = self
                 .cache_rx
                 .lock()
                 .infer_err()?
                 .take()
-                .unwrap()
+                .bad_err("no cache channel found")?
                 .blocking_recv()
                 .infer_err()?;
             Ok(cache)
