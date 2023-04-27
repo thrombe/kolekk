@@ -473,6 +473,16 @@ pub mod thumbnails {
         uuid: String,
     }
     impl Thumbnail {
+        // TODO: maybe these should be concrete errors :/
+        /// returns None if
+        ///  - passed string was not a Path | Url
+        ///  - path was not an image / unsupported image format
+        ///  - url was not an image
+        ///  - url does not return a CONTENT_TYPE header
+        ///    - assume that url was not an image
+        /// returns Err if
+        ///  - some IO error
+        ///  - url with CONTENT_TYPE containing image is unsupported
         pub async fn new(
             uri: impl AsRef<str>,
             thumbnail_dir: impl AsRef<Path>,
@@ -491,35 +501,43 @@ pub mod thumbnails {
 
                     // TODO:? sync or async file io ?
                     std::fs::copy(p, &dest_path).infer_err()?;
-                    let img_dimensions = Reader::open(dest_path)
+                    match Reader::open(dest_path)
                         .infer_err()?
                         .with_guessed_format()
                         .infer_err()?
                         .into_dimensions()
-                        .infer_err()
-                        .look(|e| dbg!(e))?;
-
-                    return Ok(Some(Self {
-                        width: img_dimensions.0,
-                        uuid,
-                    }));
+                    {
+                        Ok(img_dimensions) => {
+                            return Ok(Some(Self {
+                                width: img_dimensions.0,
+                                uuid,
+                            }));
+                        }
+                        Err(image::ImageError::Unsupported(e)) => {
+                            return Ok(None);
+                        }
+                        Err(e) => {
+                            return Err(e).infer_err();
+                        }
+                    }
                 }
                 _ => {
                     // check if uri
                     if Url::parse(uri).is_ok() {
                         let p = dir.join(ThumbnailSize::Original.as_ref()).look(|e| dbg!(e));
                         let resp = client.get(uri).send().await.infer_err()?;
-                        resp.headers()
+                        let Some(h) = resp
+                            .headers()
                             .look(|e| dbg!(e))
                             .get(reqwest::header::CONTENT_TYPE)
-                            .bad_err("no content type in response")
-                            .look(|e| dbg!(e))?
-                            .to_str()
-                            .infer_err()?
-                            .contains("image")
-                            .then_some(())
-                            .bad_err("response is not an image")
-                            .look(|e| dbg!(e))?; // bail out if not an image
+                        else {
+                           return Ok(None);
+                        };
+
+                        if !h.to_str().infer_err()?.contains("image") {
+                            return Ok(None);
+                        }
+
                         dbg!("fetching image!!!!!");
                         let bytes = resp.bytes().await.infer_err()?;
                         dbg!("got image!!!!");
@@ -530,7 +548,7 @@ pub mod thumbnails {
                         let img_dimensions = Reader::new(Cursor::new(&bytes))
                             .with_guessed_format()
                             .expect("Cursor io never fails")
-                            .into_dimensions()
+                            .into_dimensions() // NOTE: return error here, as CONTENT_TYPE was supposed to be an image
                             .infer_err()
                             .look(|e| dbg!(e))?;
 
