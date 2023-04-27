@@ -541,7 +541,6 @@ pub mod thumbnails {
                 None => {
                     dbg!(&r);
                     let uri = r.uri.clone();
-                    // TODO: delete the evicted thumbnails
                     // TODO: bad bad bad. all the .expect("unreachable!") used above can actually fail because of these evictions.
                     //       but it should be quite rare, as the items should get bumped up in the LRU cache when a new request is put up
                     //       for it. also the limit is high enough that requests will hopefully get resolved quicker than the ThumbnailStatus
@@ -551,7 +550,12 @@ pub mod thumbnails {
                     //     - ignoring the ThumbnailWorkResult for the evicted items
                     //       - NOTE: make sure to delete any files that might have been created or undo anything that needs to be undone
                     if let Some(v) = cache.put(r.uri.clone(), ThumbnailStatus::Waiting(vec![r])) {
-                        todo!();
+                        match v {
+                            ThumbnailStatus::Completed { tmb, sizes } => {
+                                let _ = std::fs::remove_dir_all(dir.join(tmb.uuid));
+                            }
+                            ThumbnailStatus::Waiting(_) => (),
+                        }
                     }
                     let work_tx = work_tx.clone();
 
