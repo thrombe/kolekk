@@ -111,11 +111,12 @@ async fn setup(app_handle: &tauri::AppHandle) -> Result<(), Error> {
     app_handle
         .manage(TmdbClient::new(include_str!("../../cache/tmdb_v3_auth"), client.clone()).await?);
     app_handle.manage(client.clone());
-    app_handle.manage(AppDatabase::new(&conf).await?);
+    let db = AppDatabase::new(&conf).await?;
+    images::thumbnails::init_thumbnailer(app_handle, &conf, &db, client.clone()).await?;
+    app_handle.manage(db);
     app_handle.manage(Player(std::sync::Mutex::new(
         musiplayer::Player::new().unwrap(),
     )));
-    images::thumbnails::init_thumbnailer(app_handle, &conf, client.clone()).await?;
     app_handle.manage(conf);
     Ok(())
 }

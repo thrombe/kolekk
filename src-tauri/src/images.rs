@@ -32,25 +32,32 @@ pub mod thumbnails {
     use caches::{AdaptiveCache, Cache};
     use derivative::Derivative;
     use image::io::Reader;
-    use kolekk_types::utility::ThumbnailSize;
+    use kolekk_types::{
+        objects::{Fields, TypeFacet},
+        utility::ThumbnailSize,
+    };
     use reqwest::{Client, Url};
     use serde::{Deserialize, Serialize};
+    use tantivy::{
+        collector::TopDocs, query::TermQuery, schema::IndexRecordOption, Document, Term,
+    };
     use tauri::{AppHandle, Manager, State, WindowEvent};
     use tokio::select;
 
     use crate::{
-        bad_error::{BadError, Error, InferBadError, Inspectable},
+        bad_error::{BadError, Error, InferBadError, Inspectable, InspectableErr},
         config::AppConfig,
-        database::AppDatabase,
+        database::{AppDatabase, AutoDbAble, DbAble, FacetFrom},
     };
 
     pub async fn init_thumbnailer(
         app_handle: &AppHandle,
         conf: &AppConfig,
+        db: &AppDatabase,
         client: Client,
     ) -> Result<(), Error> {
         let handle = app_handle.app_handle();
-        app_handle.manage(Thumbnailer::new(&conf.app_data_dir, client).await?);
+        app_handle.manage(Thumbnailer::new(&conf.app_data_dir, client, db).await?);
         // TODO: ugly unwraps :(
         app_handle
             // .get_window("kolekk")
@@ -63,13 +70,35 @@ pub mod thumbnails {
                     let thumbnailer = handle.state::<Thumbnailer>().inner();
                     let db = handle.state::<AppDatabase>().inner();
                     let cache = thumbnailer.shut_down().unwrap();
-                    let v = cache.frequent_iter().collect::<Vec<_>>();
-                    // let v = LruCacheStore {
-                    //     v: v.into_iter().map(|e| (e.0.clone(), e.1.clone())).collect(),
-                    // };
-                    // let mut doc = Document::new();
-                    // doc.add_facet(db.get_field(kolekk_types::objects::Fields::Type), TypeFacet::Temp("/cache/".into()).facet());
-                    // v.add(db, &mut doc).unwrap();
+                    let v = cache
+                        .frequent_iter()
+                        .chain(cache.recent_iter())
+                        .chain(cache.frequent_evict_iter())
+                        .chain(cache.recent_evict_iter());
+                    let v = LruCacheStore {
+                        v: v.filter_map(|e| e.1.kinda_clone().map(|t| (e.0.clone(), t)))
+                            .collect(),
+                    };
+
+                    let facet = TypeFacet::Temp("/cache/thumbnails_cache".into()).facet();
+
+                    let mut writer = db.index_writer.lock().unwrap();
+                    let _opstamp =
+                        writer.delete_term(Term::from_facet(db.get_field(Fields::Type), &facet));
+
+                    let mut doc = Document::new();
+                    doc.add_facet(db.get_field(Fields::Type), facet);
+                    v.add(db, &mut doc)
+                        .expect("failed add thumbnail cache to Document");
+
+                    dbg!("saving cache");
+
+                    let _opstamp = writer
+                        .add_document(doc)
+                        .expect("eror: failed to add cache document to tantivy");
+                    let _opstamp = writer
+                        .commit()
+                        .expect("eror: failed to commit changes to tantivy");
                 }
                 _ => {}
             });
@@ -139,21 +168,48 @@ pub mod thumbnails {
         tx: tokio::sync::oneshot::Sender<Result<PathBuf, Error>>,
     }
 
-    // #[derive(Deserialize, Serialize)]
+    #[derive(Deserialize, Serialize)]
     pub enum ThumbnailStatus {
-        // #[serde(skip)]
+        #[serde(skip)]
         Waiting(Vec<ThumbnailRequest>),
         Completed {
             tmb: Thumbnail,
             sizes: Box<[ThumbnailSizeStatus; 9]>,
         },
     }
-    // #[derive(Deserialize, Serialize)]
-    #[derive(Derivative)]
+    impl ThumbnailStatus {
+        pub fn is_completed(&self) -> bool {
+            matches!(self, Self::Completed { .. })
+        }
+        pub fn kinda_clone(&self) -> Option<Self> {
+            match self {
+                ThumbnailStatus::Waiting(_) => None,
+                ThumbnailStatus::Completed { tmb, sizes } => {
+                    let s = Self::Completed {
+                        tmb: tmb.clone(),
+                        sizes: Box::new([
+                            sizes[0].kinda_clone(),
+                            sizes[1].kinda_clone(),
+                            sizes[2].kinda_clone(),
+                            sizes[3].kinda_clone(),
+                            sizes[4].kinda_clone(),
+                            sizes[5].kinda_clone(),
+                            sizes[6].kinda_clone(),
+                            sizes[7].kinda_clone(),
+                            sizes[8].kinda_clone(),
+                        ]),
+                    };
+                    Some(s)
+                }
+            }
+        }
+    }
+
+    #[derive(Derivative, Deserialize, Serialize)]
     #[derivative(Debug)]
     pub enum ThumbnailSizeStatus {
         None,
-        // #[serde(deserialize_with = "none_status", skip_serializing)]
+        #[serde(skip)]
         Waiting(
             #[derivative(Debug = "ignore")]
             Vec<tokio::sync::oneshot::Sender<Result<PathBuf, Error>>>,
@@ -161,19 +217,17 @@ pub mod thumbnails {
         Completed,
         Original,
     }
-    impl Default for ThumbnailSizeStatus {
-        fn default() -> Self {
-            Self::None
+
+    impl ThumbnailSizeStatus {
+        pub fn kinda_clone(&self) -> Self {
+            match self {
+                ThumbnailSizeStatus::Waiting(_) => ThumbnailSizeStatus::None,
+                ThumbnailSizeStatus::None => ThumbnailSizeStatus::None,
+                ThumbnailSizeStatus::Completed => ThumbnailSizeStatus::Completed,
+                ThumbnailSizeStatus::Original => ThumbnailSizeStatus::Original,
+            }
         }
     }
-    // fn none_status<'de, D>(deserializer: D) -> Result<, D::Error>
-    // where
-    //     D: serde::Deserializer<'de>,
-    // {
-    //     let value = i64::deserialize(deserializer)?;
-    //     let v = (value > 0).then_some(value as _);
-    //     Ok(v)
-    // }
 
     pub struct Thumbnailer {
         tx: tokio::sync::mpsc::UnboundedSender<ThumbnailRequest>,
@@ -183,12 +237,11 @@ pub mod thumbnails {
             Mutex<Option<tokio::sync::oneshot::Receiver<AdaptiveCache<String, ThumbnailStatus>>>>,
     }
 
-    // #[derive(Deserialize, Serialize)]
+    #[derive(Deserialize, Serialize, Default)]
     pub struct LruCacheStore {
         v: Vec<(String, ThumbnailStatus)>,
     }
-    // impl AutoDbAble for LruCacheStore {}
-    // impl AutoDbAble for ThumbnailStatus {}
+    impl AutoDbAble for LruCacheStore {}
 
     #[derive(Debug)]
     #[allow(clippy::enum_variant_names)]
@@ -217,7 +270,11 @@ pub mod thumbnails {
     }
 
     impl Thumbnailer {
-        pub async fn new(dir: impl AsRef<Path>, client: Client) -> Result<Self, Error> {
+        pub async fn new(
+            dir: impl AsRef<Path>,
+            client: Client,
+            db: &AppDatabase,
+        ) -> Result<Self, Error> {
             let dir = dir.as_ref().join("thumbnails");
             if !dir.exists() {
                 std::fs::create_dir(&dir).infer_err()?;
@@ -234,6 +291,28 @@ pub mod thumbnails {
                 tokio::sync::oneshot::channel::<AdaptiveCache<String, ThumbnailStatus>>(); // exit signal
             let mut cache: AdaptiveCache<String, ThumbnailStatus> =
                 AdaptiveCache::new(10_000).infer_err()?;
+            let searcher = db.get_searcher();
+            let cache_store: LruCacheStore = searcher
+                .search(
+                    &TermQuery::new(
+                        Term::from_facet(
+                            db.get_field(Fields::Type),
+                            &TypeFacet::Temp("/cache/thumbnails_cache".into()).facet(),
+                        ),
+                        IndexRecordOption::Basic,
+                    ),
+                    &TopDocs::with_limit(1),
+                )
+                .infer_err()?
+                .first()
+                .and_then(|&(_, add)| searcher.doc(add).ok())
+                .and_then(|mut doc| DbAble::take(db, &mut doc).look_err(|e| dbg!(e)).ok())
+                .unwrap_or_default();
+            cache_store.v.into_iter().rev().for_each(|(k, v)| {
+                if !matches!(cache.put(k, v), caches::PutResult::Put) {
+                    unreachable!();
+                }
+            });
 
             // receive work results from work tasks through this
             let (work_tx, mut work_rx) =

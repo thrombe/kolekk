@@ -393,7 +393,7 @@ pub mod api {
 }
 
 pub mod objects {
-    use std::ops::Deref;
+    use std::{ops::Deref, borrow::Cow};
 
     use serde::{Deserialize, Serialize};
     use ts_rs::TS;
@@ -547,7 +547,7 @@ pub mod objects {
         Group,
         Content,
         Notes,
-        Temp(String),
+        Temp(#[ts(type = "string")] Cow<'static, str>),
     }
 
     impl AsRef<str> for TypeFacet {
