@@ -70,7 +70,10 @@ pub mod thumbnails {
                 WindowEvent::Destroyed | WindowEvent::CloseRequested { .. } => {
                     let thumbnailer = handle.state::<Thumbnailer>().inner();
                     let db = handle.state::<AppDatabase>().inner();
-                    let cache = thumbnailer.shut_down().unwrap();
+                    let Some(cache) = thumbnailer.shut_down().unwrap() else {
+                        // return if already shut down
+                        return;
+                    };
                     let v = cache.into_iter(); // mru order
                     let v = LruCacheStore {
                         v: v.filter_map(|e| e.1.kinda_clone().map(|t| (e.0, t)))
@@ -592,12 +595,16 @@ pub mod thumbnails {
         }
 
         // TODO: how do i enforce that calling image_thumbnail after calling this method fails
-        pub fn shut_down(&self) -> Result<LruCache<String, ThumbnailStatus>, Error> {
-            self.close_tx
+        /// returns None if it is already shut down
+        pub fn shut_down(&self) -> Result<Option<LruCache<String, ThumbnailStatus>>, Error> {
+            let close_tx = match self.close_tx
                 .lock()
                 .infer_err()?
-                .take()
-                .bad_err("no close channel found")?
+                .take() {
+                    Some(c) => c,
+                    None => return Ok(None),
+                };
+            close_tx
                 .send(())
                 .ok()
                 .bad_err("dead channel")?;
@@ -609,7 +616,7 @@ pub mod thumbnails {
                 .bad_err("no cache channel found")?
                 .blocking_recv()
                 .infer_err()?;
-            Ok(cache)
+            Ok(Some(cache))
         }
     }
 
