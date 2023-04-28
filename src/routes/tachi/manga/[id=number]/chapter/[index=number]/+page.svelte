@@ -10,11 +10,24 @@
     let window_width = 100;
     let window_height = 100;
     let selected = 0;
+    let columns = 1;
     let search_input: any;
     const on_keydown = async (event: KeyboardEvent, scroll_selected_into_view: any) => {
+        console.log(event, $page);
         if (event.key == 'a') {
             // await add_tag_button();
             // event.preventDefault();
+        } else if (event.key == 'F1') {
+            // window.location.pathname = $page.url.pathname
+            window.history.back();
+        } else if (event.key == 'F2') {
+            if (selected - columns >= 0) {
+                selected -= columns;
+            }
+        } else if (event.key == 'F3') {
+            if (selected + 1 < items.length) {
+                selected += columns;
+            }
         } else if (event.key == '/') {
             selected = 0;
             await tick();
@@ -71,7 +84,7 @@
 <cl>
     <VirtualScrollable
         bind:items
-        columns={1}
+        {columns}
         width={window_width}
         item_height={window_height}
         bind:selected
