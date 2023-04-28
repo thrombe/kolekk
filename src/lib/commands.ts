@@ -11,15 +11,17 @@ export class Searcher<T> {
     _results_valid: boolean;
     _has_next_page: boolean;
     search_results: Array<RObject<T>>;
+    on_update: any;
 
     // TypeFacet should match T
-    constructor(facet: TypeFacet, page_size: number) {
+    constructor(facet: TypeFacet, page_size: number, on_update = (_e: any) => {}) {
         this.facet = facet;
         this._query = '';
         this._limit = page_size;
         this._results_valid = false;
         this._has_next_page = false;
         this.search_results = [];
+        this.on_update = on_update;
     }
 
     get query() {
@@ -82,6 +84,7 @@ export class Searcher<T> {
             this._results_valid = true;
             this.search_results = search_results;
         }
+        this.on_update(this);
         return this.search_results;
     }
 }
@@ -112,6 +115,6 @@ export async function enter_searchable<T>(facet: TypeFacet, data: SearchableEntr
 
 export async function get_path(path: Path) {
     let p: string =  await invoke('get_path', { path });
-    let p1 = convertFileSrc(p);
-    return p1;
+    // let p1 = convertFileSrc(p);
+    return p;
 }
