@@ -14,7 +14,7 @@ use kolekk_types::{
     },
     utility::Path,
 };
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Serialize, Deserialize};
 use tantivy::{
     collector::TopDocs,
     directory::{ManagedDirectory, MmapDirectory},
@@ -22,7 +22,7 @@ use tantivy::{
     schema::{Facet, FacetOptions, Field, IndexRecordOption, FAST, INDEXED, STORED, TEXT},
     DocAddress, Document, Index, IndexReader, IndexWriter, Term,
 };
-use tauri::State;
+use tauri::{State, WindowEvent, AppHandle, Manager};
 
 use crate::{
     bad_error::{BadError, Error, InferBadError, Inspectable},
@@ -451,6 +451,75 @@ pub fn search_object<T: DbAble + Debug>(
         .collect()
 }
 
+pub async fn init_database(
+    app_handle: &AppHandle,
+    conf: &AppConfig,
+) -> Result<(), Error> {
+    let handle = app_handle.app_handle();
+
+    let mut db = AppDatabase::new(conf).await?;
+
+    let searcher = db.get_searcher();
+    let state: AppDatabaseState = searcher
+        .search(
+            &TermQuery::new(
+                Term::from_facet(
+                    db.get_field(Fields::Type),
+                    &TypeFacet::Temp("/app_data/state".into()).facet(),
+                ),
+                IndexRecordOption::Basic,
+            ),
+            &TopDocs::with_limit(1),
+        )
+        .infer_err()?
+        .first()
+        .and_then(|&(_, add)| searcher.doc(add).ok())
+        .and_then(|mut doc| DbAble::take(&db, &mut doc).ok())
+        .unwrap_or_default();
+    db.update_state(state);
+
+    app_handle.manage(db);
+
+    // TODO: ugly unwraps :(
+    app_handle
+        .windows()
+        .into_values()
+        .next()
+        .expect("no window?")
+        .on_window_event(move |e| match e {
+            WindowEvent::Destroyed | WindowEvent::CloseRequested { .. } => {
+                let db = handle.state::<AppDatabase>().inner();
+
+                // TODO: Temp really?
+                let facet = TypeFacet::Temp("/app_data/state".into()).facet();
+
+                let mut writer = db.index_writer.lock().unwrap();
+                let _opstamp =
+                    writer.delete_term(Term::from_facet(db.get_field(Fields::Type), &facet));
+
+                let mut doc = Document::new();
+                doc.add_facet(db.get_field(Fields::Type), facet);
+
+                // TODO: this does not gurantee that ids won't be repeated after app reboot as
+                //    some ids may get created after this thing is saved in the database
+                //    not clear how to solve this problem as it is not possible to unhandle anything from tauri
+                //    maybe just panic inside new_id()?
+                db.get_state().add(db, &mut doc).unwrap();
+
+                dbg!("saving appdatabase state");
+
+                let _opstamp = writer
+                    .add_document(doc)
+                    .expect("eror: failed to add cache document to tantivy");
+                let _opstamp = writer
+                    .commit()
+                    .expect("eror: failed to commit changes to tantivy");
+            }
+            _ => {}
+        });
+    Ok(())
+}
+
 pub struct AppDatabase {
     // sql: DatabaseConnection,
     index: Index,
@@ -459,6 +528,14 @@ pub struct AppDatabase {
     fields: HashMap<Fields, Field>,
     id_gen: AtomicU32,
 }
+
+// the state that persists
+#[derive(Serialize, Deserialize, Default)]
+struct AppDatabaseState {
+    id_gen: u32,
+}
+
+impl AutoDbAble for AppDatabaseState {}
 
 impl AppDatabase {
     pub async fn new(config: &AppConfig) -> Result<Self, Error> {
@@ -536,6 +613,14 @@ impl AppDatabase {
             fields,
             id_gen: 0.into(),
         })
+    }
+
+    fn get_state(&self) -> AppDatabaseState {
+        AppDatabaseState { id_gen: self.id_gen.load(std::sync::atomic::Ordering::Relaxed) }
+    }
+
+    fn update_state(&mut self, state: AppDatabaseState) {
+        self.id_gen = state.id_gen.into();
     }
 
     pub fn get_field(&self, f: Fields) -> Field {
