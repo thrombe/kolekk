@@ -48,6 +48,7 @@ pub mod commands {
             let tachi = TachideskClient::download_if_needed(
                 client.inner().clone(),
                 conf.app_data_dir.join("tachidesk"),
+                &conf.app_log_dir,
             )
             .await?;
 
@@ -644,6 +645,7 @@ pub mod tachidesk {
             jre: impl AsRef<Path>,
             tachidesk_jar: impl AsRef<Path>,
             tachidesk_root_dir: impl AsRef<Path>,
+            log_dir: impl AsRef<Path>,
         ) -> Result<Self, Error> {
             let jre = jre.as_ref();
             let tachidesk_jar = tachidesk_jar.as_ref();
@@ -651,7 +653,7 @@ pub mod tachidesk {
             let cache_dir = root_dir.join("cache");
             let thumbnails_dir = root_dir.join("thumbnails");
 
-            let _ = std::fs::remove_dir_all(&thumbnails_dir).look(|e| dbg!(e));
+            let _ = std::fs::remove_dir_all(thumbnails_dir).look(|e| dbg!(e));
             let _ = std::fs::remove_dir_all(&cache_dir).look(|e| dbg!(e));
             // let _ = std::fs::remove_file(&root_dir.join("database.mv.db")).look(|e| dbg!(e));
 
@@ -662,10 +664,13 @@ pub mod tachidesk {
                 .exists()
                 .then_some(())
                 .bad_err("tachidesk jar does not exist")?;
+            let log = File::create(log_dir.as_ref().join("tachidesk.log")).infer_err()?;
 
             let mut tachi = Command::new(jre.join("bin/java"));
             tachi
                 .kill_on_drop(true)
+                .stdout(log.try_clone().infer_err()?)
+                .stderr(log)
                 .arg(format!(
                     "-Dsuwayomi.tachidesk.config.server.rootDir={}",
                     root_dir.to_string_lossy()
@@ -690,6 +695,7 @@ pub mod tachidesk {
         pub async fn download_if_needed(
             client: Client,
             tachidesk_path: impl AsRef<Path>,
+            log_dir: impl AsRef<Path>,
         ) -> Result<Self, Error> {
             let tachidesk_path = tachidesk_path.as_ref().to_path_buf();
             let assets = tachidesk_path.join("assets");
@@ -760,6 +766,7 @@ pub mod tachidesk {
                 assets.join("jre"),
                 assets.join("Tachidesk-Server.jar"),
                 tachidesk_root_dir,
+                log_dir,
             )
         }
 
