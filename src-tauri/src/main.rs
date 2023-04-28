@@ -11,6 +11,7 @@ mod database;
 mod filesystem;
 mod logg;
 // mod orm;
+mod clipboard;
 mod images;
 mod player;
 mod tag;
@@ -22,7 +23,7 @@ use tauri::Manager;
 
 pub use logg::{debug, error};
 
-use crate::{api::tmdb::TmdbClient, database::AppDatabase, images::thumbnails::Thumbnailer};
+use crate::{api::tmdb::TmdbClient, database::AppDatabase};
 
 #[derive(PartialEq, Eq)]
 pub enum AppInitialisationStatus {
@@ -74,6 +75,7 @@ fn main() {
             database::delete_facet_objects,
             database::new_temp_facet,
             database::get_path,
+            clipboard::copy_image_to_clipboard,
         ])
         .setup(|app| {
             app.handle().manage(app.handle());
@@ -111,6 +113,7 @@ async fn setup(app_handle: &tauri::AppHandle) -> Result<(), Error> {
     app_handle
         .manage(TmdbClient::new(include_str!("../../cache/tmdb_v3_auth"), client.clone()).await?);
     app_handle.manage(client.clone());
+    app_handle.manage(clipboard::Clipboard::new()?);
 
     database::init_database(app_handle, &conf).await?;
     let db = app_handle.state::<AppDatabase>().inner();

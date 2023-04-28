@@ -36,6 +36,7 @@ stretto = { version = "0.7.2", features = ["async", "serde_json", "serde", "seri
 caches = "0.2.3"
 rayon = "1.7.0"
 derivative = "2.2.0"
+arboard = "3.2.0"
 
 [dependencies.musiplayer]
 # version = "0.1"
