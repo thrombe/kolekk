@@ -117,11 +117,11 @@
     <gd style="--item-width: {item_width}px;" bind:this={grid}>
     {#each visible as item, i (item.id)}
         {#if (selected == i + start*columns) || (i + start*columns == items.length - 1 && selected >= items.length)}
-            <sel bind:this={selected_item} style="width: {item_width}px; height: {item_height}px;">
+            <sel bind:this={selected_item}>
                 <slot {item_width} {item_height} {root} item={item.data} index={i + start*columns} selected={true} />
             </sel>
         {:else}
-            <clk on:click={() => {selected = i + start*columns}} on:keydown={() => {}} style="width: {item_width}px; height: {item_height}px;" >
+            <clk on:click={() => {selected = i + start*columns}} on:keydown={() => {}}>
                 <slot {item_width} {item_height} {root} item={item.data} index={i + start*columns} selected={false} />
             </clk>
         {/if}
@@ -130,7 +130,7 @@
     <pad  style="height: {bottom_padding}px; width: 100%;" />
 
     <!-- observer -->
-    <div style="height: 10px; width: 100%; position: relative; top: -{margin}px;">
+    <div style="width: 100%; position: relative; top: -{margin}px;">
         <Observer enter_screen={end_reached} bind:visible={end_is_visible} {root} {margin} />
     </div>
 </cl>
