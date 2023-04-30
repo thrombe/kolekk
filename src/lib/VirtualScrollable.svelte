@@ -9,6 +9,7 @@
 
     export let end_reached = async () => {};
     export let on_keydown = async (_: KeyboardEvent, _a: any) => {};
+    export let on_item_click = async () => {};
     export let end_is_visible = true;
     export let keyboard_control = true;
 
@@ -110,6 +111,12 @@
     $: if (!(selected === undefined)) {
         try_scroll_into_view();
     }
+
+    const _on_item_click = async (i: number) => {
+        selected = i + start*columns;
+        await tick();
+        await on_item_click();
+    };
 </script>
 
 <cl on:scroll={on_update} bind:this={root} bind:clientWidth={width}>
@@ -121,7 +128,7 @@
                 <slot {item_width} {item_height} {root} item={item.data} index={i + start*columns} selected={true} />
             </sel>
         {:else}
-            <clk on:click={() => {selected = i + start*columns}} on:keydown={() => {}}>
+            <clk on:click={() => {_on_item_click(i)}} on:keydown={() => {}}>
                 <slot {item_width} {item_height} {root} item={item.data} index={i + start*columns} selected={false} />
             </clk>
         {/if}

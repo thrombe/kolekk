@@ -92,8 +92,8 @@
         }
     };
     const copy = async (img: Image) => {
-        console.log("copying image", img.title)
         await invoke('copy_image_to_clipboard', { imgPath: img.path });
+        console.log("copied image", img.title);
     };
     const copy_selected = async () => {
         await copy(items[$selected].data.data.data);
@@ -124,6 +124,7 @@
         bind:items
         item_width={150}
         item_height={170}
+        on_item_click={copy_selected}
         {end_reached}
         bind:selected={$selected}
         {on_keydown}
@@ -140,7 +141,6 @@
             selected={s}
             {image}
             {root}
-            on_click={copy_selected}
         />
     </VirtualScrollable>
 </cl>
