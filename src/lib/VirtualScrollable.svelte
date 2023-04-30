@@ -2,9 +2,8 @@
     import Observer from '$lib/Observer.svelte';
     import { tick } from 'svelte';
 
-    export let width: number;
+    export let item_width: number;
     export let item_height: number;
-    export let columns: number;
     export let items: Array<any>;
     export let selected: number;
 
@@ -13,8 +12,9 @@
     export let end_is_visible = true;
     export let keyboard_control = true;
 
+    let width: number;
+    let columns = 1;
 
-    $: item_width = width / columns;
     $: margin = item_height * 2;
 
     let start = 0;
@@ -23,6 +23,11 @@
     let edited = false;
     $: if (items) {
         edited = true;
+    }
+    let grid: HTMLElement;
+    $: if (grid && width) {
+        let st = window.getComputedStyle(grid)
+        columns = st.getPropertyValue("grid-template-columns").split(" ").length
     }
 
     let root: HTMLElement;
@@ -109,8 +114,9 @@
     }
 </script>
 
-<cl on:scroll={on_update}  bind:this={root}>
+<cl on:scroll={on_update} bind:this={root} bind:clientWidth={width}>
     <pad style="height: {top_padding}px; width: 100%;" />
+    <gd style="--item-width: {item_width}px;" bind:this={grid}>
     {#each visible as item, i (item.id)}
         {#if (selected == i + start*columns) || (i + start*columns == items.length - 1 && selected >= items.length)}
             <sel bind:this={selected_item} style="width: {item_width}px; height: {item_height}px;">
@@ -122,10 +128,11 @@
             </clk>
         {/if}
     {/each}
+    </gd>
     <pad  style="height: {bottom_padding}px; width: 100%;" />
 
     <!-- observer -->
-    <div style="height: 10px; width: 100%;">
+    <div style="height: 10px; width: 100%; position: relative; top: -{margin}px;">
         <Observer enter_screen={end_reached} bind:visible={end_is_visible} {root} {margin} />
     </div>
 </cl>
@@ -137,16 +144,27 @@
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
-        flex: none;
-        align-content: flex-start;
 
         overflow: auto;
         width: 100%;
         height: 100%;
     }
 
-    sel,clk {
+    gd {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(var(--item-width), 1fr));
+        align-content: start;
+        justify-content: space-evenly;
+        justify-items: center;
+        row-gap: 15px;
+        column-gap: 15px;
+
+        overflow: visible;
         width: 100%;
-        height: 100%;
+        padding-top: 20px;
+        padding-left: 20px;
+        padding-right: 20px;
     }
+
+    sel,clk {}
 </style>
