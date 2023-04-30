@@ -174,19 +174,19 @@
 <cl>
     <VirtualScrollable
         bind:items={items}
-        columns={5}
-        width={window_width}
-        item_height={window_width / 5 / item_aspect_ratio}
+        item_width={166}
+        item_height={243}
         {end_reached}
         bind:selected={$selected}
         {on_keydown}
         bind:end_is_visible
         let:item_width={width}
+        let:item_height
         let:root
         let:item={manga}
         let:selected={s}
     >
-        <Card {width} aspect_ratio={item_aspect_ratio} selected={s} {manga} {root} />
+        <Card {width} aspect_ratio={width / item_height} selected={s} {manga} {root} />
     </VirtualScrollable>
 </cl>
 
