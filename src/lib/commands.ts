@@ -28,10 +28,10 @@ export class Searcher<T> {
         return this._query;
     }
 
-    set query(q: string) {
+    async set_query(q: string) {
         this._query = q;
         this._results_valid = false;
-        this.next_page();
+        await this.next_page();
     }
 
     // get facet() {

@@ -51,18 +51,18 @@
     };
 
     let window_width = 100;
-    let item_aspect_ratio = 1;
-    let search_images = () => {
-        $searcher.query = $search_query;
+    let search_images = async () => {
+        await $searcher.set_query($search_query);
         console.log(
             images,
             $searcher.search_results.map((e) => e.data.data.title),
             $searcher.search_results.map((e) => e.id)
         );
+        end_reached();
     };
     let images = new Array();
 
-    $: $searcher.query = $search_query;
+    $: $searcher.set_query($search_query);
     // $: console.log($searcher.search_results.map(e => e.data.data.title));
     // $: images = $searcher.search_results;
     // $: console.log(images);
@@ -93,7 +93,15 @@
         }
     };
 
-    const end_reached = async () => {};
+    const end_reached = async () => {
+        while (true) {
+            if (!end_is_visible || !$searcher._has_next_page) {
+                break;
+            }
+            await $searcher.next_page();
+            await tick();
+        }
+    };
 </script>
 
 <DataListener on_receive={file_drop} />
@@ -107,13 +115,14 @@
     <input bind:value={tag_name} />
     <button on:click={add_tag}>add tag</button>
     <button on:click={remove_tag}>remove tag</button>
+    <button>{end_is_visible}</button>
 </cl>
 
 <cl>
     <VirtualScrollable
         bind:items
-        item_width={170}
-        item_height={230}
+        item_width={150}
+        item_height={170}
         {end_reached}
         bind:selected={$selected}
         {on_keydown}
