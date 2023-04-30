@@ -1,7 +1,6 @@
 <script lang="ts">
     import { get_path } from '$lib/commands';
     import ImageCard from '$lib/ImageCard.svelte';
-    import { invoke } from '@tauri-apps/api';
     import type { Meta, Taggable, Image } from 'types';
 
     export let width: number;
@@ -37,10 +36,6 @@
     $: wrap = selected ? 'normal' : 'nowrap';
     $: shade_height = selected ? '60%' : '25%';
     let bg_color = '#282828';
-
-    const copy = async () => {
-        await invoke('copy_image_to_clipboard', { imgPath: image.data.data.path });
-    };
 </script>
 
 <this-helps-position-the-title>
@@ -55,44 +50,13 @@
                     </title-box>
                 {/if}
 
-                <button class="copy-button" on:click={copy}>
-                    <span>copy</span>
-                </button>
+                <slot />
             </card-insides>
         </card-div>
     </cl>
 </this-helps-position-the-title>
 
 <style>
-    .copy-button {
-        --width: 40px;
-        --height: 20px;
-        position: absolute;
-        z-index: 2;
-        float: left;
-        height: var(--height);
-        width: var(--width);
-        top: calc(var(--height) / 2);
-        left: calc(var(--height) / 2);
-        border: 2px solid;
-        border-radius: 8px;
-        border-color: var(--color);
-        padding: 0px;
-        margin: 0px;
-        transition: width 0.2s ease;
-        text-align: center;
-        line-height: calc(var(--height) / 2);
-        font-size: 1.37ch;
-        font-weight: 700;
-        color: #282828;
-        background-color: var(--color);
-    }
-
-    .copy-button:hover {
-        color: #d8d8d8;
-        background-color: #558855af;
-    }
-
     this-helps-position-the-title {
         position: relative;
     }

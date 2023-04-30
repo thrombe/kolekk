@@ -53,36 +53,25 @@
     let window_width = 100;
     let search_images = async () => {
         await $searcher.set_query($search_query);
-        console.log(
-            images,
-            $searcher.search_results.map((e) => e.data.data.title),
-            $searcher.search_results.map((e) => e.id)
-        );
         end_reached();
     };
-    let images = new Array();
 
     $: $searcher.set_query($search_query);
-    // $: console.log($searcher.search_results.map(e => e.data.data.title));
-    // $: images = $searcher.search_results;
-    // $: console.log(images);
-    // $: items = images.map(e => {
-    //     return { id: e.id, data: e };
-    // });
     let items = new Array();
-    // searcher.subscribe(e => {
-    //     console.log(e);
-    //     items = e.search_results.map(e => {
-    //         return { id: e.id, data: e };
-    //     });
-    // });
 
     let end_is_visible = true;
     let search_input: any;
     const on_keydown = async (event: KeyboardEvent, scroll_selected_into_view: any) => {
-        if (event.key == 'a') {
+        if (event.key == 'Enter') {
+            await copy_selected();
             // await add_tag_button();
             // event.preventDefault();
+        } else if (event.key == '?') {
+            $selected = 0;
+            await tick();
+            await scroll_selected_into_view();
+            search_input.focus();
+            event.preventDefault();
         } else if (event.key == '/') {
             $selected = 0;
             await tick();
@@ -102,6 +91,18 @@
             await tick();
         }
     };
+    const copy = async (img: Image) => {
+        console.log("copying image", img.title)
+        await invoke('copy_image_to_clipboard', { imgPath: img.path });
+    };
+    const copy_selected = async () => {
+        await copy(items[$selected].data.data.data);
+    };
+    const on_enter = async (event: KeyboardEvent) => {
+        if (event.key == 'Enter') {
+            search_input.blur();
+        }
+    };
 </script>
 
 <DataListener on_receive={file_drop} />
@@ -109,7 +110,7 @@
 <svelte:window bind:innerWidth={window_width} />
 
 <cl class="inputs">
-    <input bind:value={$search_query} on:input={search_images} bind:this={search_input} />
+    <input bind:value={$search_query} on:input={search_images} bind:this={search_input} on:keydown={on_enter}/>
     <button on:click={search_images}>refresh</button>
 
     <input bind:value={tag_name} />
@@ -133,7 +134,14 @@
         let:item={image}
         let:selected={s}
     >
-        <Card {width} aspect_ratio={width / item_height} selected={s} {image} {root} />
+        <Card
+            {width}
+            aspect_ratio={width / item_height}
+            selected={s}
+            {image}
+            {root}
+            on_click={copy_selected}
+        />
     </VirtualScrollable>
 </cl>
 
