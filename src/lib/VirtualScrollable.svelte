@@ -137,6 +137,9 @@
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
+        flex: none;
+        align-content: flex-start;
+
         overflow: auto;
         width: 100%;
         height: 100%;

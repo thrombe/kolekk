@@ -86,7 +86,6 @@
         font-weight: 700;
         color: #282828;
         background-color: var(--color);
-        line-height: 2.3ch;
     }
 
     .copy-button:hover {
