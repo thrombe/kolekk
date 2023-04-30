@@ -25,10 +25,6 @@
         edited = true;
     }
     let grid: HTMLElement;
-    $: if (grid && width) {
-        let st = window.getComputedStyle(grid)
-        columns = st.getPropertyValue("grid-template-columns").split(" ").length
-    }
 
     let root: HTMLElement;
 
@@ -38,6 +34,8 @@
         if (!items) {
             return;
         }
+        let st = window.getComputedStyle(grid)
+        columns = st.getPropertyValue("grid-template-columns").split(" ").length
         // console.log(root.scrollTop, root.clientHeight, start, end, top_padding, bottom_padding);
         let s = Math.floor(root.scrollTop/item_height);
         top_padding = s*item_height;
