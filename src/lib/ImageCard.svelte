@@ -13,14 +13,7 @@
     export let scale = '100%';
     export let root: HTMLElement | null = null;
 
-    let insides: HTMLElement;
     $: height = width / aspect_ratio;
-    $: if (insides) {
-        insides.style.setProperty('--bg-color', bg_color);
-
-        insides.style.width = width.toString() + 'px';
-        insides.style.height = height.toString() + 'px';
-    }
     let abs: HTMLElement;
     $: if (abs) {
         abs.style.left = (width / 2).toString() + 'px';
@@ -29,6 +22,10 @@
     let scalable: HTMLElement;
     $: if (scalable) {
         scalable.style.scale = scale;
+        scalable.style.setProperty('--bg-color', bg_color);
+
+        scalable.style.width = width.toString() + 'px';
+        scalable.style.height = height.toString() + 'px';
     }
 
     let thumbnail_size: ThumbnailSize;
@@ -67,11 +64,7 @@
         </rel>
     {/if}
 
-    <card-div bind:this={insides}>
-        <card-insides>
-            <image-div style={'background-image: url(' + lazy_img_src + ');'} />
-        </card-insides>
-    </card-div>
+    <image-div style={'background-image: url(' + lazy_img_src + ');'} />
 </cl>
 
 <style>
@@ -91,16 +84,11 @@
         background-color: var(--bg-color);
     }
 
-    card-insides {
-        height: 100%;
-        width: 100%;
+    cl {
         display: flex;
         flex-direction: column;
         align-items: center;
         overflow: hidden;
     }
 
-    cl {
-        display: flex;
-    }
 </style>

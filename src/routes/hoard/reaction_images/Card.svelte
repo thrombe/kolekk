@@ -15,7 +15,6 @@
     let img_source = '';
     (async () => {
         img_source = await get_path(image.data.data.path);
-        console.log(img_source);
     })();
 
     let ele: HTMLElement;
@@ -25,12 +24,10 @@
         ele.style.setProperty('--color-transparent', color + '00');
         ele.style.setProperty('--border', '2px');
         ele.style.setProperty('--border-radius', '15px');
-    }
-    let insides: HTMLElement;
-    $: if (insides) {
-        insides.style.width = width.toString() + 'px';
+
+        ele.style.width = width.toString() + 'px';
         let height = width / aspect_ratio;
-        insides.style.height = height.toString() + 'px';
+        ele.style.height = height.toString() + 'px';
     }
 
     $: wrap = selected ? 'normal' : 'nowrap';
@@ -40,19 +37,15 @@
 
 <this-helps-position-the-title>
     <cl bind:this={ele} draggable="true" on:click={on_click} on:keydown={() => {}}>
-        <card-div bind:this={insides}>
-            <card-insides>
-                <ImageCard {img_source} {width} {aspect_ratio} {bg_color} lazy={false} {root} />
+        <ImageCard {img_source} {width} {aspect_ratio} {bg_color} lazy={false} {root} />
 
-                {#if title && title.length > 0}
-                    <title-box style={'height: ' + shade_height}>
-                        <span style={'white-space: ' + wrap}>{title}</span>
-                    </title-box>
-                {/if}
+        {#if title && title.length > 0}
+            <title-box style={'height: ' + shade_height}>
+                <span style={'white-space: ' + wrap}>{title}</span>
+            </title-box>
+        {/if}
 
-                <slot />
-            </card-insides>
-        </card-div>
+        <slot />
     </cl>
 </this-helps-position-the-title>
 
@@ -67,7 +60,6 @@
         width: calc(100% - 3 * var(--border));
         background-image: linear-gradient(to top, var(--color), var(--color-transparent));
         border-radius: var(--border-radius);
-        margin-bottom: 3px;
         overflow: hidden;
         left: var(--border);
     }
@@ -88,11 +80,11 @@
         color: #cccccc;
     }
 
-    card-insides {
+    cl {
+        display: flex;
         width: calc(100% - 2 * var(--border) - 6px);
         height: calc(100% - 2 * var(--border) - 6px);
 
-        display: flex;
         flex-direction: column;
         align-items: center;
         color: var(--color);
@@ -105,13 +97,5 @@
         border-radius: var(--border-radius);
 
         overflow: hidden;
-    }
-
-    cl {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        overflow: auto;
-        width: 100%;
     }
 </style>
