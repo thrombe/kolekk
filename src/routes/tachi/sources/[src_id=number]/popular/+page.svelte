@@ -9,7 +9,7 @@
 
 <script lang="ts">
     import { tick } from 'svelte';
-    import Card from './Card.svelte';
+    import Card from '$lib/Card.svelte';
     import { invoke } from '@tauri-apps/api/tauri';
     import { page } from '$app/stores';
     import type { MangaListPage } from 'types';
@@ -114,7 +114,6 @@
         }
     };
 
-    let item_aspect_ratio = 2 / 3;
     $: items = $search_results.mangaList.map((e) => {
         return { id: e.id, data: e };
     });
@@ -171,11 +170,12 @@
     </button>
 </cl>
 
-<cl>
+<cl class="scrollable">
     <VirtualScrollable
-        bind:items={items}
+        bind:items
         item_width={166}
         item_height={243}
+        gap={15}
         {end_reached}
         bind:selected={$selected}
         {on_keydown}
@@ -186,13 +186,58 @@
         let:item={manga}
         let:selected={s}
     >
-        <Card {width} aspect_ratio={width / item_height} selected={s} {manga} {root} />
+        <Card
+            {width}
+            aspect_ratio={width / item_height}
+            selected={s}
+            item={manga}
+            {root}
+            title={manga.title}
+            get_img_source={async () => {
+                return 'http://0.0.0.0:4567' + manga.thumbnailUrl;
+            }}
+        >
+            <a href="/tachi/manga/{manga.id}">
+                read
+            </a>
+        </Card>
     </VirtualScrollable>
 </cl>
 
 <svelte:window bind:innerHeight={window_height} bind:innerWidth={window_width} />
 
 <style>
+    a {
+        --width: 40px;
+        --height: 20px;
+        position: absolute;
+        z-index: 2;
+        float: left;
+        height: var(--height);
+        width: var(--width);
+        top: calc(var(--height) / 2);
+        left: calc(var(--height) / 2);
+        border: 2px solid;
+        border-radius: 8px;
+        border-color: var(--color);
+        padding: 0px;
+        margin: 0px;
+        transition: width 0.2s ease;
+        text-align: center;
+        line-height: calc(var(--height) / 2);
+        font-size: 1.57ch;
+        font-weight: 700;
+        color: #282828;
+        background-color: var(--color);
+        line-height: 2.5ch;
+        text-decoration: none;
+    }
+
+    a:hover {
+        color: #d8d8d8;
+        background-color: #558855af;
+    }
+
     * {
         --input-height: 33px;
     }
@@ -201,12 +246,20 @@
         height: var(--input-height);
     }
 
+    .scrollable {
+        --margin: 15px;
+    }
+
     cl {
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
         overflow: hidden;
-        width: 100%;
-        height: calc(100% - var(--input-height));
+        width: calc(100% - var(--margin) * 2);
+        height: calc(100% - var(--input-height) - var(--margin));
+
+        margin-left: var(--margin);
+        margin-right: var(--margin);
+        margin-top: var(--margin);
     }
 </style>
