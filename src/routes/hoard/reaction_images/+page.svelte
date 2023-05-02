@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-    import { Searcher } from '$lib/commands';
+    import { get_path, Searcher } from '$lib/commands';
     import { writable } from 'svelte/store';
 
     let searcher = writable(new Searcher<Image>('Image', 50));
@@ -13,7 +13,7 @@
     import DataListener from '$lib/DataListener.svelte';
     import { files_to_bytearrays } from '$lib/data_listener';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
-    import Card from './Card.svelte';
+    import Card from '$lib/Card.svelte';
     import { tick } from 'svelte';
 
     const file_drop = async (e: DragDropPaste<File>) => {
@@ -119,9 +119,10 @@
     <button>{end_is_visible}</button>
 </cl>
 
-<cl>
+<cl class="scrollable">
     <VirtualScrollable
         bind:items
+        gap={15}
         item_width={150}
         item_height={170}
         on_item_click={copy_selected}
@@ -136,10 +137,14 @@
         let:selected={s}
     >
         <Card
+            get_img_source={async () => {
+                return await get_path(image.data.data.path);
+            }}
+            title={image.data.data.title}
             {width}
             aspect_ratio={width / item_height}
             selected={s}
-            {image}
+            item={image}
             {root}
         />
     </VirtualScrollable>
@@ -148,10 +153,20 @@
 <style>
     * {
         --input-height: 33px;
+        --gap: 20px;
+        --top-margin: 15px;
     }
 
     .inputs {
         height: var(--input-height);
+    }
+
+    .scrollable {
+        margin-left: var(--gap);
+        margin-right: var(--gap);
+        margin-top: var(--top-margin);
+        width: calc(100% - var(--gap) * 2);
+        height: calc(100% - var(--input-height) - var(--top-margin));
     }
 
     cl {
@@ -160,6 +175,5 @@
         flex-wrap: wrap;
         overflow: hidden;
         width: 100%;
-        height: calc(100% - var(--input-height));
     }
 </style>
