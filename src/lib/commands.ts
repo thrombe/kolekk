@@ -84,7 +84,7 @@ export class Searcher<T> {
             this._results_valid = true;
             this.search_results = search_results;
         }
-        this.on_update(this);
+        await this.on_update(this);
         return this.search_results;
     }
 }
