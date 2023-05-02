@@ -6,6 +6,7 @@
     export let item_height: number;
     export let items: Array<any>;
     export let selected: number;
+    export let gap: number;
 
     export let end_reached = async () => {};
     export let on_keydown = async (_: KeyboardEvent, _a: any) => {};
@@ -121,7 +122,7 @@
 
 <cl on:scroll={on_update} bind:this={root} bind:clientWidth={width}>
     <pad style="height: {top_padding}px; width: 100%;" />
-    <gd style="--item-width: {item_width}px;" bind:this={grid}>
+    <gd style="--item-width: {item_width}px; --gap: {gap}px;" bind:this={grid}>
     {#each visible as item, i (item.id)}
         {#if (selected == i + start*columns) || (i + start*columns == items.length - 1 && selected >= items.length)}
             <sel bind:this={selected_item}>
@@ -161,14 +162,12 @@
         align-content: start;
         justify-content: space-evenly;
         justify-items: center;
-        row-gap: 15px;
-        column-gap: 15px;
+        row-gap: var(--gap);
+        column-gap: var(--gap);
+        padding: 0px;
 
         overflow: visible;
-        width: 100%;
-        padding-top: 20px;
-        padding-left: 20px;
-        padding-right: 20px;
+        width: calc(100% - var(--gap) * 0);
     }
 
     sel,clk {}
