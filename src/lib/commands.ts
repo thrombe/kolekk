@@ -31,7 +31,7 @@ export class Searcher<T> {
     async set_query(q: string) {
         this._query = q;
         this._results_valid = false;
-        await this.next_page();
+        return await this.next_page();
     }
 
     // get facet() {
@@ -48,13 +48,18 @@ export class Searcher<T> {
         this._results_valid = false;
     }
 
+    async reload_reader() {
+        await invoke("reload_reader");
+    }
+
     async add_item(...items: SearchableEntry<T>[]) {
         await enter_searchable<T>(this.facet, items);
         this.invalidate_search_results();
-        await this.next_page();
+        return await this.next_page();
     }
 
     async next_page() {
+        await this.reload_reader();
         if (this._results_valid) {
             if (!this._has_next_page) {
                 return this.search_results;

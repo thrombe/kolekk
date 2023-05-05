@@ -354,6 +354,13 @@ impl DbAble for Indexed {
 //     }
 // }
 
+// https://docs.rs/tantivy/0.19.2/tantivy/struct.IndexReader.html#method.reload
+// docs say that automatic reloads may take a smol while to take effect.
+#[tauri::command]
+pub async fn reload_reader(db: State<'_, AppDatabase>) -> Result<(), Error> {
+    db.index_reader.reload().infer_err()
+}
+
 pub fn direct_search<T: DbAble + Debug>(
     db: &AppDatabase,
     ob_type: TypeFacet,

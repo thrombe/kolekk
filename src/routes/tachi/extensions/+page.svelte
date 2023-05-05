@@ -16,8 +16,6 @@
     import Card from '$lib/Card.svelte';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
 
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
     const get_all_extensions = async () => {
         let exts: Extension[] = await invoke('tachidesk_get_all_extensions');
         await invoke('delete_facet_objects', { facet });
@@ -27,9 +25,6 @@
                 return { data: e, searchable };
             })
         );
-        // TODO: BUG: T_T why do i need to sleep?
-        await sleep(500);
-        await $searcher.set_query($search_query);
     };
 
     $searcher.on_update = async (e: Searcher<Extension>) => {
