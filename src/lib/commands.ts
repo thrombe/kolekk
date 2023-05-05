@@ -90,7 +90,7 @@ export class Searcher<T> {
 }
 
 
-type RObject<T> = T extends Tag ? Meta<T> : Meta<Taggable<T>>;
+export type RObject<T> = T extends Tag ? Meta<T, TypeFacet> : Meta<Taggable<T>, TypeFacet>;
 
 export async function search<T>(
     query: string,

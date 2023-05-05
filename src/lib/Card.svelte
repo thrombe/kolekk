@@ -1,10 +1,9 @@
 <script lang="ts">
     import ImageCard from '$lib/ImageCard.svelte';
-    import type { Meta, Taggable } from 'types';
 
     export let width: number;
     export let aspect_ratio: number;
-    export let item: Meta<Taggable<any>>;
+    export let item: any;
     export let title: string;
     export let get_img_source = async (): Promise<string> => { return "" };
     export let border_radius = "15px";
