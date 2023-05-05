@@ -3,9 +3,9 @@
     import { Searcher } from '$lib/commands';
     import { writable } from 'svelte/store';
 
-    const facet = '/temp/tachi/extension';
+    const facet = { Temp: '/temp/tachi/extension' };
 
-    let searcher = writable(new Searcher<Extension>({ Temp: facet }, 50));
+    let searcher = writable(new Searcher<Extension>(facet , 50));
     let selected = writable(0);
     let search_query = writable('');
 </script>
@@ -16,16 +16,20 @@
     import Card from '$lib/Card.svelte';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
 
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
     const get_all_extensions = async () => {
         let exts: Extension[] = await invoke('tachidesk_get_all_extensions');
-        await invoke('delete_facet_objects', { facet: { Temp: facet } });
+        await invoke('delete_facet_objects', { facet });
         await $searcher.add_item(
             ...exts.map((e) => {
                 let searchable: Indexed[] = [{ data: e.name, field: 'Text' }];
                 return { data: e, searchable };
             })
         );
-        await $searcher.next_page();
+        // TODO: BUG: T_T why do i need to sleep?
+        await sleep(500);
+        await $searcher.set_query($search_query);
     };
 
     $searcher.on_update = async (e: Searcher<Extension>) => {
