@@ -219,6 +219,9 @@
         }
         bk.data.tags = bk.data.tags;
     };
+    const dragstart = async (e: DragEvent, bk: RObject<Bookmark>) => {
+        e.dataTransfer?.setData('text/plain', bk.data.data.url);
+    };
 </script>
 
 <DataListener {on_receive} />
@@ -281,6 +284,9 @@
             <bookmark
                 style={'width: 50%;border-radius: 15px;overflow:hidden;'}
                 bind:this={selected_element}
+                draggable="true"
+                on:dragstart={async (e) => {await dragstart(e, bk)}}
+                on:dragend={() => {}}
             >
                 <div class={'bookmark-buttons'}>
                     <button on:click={add_tag_button}
