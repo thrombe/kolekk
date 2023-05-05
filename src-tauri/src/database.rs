@@ -159,6 +159,9 @@ pub fn get_path(config: State<'_, AppConfig>, path: Path) -> std::path::PathBuf 
 // and then at last converting the entire thing into a Map<_, _>
 // i.e. convert Meta<Taggable<...>> into a Map<_, _>  and save it in something like Fields::Json
 // and while calling DbAble::take - just deserialize this and ignore all the other stuff from the Document
+// to make this checked at compile time, (Taggable<Meta<..>> would still be valid acc to compiler, but would fail in DbAble::take)
+//   an extra trait constraint can be added. (impl ExtraTrait for Meta<Taggable<T>>, Meta<Tag>, ...)
+//   which would enumerate all the views that do not fail
 pub trait DbAble
 where
     Self: Sized,
@@ -434,7 +437,7 @@ pub fn search_object<T: DbAble + Debug>(
     let title_query = if phrase_query_terms.len() < 2 {
         // PhraseQuery does not support less than 2 terms
         Box::new(TermQuery::new(
-            Term::from_field_text(db.get_field(Fields::Text), &query),
+            Term::from_field_text(db.get_field(Fields::Text), query),
             IndexRecordOption::Basic,
         )) as _
     } else {

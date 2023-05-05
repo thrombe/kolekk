@@ -40,7 +40,7 @@ pub async fn bookmarks_from_ddp(
     data: DragDropPaste<ByteArrayFile>,
     client: &Client,
 ) -> Vec<Bookmark> {
-    let bks = data
+    data
         .file_uris
         .as_ref()
         .map(|v| v.iter().map(String::as_str).collect::<HashSet<_>>())
@@ -61,8 +61,7 @@ pub async fn bookmarks_from_ddp(
         .await
         .into_iter()
         .flatten()
-        .collect();
-    bks
+        .collect()
 }
 
 pub fn get_urls_from_hrefs(mut h: &str) -> HashSet<&str> {
