@@ -45,7 +45,7 @@ pub async fn save_new_tag(db: State<'_, AppDatabase>, tag: Tag) -> Result<Id, Er
         last_interaction: ctime,
     };
     v.add(db.inner(), &mut doc)?;
-    let mut writer = db.index_writer.lock().infer_err()?;
+    let mut writer = db.index_writer.write().infer_err()?;
     let _opstamp = writer.add_document(doc).infer_err()?;
     let _opstamp = writer.commit().infer_err()?;
     Ok(id)

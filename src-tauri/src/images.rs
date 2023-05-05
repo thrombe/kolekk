@@ -82,7 +82,7 @@ pub mod thumbnails {
 
                     let facet = TypeFacet::Temp("/cache/thumbnails_cache".into()).facet();
 
-                    let mut writer = db.index_writer.lock().unwrap();
+                    let mut writer = db.index_writer.write().unwrap();
                     let _opstamp =
                         writer.delete_term(Term::from_facet(db.get_field(Fields::Type), &facet));
 

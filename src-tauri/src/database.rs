@@ -5,7 +5,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
     ops::Deref,
-    sync::{atomic::AtomicU32, Mutex},
+    sync::{atomic::AtomicU32, RwLock},
 };
 
 use kolekk_types::{
@@ -41,7 +41,7 @@ pub async fn delete_facet_objects(
     db: State<'_, AppDatabase>,
     facet: TypeFacet,
 ) -> Result<(), Error> {
-    let mut writer = db.index_writer.lock().infer_err()?;
+    let mut writer = db.index_writer.write().infer_err()?;
     let _opstamp = writer.delete_term(Term::from_facet(db.get_field(Fields::Type), &facet.facet()));
     let _opstamp = writer.commit().infer_err()?;
     Ok(())
@@ -54,6 +54,7 @@ pub async fn enter_searchable(
     facet: TypeFacet,
 ) -> Result<(), Error> {
     let ctime = db.now_time().infer_err()?;
+    let writer = db.index_writer.read().infer_err()?;
     data.into_iter().try_for_each(|e| {
         let mut doc = Document::new();
         let v = Meta {
@@ -69,18 +70,12 @@ pub async fn enter_searchable(
         };
         v.add(db.inner(), &mut doc).look(|e| dbg!(e))?;
 
-        // TODO: too much locking and unlocking too quickly
-        let _opstamp = db
-            .index_writer
-            .lock()
-            .infer_err()?
-            .add_document(doc)
-            .look(|e| dbg!(e))
-            .infer_err()?;
+        let _opstamp = writer.add_document(doc).look(|e| dbg!(e)).infer_err()?;
         // TODO: if err, do i remove all those that succeeded?
         Ok(())
     })?;
-    let _opstamp = db.index_writer.lock().infer_err()?.commit().infer_err()?;
+    drop(writer);
+    let _opstamp = db.index_writer.write().infer_err()?.commit().infer_err()?;
     Ok(())
 }
 
@@ -109,7 +104,7 @@ pub async fn add_tag_to_object(
     let mut doc = Document::new();
     v.add(db.inner(), &mut doc)?;
 
-    let mut writer = db.index_writer.lock().infer_err()?;
+    let mut writer = db.index_writer.write().infer_err()?;
     let _opstamp = writer.delete_term(Term::from_field_u64(db.get_field(Fields::Id), id as _));
     let _opstamp = writer.add_document(doc).infer_err()?;
     let _opstamp = writer.commit().infer_err()?;
@@ -130,7 +125,7 @@ pub async fn remove_tag_from_object(
     let mut doc = Document::new();
     j.add(db.inner(), &mut doc)?;
 
-    let mut writer = db.index_writer.lock().infer_err()?;
+    let mut writer = db.index_writer.write().infer_err()?;
     let _opstamp = writer.delete_term(Term::from_field_u64(db.get_field(Fields::Id), id as _));
     let _opstamp = writer.add_document(doc).infer_err()?;
     let _opstamp = writer.commit().infer_err()?;
@@ -184,6 +179,7 @@ impl AutoDbAble for Tag {}
 impl AutoDbAble for serde_json::Map<String, serde_json::Value> {}
 impl AutoDbAble for tantivy::schema::Value {}
 
+// MAYBE: split this into 2 traits. one to add, another to get
 impl<T: DbAble> DbAble for Meta<T, Facet> {
     fn add(self, db: &AppDatabase, doc: &mut Document) -> Result<(), Error> {
         doc.add_u64(db.get_field(Fields::Id), self.id as _);
@@ -595,7 +591,7 @@ pub async fn init_database(app_handle: &AppHandle, conf: &AppConfig) -> Result<(
                 // TODO: Temp really?
                 let facet = TypeFacet::Temp("/app_data/state".into()).facet();
 
-                let mut writer = db.index_writer.lock().unwrap();
+                let mut writer = db.index_writer.write().unwrap();
                 let _opstamp =
                     writer.delete_term(Term::from_facet(db.get_field(Fields::Type), &facet));
 
@@ -626,7 +622,7 @@ pub struct AppDatabase {
     // sql: DatabaseConnection,
     index: Index,
     index_reader: IndexReader,
-    pub index_writer: Mutex<IndexWriter>, // TODO: RWlock + make commits explicit (don't commit in add_object functions. commit should be called when needed explicitly)
+    pub index_writer: RwLock<IndexWriter>, // TODO: make commits explicit (don't commit in add_object functions. commit should be called when needed explicitly)
     fields: HashMap<Fields, Field>,
     id_gen: AtomicU32,
 }
@@ -711,7 +707,7 @@ impl AppDatabase {
         Ok(AppDatabase {
             // sql: db,
             index_reader,
-            index_writer: Mutex::new(index_writer),
+            index_writer: RwLock::new(index_writer),
             index,
             fields,
             id_gen: 0.into(),
