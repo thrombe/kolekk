@@ -140,6 +140,28 @@ pub fn get_path(config: State<'_, AppConfig>, path: Path) -> std::path::PathBuf 
     crate::filesystem::get_path(&path, config.inner())
 }
 
+// NOTE:
+// calling DbAble::take for Meta<Taggable<Map<_, _>>> returns different stuff than
+// calling DbAble::take for Meta<Taggable<SearchableEntry<Map<_, _>>>>
+// because each thing is associated with different varient of Fields enum
+// so calling DbAble::take for Map<_, _> parses the Fields::Json and leaves out Fields::Text stuff
+//   that is used for SearchableEntry
+//
+// so entering Meta<Taggable<SearchableEntry<Object>>> and calling
+// DbAble::take for Object, Meta<Object>, Taggable<Object>, Meta<SearchableEntry<Object>>, Taggable<Meta<Object>>, etc
+// should be fine. which is kinda nice and kinda aweful at the same time
+// donno if i really want this behaviour, but imma keep it for now. (i realised all this while debugging :P)
+//
+// this also makes it possible to define multiple views of the same Document
+// for example, a TaggableMeta<T> can be implimented such that it contains { id, data, tags }
+// and ignore the rest of the stuff from a Meta<Taggable<T>>
+// this will allow js stuff to avoid annoying ".data" chains
+//
+// MAYBE:
+// a stricter version of this can be made by first entering stuff in different varients of Fields enum
+// and then at last converting the entire thing into a Map<_, _>
+// i.e. convert Meta<Taggable<...>> into a Map<_, _>  and save it in something like Fields::Json
+// and while calling DbAble::take - just deserialize this and ignore all the other stuff from the Document
 pub trait DbAble
 where
     Self: Sized,
@@ -299,12 +321,60 @@ impl DbAble for Indexed {
 //     }
 // }
 
-// TODO: when query is empty, sort by recently added / most recent interations / total interactions + most recent interactions
+pub fn direct_search<T: DbAble + Debug>(
+    db: &AppDatabase,
+    ob_type: TypeFacet,
+    query: impl AsRef<str>,
+    limit: usize,
+    offset: usize,
+) -> Result<Vec<T>, Error> {
+    let searcher = db.get_searcher();
+    let query = query.as_ref();
+
+    let q = BooleanQuery::new(vec![
+        (
+            Occur::Must,
+            Box::new(TermQuery::new(
+                Term::from_facet(db.get_field(Fields::Type), &ob_type.facet()),
+                IndexRecordOption::Basic,
+            )) as _,
+        ),
+        (
+            Occur::Should,
+            Box::new(BooleanQuery::new(
+                query
+                    .split_whitespace()
+                    .map(|t| {
+                        (
+                            Occur::Should,
+                            Box::new(FuzzyTermQuery::new(
+                                Term::from_field_text(db.get_field(Fields::Text), t),
+                                2,    // ?
+                                true, // what??
+                            )) as _,
+                        )
+                    })
+                    .collect(),
+            )),
+        ),
+    ]);
+    searcher
+        .search(&q, &TopDocs::with_limit(limit).and_offset(offset))
+        .infer_err()?
+        .into_iter()
+        .map(|(score, address)| {
+            let mut doc = searcher.doc(address).infer_err()?;
+            DbAble::take(db, &mut doc).look(|e| dbg!(e))
+        })
+        .collect::<Result<Vec<_>, _>>()
+}
+
+// TODO: sort by recently added / most recent interations / total interactions + most recent interactions
 //       collect this stat inside the objects
 pub fn search_object<T: DbAble + Debug>(
     db: &AppDatabase,
     ob_type: TypeFacet,
-    query: String,
+    query: impl AsRef<str>,
     limit: usize,
     offset: usize,
 ) -> Result<Vec<T>, Error> {
@@ -320,6 +390,7 @@ pub fn search_object<T: DbAble + Debug>(
     //   OR title:FuzzyTermQuery(split at whitespace map) -> priority 3
     // )
     let searcher = db.get_searcher();
+    let query = query.as_ref();
 
     let obj_type_query = Box::new(TermQuery::new(
         Term::from_facet(db.get_field(Fields::Type), &ob_type.facet()),
