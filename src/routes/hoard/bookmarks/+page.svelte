@@ -24,6 +24,9 @@
     const on_receive = async (e: DragDropPaste<File>) => {
         console.log(e);
         console.log(e.text_html);
+        if (e.kolekk_text?.filter(e => e.type == 'kolekk/ignore').length) {
+            return;
+        }
         let bks: [Bookmark] = await invoke('get_bookmarks', { data: await files_to_bytearrays(e) });
         console.log(bks, new_bookmarks);
         new_bookmarks = bks.map(t => {
@@ -221,6 +224,7 @@
     };
     const dragstart = async (e: DragEvent, bk: RObject<Bookmark>) => {
         e.dataTransfer?.setData('text/plain', bk.data.data.url);
+        e.dataTransfer?.setData('kolekk/ignore', 'ignore');
     };
 </script>
 
