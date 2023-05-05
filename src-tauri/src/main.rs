@@ -75,6 +75,7 @@ fn main() {
             database::delete_facet_objects,
             database::new_temp_facet,
             database::get_path,
+            database::reload_reader,
             clipboard::copy_image_to_clipboard,
         ])
         .setup(|app| {
