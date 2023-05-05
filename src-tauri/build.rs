@@ -64,7 +64,7 @@ fn main() {
         Notes,
         Tag,
         Group,
-        Meta<()>,
+        Meta<(), ()>,
         Taggable<()>,
         Fields,
         TypeFacet,

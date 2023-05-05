@@ -493,9 +493,9 @@ pub mod objects {
     }
 
     #[derive(Serialize, Deserialize, TS, Debug, Clone)]
-    pub struct Meta<T> {
+    pub struct Meta<T, F> {
         pub id: Id,
-        pub facet: String,
+        pub facet: F,
         pub data: T,
         pub ctime: u64,
         pub last_update: u64,
@@ -562,6 +562,37 @@ pub mod objects {
                 Self::Notes => "/notes",
                 Self::Temp(s) => s,
             }
+        }
+    }
+
+    impl TryFrom<&str> for TypeFacet {
+        type Error = ();
+        fn try_from(value: &str) -> Result<Self, Self::Error> {
+            let t = match value {
+                "/image" => Self::Image,
+                "/bookmark" => Self::Bookmark,
+                "/tag" => Self::Tag,
+                "/group" => Self::Group,
+                "/content" => Self::Content,
+                "/notes" => Self::Notes,
+                s => Self::Temp(s.to_string().into()),
+            };
+            Ok(t)
+        }
+    }
+    impl TryFrom<String> for TypeFacet {
+        type Error = ();
+        fn try_from(value: String) -> Result<Self, Self::Error> {
+            let t = match value.as_ref() {
+                "/image" => Self::Image,
+                "/bookmark" => Self::Bookmark,
+                "/tag" => Self::Tag,
+                "/group" => Self::Group,
+                "/content" => Self::Content,
+                "/notes" => Self::Notes,
+                _ => Self::Temp(value.into()),
+            };
+            Ok(t)
         }
     }
 }

@@ -16,7 +16,7 @@ pub async fn search_tags(
     query: String,
     limit: usize,
     offset: usize,
-) -> Result<Vec<Meta<serde_json::Map<String, serde_json::Value>>>, Error> {
+) -> Result<Vec<Meta<serde_json::Map<String, serde_json::Value>, TypeFacet>>, Error> {
     crate::database::direct_search(db.inner(), TypeFacet::Tag, query, limit, offset)
 }
 
@@ -28,7 +28,7 @@ pub async fn save_new_tag(db: State<'_, AppDatabase>, tag: Tag) -> Result<Id, Er
     let id = db.new_id();
     let v = Meta {
         id,
-        facet: TypeFacet::Tag.as_ref().to_string(),
+        facet: TypeFacet::Tag,
         data: SearchableEntry {
             searchable: vec![Indexed {
                 field: Fields::Text,
@@ -55,7 +55,7 @@ pub async fn save_new_tag(db: State<'_, AppDatabase>, tag: Tag) -> Result<Id, Er
 pub async fn get_tags_from_ids(
     ids: Vec<u32>,
     db: State<'_, AppDatabase>,
-) -> Result<Vec<Meta<serde_json::Map<String, serde_json::Value>>>, Error> {
+) -> Result<Vec<Meta<serde_json::Map<String, serde_json::Value>, TypeFacet>>, Error> {
     let searcher = db.get_searcher();
     ids.into_iter()
         .map(|id| Term::from_field_u64(db.get_field(Fields::Id), id as _))

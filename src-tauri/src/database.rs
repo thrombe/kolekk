@@ -58,7 +58,7 @@ pub async fn enter_searchable(
         let mut doc = Document::new();
         let v = Meta {
             id: db.new_id(),
-            facet: facet.as_ref().to_string(),
+            facet: facet.clone(),
             data: Taggable {
                 data: e,
                 tags: vec![],
@@ -91,7 +91,7 @@ pub async fn search_jsml_object(
     facet: TypeFacet,
     limit: usize,
     offset: usize,
-) -> Result<Vec<Meta<Taggable<serde_json::Map<String, serde_json::Value>>>>, Error> {
+) -> Result<Vec<Meta<Taggable<serde_json::Map<String, serde_json::Value>>, TypeFacet>>, Error> {
     search_object(db.inner(), facet, query, limit, offset)
 }
 
@@ -103,7 +103,7 @@ pub async fn add_tag_to_object(
 ) -> Result<(), Error> {
     let mut doc = db.get_doc(id)?;
 
-    let mut v: Meta<Taggable<SearchableEntry<serde_json::Map<String, serde_json::Value>>>> =
+    let mut v: Meta<Taggable<SearchableEntry<serde_json::Map<String, serde_json::Value>>>, Facet> =
         DbAble::take(db.inner(), &mut doc)?;
     v.data.tags.push(tag_id);
     let mut doc = Document::new();
@@ -124,7 +124,7 @@ pub async fn remove_tag_from_object(
 ) -> Result<(), Error> {
     let mut doc = db.get_doc(id)?;
 
-    let mut j: Meta<Taggable<SearchableEntry<serde_json::Map<String, serde_json::Value>>>> =
+    let mut j: Meta<Taggable<SearchableEntry<serde_json::Map<String, serde_json::Value>>>, Facet> =
         DbAble::take(db.inner(), &mut doc)?;
     j.data.tags.retain(|&t| t != tag_id);
     let mut doc = Document::new();
@@ -184,10 +184,10 @@ impl AutoDbAble for Tag {}
 impl AutoDbAble for serde_json::Map<String, serde_json::Value> {}
 impl AutoDbAble for tantivy::schema::Value {}
 
-impl<T: DbAble> DbAble for Meta<T> {
+impl<T: DbAble> DbAble for Meta<T, Facet> {
     fn add(self, db: &AppDatabase, doc: &mut Document) -> Result<(), Error> {
         doc.add_u64(db.get_field(Fields::Id), self.id as _);
-        doc.add_facet(db.get_field(Fields::Type), self.facet.facet());
+        doc.add_facet(db.get_field(Fields::Type), self.facet);
         doc.add_u64(db.get_field(Fields::Ctime), self.ctime as _);
         doc.add_u64(db.get_field(Fields::Mtime), self.last_update as _);
         doc.add_u64(
@@ -205,7 +205,7 @@ impl<T: DbAble> DbAble for Meta<T> {
                 .bad_err("bad id")?,
             facet: doc
                 .get_first(db.get_field(Fields::Type))
-                .and_then(|f| f.as_facet().map(|f| f.to_path_string()))
+                .and_then(|f| f.as_facet().map(|f| f.to_owned()))
                 .bad_err("bad facet")?,
             ctime: doc
                 .get_first(db.get_field(Fields::Ctime))
@@ -222,6 +222,33 @@ impl<T: DbAble> DbAble for Meta<T> {
             data: DbAble::take(db, &mut *doc)?,
         };
         Ok(m)
+    }
+}
+impl<T: DbAble> DbAble for Meta<T, TypeFacet> {
+    fn add(self, db: &AppDatabase, doc: &mut Document) -> Result<(), Error> {
+        let m = Meta {
+            id: self.id,
+            facet: self.facet.facet(),
+            data: self.data,
+            ctime: self.ctime,
+            last_update: self.last_update,
+            last_interaction: self.last_interaction,
+        };
+        m.add(db, doc)
+    }
+
+    fn take(db: &AppDatabase, doc: &mut Document) -> Result<Self, Error> {
+        let m: Meta<T, Facet> = DbAble::take(db, doc)?;
+        Ok(Self {
+            id: m.id,
+            facet: TypeFacet::try_from(m.facet.to_path_string())
+                .ok()
+                .bad_err("could not convert to TypeFacet")?,
+            data: m.data,
+            ctime: m.ctime,
+            last_update: m.last_update,
+            last_interaction: m.last_interaction,
+        })
     }
 }
 
@@ -459,7 +486,7 @@ pub fn search_object<T: DbAble + Debug>(
         .into_iter()
         .map(|(score, address)| {
             let mut doc = searcher.doc(address).infer_err()?;
-            let t: Meta<Tag> = DbAble::take(db, &mut doc).look(|e| dbg!(e))?;
+            let t: Meta<Tag, Facet> = DbAble::take(db, &mut doc).look(|e| dbg!(e))?;
             let t = match t.data {
                 Tag::Main { .. } => t.id,
                 Tag::Alias { alias_to, .. } => alias_to,
