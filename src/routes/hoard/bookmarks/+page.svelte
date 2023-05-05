@@ -1,52 +1,50 @@
 <script lang="ts" context="module">
     import { writable } from 'svelte/store';
 
-    let scroll_pos = writable(0);
+    let searcher = writable(new Searcher<Bookmark>('Bookmark', 50));
     let selected = writable(0);
+    let search_query = writable('');
 </script>
 
 <script lang="ts">
     import DataListener from '$lib/DataListener.svelte';
     import { files_to_bytearrays } from '$lib/data_listener';
-    import { fastScroll } from '$lib/fast_scroll';
     import Observer from '$lib/Observer.svelte';
     import { listen, type UnlistenFn, type Event } from '@tauri-apps/api/event';
     import { invoke } from '@tauri-apps/api/tauri';
-    import { onMount, tick } from 'svelte';
-    import type { Bookmark, DragDropPaste, Tag } from 'types';
+    import { tick } from 'svelte';
+    import type { Bookmark, DragDropPaste, Indexed, Tag } from 'types';
+    import { Searcher, type RObject } from '$lib/commands';
 
-    let new_bookmarks = new Array<Bookmark>();
+    interface TempTaggable<T> {
+        data: T,
+        tags: Array<string>,
+    }
+    let new_bookmarks = new Array<TempTaggable<Bookmark>>();
     const on_receive = async (e: DragDropPaste<File>) => {
         console.log(e);
         console.log(e.text_html);
         let bks: [Bookmark] = await invoke('get_bookmarks', { data: await files_to_bytearrays(e) });
         console.log(bks, new_bookmarks);
-        new_bookmarks = bks;
+        new_bookmarks = bks.map(t => {
+            return { data: t, tags: [] };
+        });
     };
 
     const save_bookmarks = async (bks: [Bookmark]) => {
-        await invoke('save_bookmarks', { data: bks });
+        await $searcher.add_item(...bks.map(e => {
+            let searchable: Indexed[] = e.title ? [{ data: e.title, field: 'Text' }] : [];
+            return { data: e, searchable };
+        }));
     };
 
-    let bookmarks = new Array<Bookmark>();
-    let query = '';
+    let bookmarks = new Array<RObject<Bookmark>>();
     const search_bookmarks = async () => {
-        let list: [Bookmark] = await invoke('search_bookmarks', {
-            query: query,
-            limit: 50,
-            offset: 0
-        });
-        bookmarks = list;
+        bookmarks = await $searcher.set_query($search_query);;
         $selected = 0;
     };
     const next_page = async () => {
-        let list: [Bookmark] = await invoke('search_bookmarks', {
-            query: query,
-            limit: 50,
-            offset: bookmarks.length
-        });
-        bookmarks.push(...list);
-        bookmarks = bookmarks;
+        bookmarks = await $searcher.next_page();;
     };
 
     search_bookmarks();
@@ -54,7 +52,7 @@
         // document.addEventListener("item-added", search_bookmarks, true);
         let unlisten: UnlistenFn | undefined;
         let destroyed = false;
-        listen('item-added', (_event: Event<number>) => {
+        listen('item-added', (_event: Event<number>) => { // TODO: no such event sent from rust
             search_bookmarks();
         }).then((e) => {
             if (destroyed) {
@@ -76,8 +74,11 @@
 
     let tag_name = '';
     const add_tag = async () => {
-        let id: number = await invoke('save_tag', { name: tag_search_query });
-        console.log(id);
+        let tag: Tag = {
+            object_type: "main_tag",
+            name: tag_search_query,
+        };
+        let id: number = await invoke('save_new_tag', { tag });
         await search_tags();
         tag_search_query = '';
         return id;
@@ -126,7 +127,7 @@
             await add_tag_button();
             event.preventDefault();
         } else if (event.key == '/') {
-            query = '';
+            $search_query = '';
             bookmark_search_input.focus();
             event.preventDefault();
         } else if (tag_box.show && event.key == 'Escape') {
@@ -139,21 +140,13 @@
         }
     };
 
-    let cached_scroll_pos = $scroll_pos;
-    onMount(() => {
-        setTimeout(async () => {
-            await tick();
-            main_element.scrollTo(0, cached_scroll_pos);
-        }, 20);
-    });
-
     let main_element: any;
     let bookmark_search_input: any;
 
     let tag_box: any = { show: false, element_rect: null };
     let tag_search_query = '';
     let tag_search_input: any;
-    let searched_tags = new Array<Tag>();
+    let searched_tags = new Array<RObject<Tag>>();
     const tag_box_tick = async () => {
         if (selected_element) {
             tag_box.element_rect = selected_element.getBoundingClientRect();
@@ -163,33 +156,33 @@
                     ? tag_box.element_rect.x + tag_box.element_rect.width
                     : 0;
             // console.log(tag_box);
+            // console.log(tag_box.element);
         }
     };
-    scroll_pos.subscribe((_) => {
-        tag_box_tick();
-    });
     selected.subscribe((_) => {
         tag_box.show = false;
     });
     const search_tags = async () => {
+        // TODO: use a searcher
         searched_tags = await invoke('search_tags', {
             query: tag_search_query,
             limit: 50,
             offset: 0
         });
+        // console.log(searched_tags, tag_search_query);
     };
-    const add_tag_to_bookmark = async (bk: Bookmark, tag_id: number) => {
-        if (!bk.tags.includes(tag_id)) {
-            await invoke('add_tag_to_bookmark', { id: bk.id, tagId: tag_id });
-            bk.tags.push(tag_id);
+    const add_tag_to_bookmark = async (bk: RObject<Bookmark>, tag_id: number) => {
+        if (!bk.data.tags.includes(tag_id)) {
+            await invoke('add_tag_to_object', { id: bk.id, tagId: tag_id });
+            bk.data.tags.push(tag_id);
         }
     };
     const get_tags_from_ids = async (tags: number[]) => {
-        return await invoke<[Tag]>('get_tags_from_ids', { ids: tags });
+        return await invoke<[RObject<Tag>]>('get_tags_from_ids', { ids: tags });
     };
-    const remove_tag_from_bookmark = async (bk: Bookmark, tag_id: number) => {
-        await invoke('remove_tag_from_bookmark', { id: bk.id, tagId: tag_id });
-        bk.tags = bk.tags.filter((e) => e != tag_id);
+    const remove_tag_from_bookmark = async (bk: RObject<Bookmark>, tag_id: number) => {
+        await invoke('remove_tag_from_object', { id: bk.id, tagId: tag_id });
+        bk.data.tags = bk.data.tags.filter((e) => e != tag_id);
     };
     const add_tag_button = async () => {
         tag_search_query = '';
@@ -198,29 +191,30 @@
         await tag_box_tick();
         tag_search_input.focus();
     };
-    const tag_box_input_handle = async (ev: KeyboardEvent, bk: Bookmark) => {
+    const tag_box_input_handle = async (ev: KeyboardEvent, bk: RObject<Bookmark>) => {
         if (ev.key == 'Enter') {
-            if (ev.ctrlKey && !searched_tags.map((t) => t.name).includes(tag_search_query)) {
-                await add_tag_to_bookmark(bk, await add_tag());
-                bk.tags = bk.tags;
+            if (ev.ctrlKey && !searched_tags.map((t) => t.data.name).includes(tag_search_query)) {
+                let id = await add_tag();
+                await add_tag_to_bookmark(bk, id);
+                bk.data.tags = bk.data.tags;
             } else if (searched_tags.length > 0) {
-                if (!bk.tags.includes(searched_tags[0].id)) {
+                if (!bk.data.tags.includes(searched_tags[0].id)) {
                     await add_tag_to_bookmark(bk, searched_tags[0].id);
                 } else {
                     await remove_tag_from_bookmark(bk, searched_tags[0].id);
                 }
                 tag_search_query = '';
-                bk.tags = bk.tags;
+                bk.data.tags = bk.data.tags;
             }
         }
     };
-    const tag_click_handle = async (bk: Bookmark, tag: Tag) => {
-        if (!bk.tags.includes(tag.id)) {
+    const tag_click_handle = async (bk: RObject<Bookmark>, tag: RObject<Tag>) => {
+        if (!bk.data.tags.includes(tag.id)) {
             await add_tag_to_bookmark(bk, tag.id);
         } else {
             await remove_tag_from_bookmark(bk, tag.id);
         }
-        bk.tags = bk.tags;
+        bk.data.tags = bk.data.tags;
     };
 </script>
 
@@ -229,12 +223,18 @@
 <svelte:window on:keyup={on_keyup} on:keydown={on_keydown} />
 
 <buttons>
-    <input bind:value={query} on:input={search_bookmarks} bind:this={bookmark_search_input} />
+    <input bind:value={$search_query} on:input={search_bookmarks} bind:this={bookmark_search_input} />
     <button on:click={search_bookmarks}>refresh</button>
 
     <input bind:value={tag_name} />
     <button on:click={add_tag}>add tag</button>
     <button on:click={remove_tag}>remove tag</button>
+    <button on:click={async () => {
+        await invoke('delete_facet_objects', { facet: "Bookmark" });
+        await search_bookmarks();
+        await invoke('delete_facet_objects', { facet: "Tag" });
+        await search_tags();
+    }}>delete objects</button>
 </buttons>
 <buttons-blok />
 
@@ -246,19 +246,20 @@
                     <div class={'bookmark-buttons'}>
                         <button on:click={() => (bk.tags = [...bk.tags, tag_name])}>add tag</button>
                         <button
-                            on:click={() => {
-                                save_bookmarks([bk]);
-                                new_bookmarks = new_bookmarks.filter((e) => bk.id != e.id);
+                            on:click={async () => {
+                                await save_bookmarks([bk.data]);
+                                new_bookmarks = new_bookmarks.filter((e) => !Object.is(bk, e));
+                                await search_bookmarks();
                             }}>add to db</button
                         >
                         <button
                             on:click={() => {
-                                new_bookmarks = new_bookmarks.filter((e) => bk.id != e.id);
+                                new_bookmarks = new_bookmarks.filter((e) => !Object.is(bk, e));
                             }}>remove</button
                         >
                     </div>
                     <div class={'content'}>
-                        <span>{bk.title}</span>
+                        <span>{bk.data.title}</span>
                         <tags>
                             {#each bk.tags as tag}
                                 <tag>{tag}</tag>
@@ -271,7 +272,7 @@
     </some-box>
 {/if}
 
-<cl bind:this={main_element} on:scroll={() => ($scroll_pos = main_element.scrollTop)}>
+<cl bind:this={main_element}>
     {#each bookmarks as bk, i (bk.id)}
         {#if i == $selected}
             <bookmark
@@ -284,18 +285,17 @@
                     >
                     <button
                         on:click={() => {
-                            save_bookmarks([bk]);
-                            new_bookmarks = new_bookmarks.filter((e) => bk.id != e.id);
+                            console.warn("this button does nothing!!!!");
                         }}>add to db</button
                     >
                     <button
                         on:click={() => {
-                            new_bookmarks = new_bookmarks.filter((e) => bk.id != e.id);
+                            console.warn("this button does nothing!!!!");
                         }}>remove</button
                     >
                 </div>
                 <div class={'content'}>
-                    <span class={''}>{bk.title}</span>
+                    <span class={''}>{bk.data.data.title}</span>
                     {#if tag_box.show}
                         <floating-tag-box
                             style={'top: ' + tag_box.top + 'px;left: ' + tag_box.left + 'px;'}
@@ -308,7 +308,7 @@
                                 on:input={search_tags}
                                 on:keydown={async (e) => {
                                     await tag_box_input_handle(e, bk);
-                                    bk.tags = bk.tags;
+                                    bk.data.tags = bk.data.tags;
                                 }}
                             />
                             <tags>
@@ -317,24 +317,24 @@
                                         on:keyup={() => {}}
                                         on:click={async () => {
                                             await tag_click_handle(bk, tag);
-                                            bk.tags = bk.tags;
+                                            bk.data.tags = bk.data.tags;
                                         }}
                                         style={'background-color: ' +
-                                            (bk.tags.includes(
-                                                tag.object_type == 'alias_tag'
-                                                    ? tag.alias_to
+                                            (bk.data.tags.includes(
+                                                tag.data.object_type == 'alias_tag'
+                                                    ? tag.data.alias_to
                                                     : tag.id
                                             )
                                                 ? '#dd8a8a'
                                                 : '#8add8a') +
-                                            ';'}>{tag.name}</tag
+                                            ';'}>{tag.data.name}</tag
                                     >
                                 {/each}
                             </tags>
                         </floating-tag-box>
                     {/if}
                     <tags>
-                        {#await get_tags_from_ids(bk.tags) then tags}
+                        {#await get_tags_from_ids(bk.data.tags) then tags}
                             {#each tags as tag}
                                 <tag
                                     on:click={async () => {
@@ -342,9 +342,9 @@
                                             return;
                                         }
                                         await remove_tag_from_bookmark(bk, tag.id);
-                                        bk.tags = bk.tags;
+                                        bk.data.tags = bk.data.tags;
                                     }}
-                                    on:keydown={() => {}}>{tag.name}</tag
+                                    on:keydown={() => {}}>{tag.data.name}</tag
                                 >
                             {/each}
                         {/await}
@@ -357,11 +357,11 @@
                 on:click={() => {
                     $selected = i;
                 }}
-                on:keyup={() => {}}>{bk.title ? bk.title : bk.url}</span
+                on:keyup={() => {}}>{bk.data.data.title ? bk.data.data.title : bk.data.data.url}</span
             >
         {/if}
     {/each}
-    <Observer enter_screen={next_page} />
+    <Observer enter_screen={next_page} margin={200} />
 </cl>
 
 <style>
@@ -374,6 +374,7 @@
         display: flex;
         flex-direction: row;
         width: 50%;
+        height: 75px;
         background-color: #282828;
         z-index: 2;
     }
