@@ -56,9 +56,9 @@ pub async fn enter_searchable(
     let ctime = db.now_time().infer_err()?;
     data.into_iter().try_for_each(|e| {
         let mut doc = Document::new();
-        doc.add_facet(db.get_field(Fields::Type), facet.facet());
         let v = Meta {
             id: db.new_id(),
+            facet: facet.as_ref().to_string(),
             data: Taggable {
                 data: e,
                 tags: vec![],
@@ -103,17 +103,10 @@ pub async fn add_tag_to_object(
 ) -> Result<(), Error> {
     let mut doc = db.get_doc(id)?;
 
-    let facet = doc
-        .get_first(db.get_field(Fields::Type))
-        .bad_err("no type found")?
-        .as_facet()
-        .bad_err("not a facet")?
-        .clone();
     let mut v: Meta<Taggable<SearchableEntry<serde_json::Map<String, serde_json::Value>>>> =
         DbAble::take(db.inner(), &mut doc)?;
     v.data.tags.push(tag_id);
     let mut doc = Document::new();
-    doc.add_facet(db.get_field(Fields::Type), facet);
     v.add(db.inner(), &mut doc)?;
 
     let mut writer = db.index_writer.lock().infer_err()?;
@@ -131,17 +124,10 @@ pub async fn remove_tag_from_object(
 ) -> Result<(), Error> {
     let mut doc = db.get_doc(id)?;
 
-    let facet = doc
-        .get_first(db.get_field(Fields::Type))
-        .bad_err("no type found")?
-        .as_facet()
-        .bad_err("not a facet")?
-        .clone();
     let mut j: Meta<Taggable<SearchableEntry<serde_json::Map<String, serde_json::Value>>>> =
         DbAble::take(db.inner(), &mut doc)?;
     j.data.tags.retain(|&t| t != tag_id);
     let mut doc = Document::new();
-    doc.add_facet(db.get_field(Fields::Type), facet);
     j.add(db.inner(), &mut doc)?;
 
     let mut writer = db.index_writer.lock().infer_err()?;
@@ -201,6 +187,7 @@ impl AutoDbAble for tantivy::schema::Value {}
 impl<T: DbAble> DbAble for Meta<T> {
     fn add(self, db: &AppDatabase, doc: &mut Document) -> Result<(), Error> {
         doc.add_u64(db.get_field(Fields::Id), self.id as _);
+        doc.add_facet(db.get_field(Fields::Type), self.facet.facet());
         doc.add_u64(db.get_field(Fields::Ctime), self.ctime as _);
         doc.add_u64(db.get_field(Fields::Mtime), self.last_update as _);
         doc.add_u64(
@@ -216,6 +203,10 @@ impl<T: DbAble> DbAble for Meta<T> {
                 .get_first(db.get_field(Fields::Id))
                 .and_then(|e| e.as_u64().map(|e| e as _))
                 .bad_err("bad id")?,
+            facet: doc
+                .get_first(db.get_field(Fields::Type))
+                .and_then(|f| f.as_facet().map(|f| f.to_path_string()))
+                .bad_err("bad facet")?,
             ctime: doc
                 .get_first(db.get_field(Fields::Ctime))
                 .and_then(|e| e.as_u64())

@@ -7,7 +7,7 @@ use tauri::State;
 
 use crate::{
     bad_error::{BadError, Error, InferBadError, Inspectable},
-    database::{AppDatabase, DbAble, FacetFrom},
+    database::{AppDatabase, DbAble},
 };
 
 #[tauri::command]
@@ -23,12 +23,12 @@ pub async fn search_tags(
 #[tauri::command]
 pub async fn save_new_tag(db: State<'_, AppDatabase>, tag: Tag) -> Result<Id, Error> {
     let mut doc = Document::new();
-    doc.add_facet(db.get_field(Fields::Type), TypeFacet::Tag.facet());
 
     let ctime = db.now_time().infer_err()?;
     let id = db.new_id();
     let v = Meta {
         id,
+        facet: TypeFacet::Tag.as_ref().to_string(),
         data: SearchableEntry {
             searchable: vec![Indexed {
                 field: Fields::Text,

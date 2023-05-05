@@ -495,6 +495,7 @@ pub mod objects {
     #[derive(Serialize, Deserialize, TS, Debug, Clone)]
     pub struct Meta<T> {
         pub id: Id,
+        pub facet: String,
         pub data: T,
         pub ctime: u64,
         pub last_update: u64,
