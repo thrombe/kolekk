@@ -713,6 +713,15 @@ pub mod utility {
         pub files: Option<Vec<F>>,          // File data
 
         pub uri_list: Option<String>, // link drops. (link is also available in self.text)
+
+        pub kolekk_text: Option<Vec<DragDropData<String>>>,
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct DragDropData<T> {
+        #[serde(rename = "type")]
+        pub typpe: String,
+        pub data: T,
     }
 
     #[derive(Serialize, Deserialize, TS, Debug, PartialEq, Eq, Clone)]

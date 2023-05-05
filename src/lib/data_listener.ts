@@ -1,4 +1,4 @@
-import type { ByteArrayFile, DragDropPaste } from 'types';
+import type { ByteArrayFile, DragDropData, DragDropPaste } from 'types';
 
 export interface DropEvent {
     event: string;
@@ -13,7 +13,8 @@ export const ddp_from_drop = (e: DropEvent): DragDropPaste<File> => {
         text: null,
         text_html: null,
         files: null,
-        uri_list: null
+        uri_list: null,
+        kolekk_text: null
     };
     return ddp;
 };
@@ -36,12 +37,25 @@ export const ddp_from_event = (e: ClipboardEvent | DragEvent): DragDropPaste<Fil
     let files = [...data.files];
     let uri_list = data.getData('text/uri-list');
 
+    let kolekk_types = data.types.filter(e => e.startsWith("kolekk"));
+    let d = data;
+    let kolekk_text: DragDropData<string>[] | null = kolekk_types.map(t => {
+        return {
+            type: t,
+            data: d.getData(t)
+        };
+    });
+    if (kolekk_text?.length == 0) {
+        kolekk_text = null;
+    }
+
     let ddp: DragDropPaste<File> = {
         file_uris: null,
         text: text ? text : null,
         text_html: text_html ? text_html : null,
         files: files.length > 0 ? files : null,
-        uri_list: uri_list ? uri_list : null
+        uri_list: uri_list ? uri_list : null,
+        kolekk_text
     };
 
     return ddp;
@@ -67,6 +81,7 @@ export const files_to_bytearrays = async (
         files,
         text_html: e.text_html,
         uri_list: e.uri_list,
-        file_uris: e.file_uris
+        file_uris: e.file_uris,
+        kolekk_text: e.kolekk_text
     };
 };
