@@ -103,10 +103,18 @@ pub async fn add_tag_to_object(
 ) -> Result<(), Error> {
     let mut doc = db.get_doc(id)?;
 
-    let mut j: Meta<Taggable<tantivy::schema::Value>> = DbAble::take(db.inner(), &mut doc)?;
-    j.data.tags.push(tag_id);
+    let facet = doc
+        .get_first(db.get_field(Fields::Type))
+        .bad_err("no type found")?
+        .as_facet()
+        .bad_err("not a facet")?
+        .clone();
+    let mut v: Meta<Taggable<SearchableEntry<serde_json::Map<String, serde_json::Value>>>> =
+        DbAble::take(db.inner(), &mut doc)?;
+    v.data.tags.push(tag_id);
     let mut doc = Document::new();
-    j.add(db.inner(), &mut doc)?;
+    doc.add_facet(db.get_field(Fields::Type), facet);
+    v.add(db.inner(), &mut doc)?;
 
     let mut writer = db.index_writer.lock().infer_err()?;
     let _opstamp = writer.delete_term(Term::from_field_u64(db.get_field(Fields::Id), id as _));
@@ -123,9 +131,17 @@ pub async fn remove_tag_from_object(
 ) -> Result<(), Error> {
     let mut doc = db.get_doc(id)?;
 
-    let mut j: Meta<Taggable<tantivy::schema::Value>> = DbAble::take(db.inner(), &mut doc)?;
+    let facet = doc
+        .get_first(db.get_field(Fields::Type))
+        .bad_err("no type found")?
+        .as_facet()
+        .bad_err("not a facet")?
+        .clone();
+    let mut j: Meta<Taggable<SearchableEntry<serde_json::Map<String, serde_json::Value>>>> =
+        DbAble::take(db.inner(), &mut doc)?;
     j.data.tags.retain(|&t| t != tag_id);
     let mut doc = Document::new();
+    doc.add_facet(db.get_field(Fields::Type), facet);
     j.add(db.inner(), &mut doc)?;
 
     let mut writer = db.index_writer.lock().infer_err()?;
@@ -647,7 +663,8 @@ impl AppDatabase {
 
         let id = schema_builder.add_u64_field(&Fields::Id, STORED | FAST | INDEXED);
         let _ = fields.insert(Fields::Id, id);
-        let object_type = schema_builder.add_facet_field(&Fields::Type, FacetOptions::default());
+        let object_type =
+            schema_builder.add_facet_field(&Fields::Type, FacetOptions::default().set_stored());
         let _ = fields.insert(Fields::Type, object_type);
         let text = schema_builder.add_text_field(&Fields::Text, STORED | TEXT);
         let _ = fields.insert(Fields::Text, text);
