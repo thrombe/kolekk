@@ -14,7 +14,7 @@ use kolekk_types::{
     },
     utility::Path,
 };
-use serde::{de::DeserializeOwned, Serialize, Deserialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tantivy::{
     collector::TopDocs,
     directory::{ManagedDirectory, MmapDirectory},
@@ -22,7 +22,7 @@ use tantivy::{
     schema::{Facet, FacetOptions, Field, IndexRecordOption, FAST, INDEXED, STORED, TEXT},
     DocAddress, Document, Index, IndexReader, IndexWriter, Term,
 };
-use tauri::{State, WindowEvent, AppHandle, Manager};
+use tauri::{AppHandle, Manager, State, WindowEvent};
 
 use crate::{
     bad_error::{BadError, Error, InferBadError, Inspectable},
@@ -92,7 +92,7 @@ pub async fn search_jsml_object(
     limit: usize,
     offset: usize,
 ) -> Result<Vec<Meta<Taggable<serde_json::Map<String, serde_json::Value>>>>, Error> {
-    crate::database::search_object(db.inner(), facet, query, limit, offset)
+    search_object(db.inner(), facet, query, limit, offset)
 }
 
 #[tauri::command]
@@ -380,8 +380,8 @@ pub fn search_object<T: DbAble + Debug>(
         .infer_err()?
         .into_iter()
         .map(|(score, address)| {
-            let mut doc = searcher.doc(address).look(|e| dbg!(e)).infer_err()?;
-            let t: Meta<Tag> = DbAble::take(db, &mut doc)?;
+            let mut doc = searcher.doc(address).infer_err()?;
+            let t: Meta<Tag> = DbAble::take(db, &mut doc).look(|e| dbg!(e))?;
             let t = match t.data {
                 Tag::Main { .. } => t.id,
                 Tag::Alias { alias_to, .. } => alias_to,
@@ -451,10 +451,7 @@ pub fn search_object<T: DbAble + Debug>(
         .collect()
 }
 
-pub async fn init_database(
-    app_handle: &AppHandle,
-    conf: &AppConfig,
-) -> Result<(), Error> {
+pub async fn init_database(app_handle: &AppHandle, conf: &AppConfig) -> Result<(), Error> {
     let handle = app_handle.app_handle();
 
     let mut db = AppDatabase::new(conf).await?;
@@ -616,7 +613,9 @@ impl AppDatabase {
     }
 
     fn get_state(&self) -> AppDatabaseState {
-        AppDatabaseState { id_gen: self.id_gen.load(std::sync::atomic::Ordering::Relaxed) }
+        AppDatabaseState {
+            id_gen: self.id_gen.load(std::sync::atomic::Ordering::Relaxed),
+        }
     }
 
     fn update_state(&mut self, state: AppDatabaseState) {

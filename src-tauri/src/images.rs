@@ -597,17 +597,11 @@ pub mod thumbnails {
         // TODO: how do i enforce that calling image_thumbnail after calling this method fails
         /// returns None if it is already shut down
         pub fn shut_down(&self) -> Result<Option<LruCache<String, ThumbnailStatus>>, Error> {
-            let close_tx = match self.close_tx
-                .lock()
-                .infer_err()?
-                .take() {
-                    Some(c) => c,
-                    None => return Ok(None),
-                };
-            close_tx
-                .send(())
-                .ok()
-                .bad_err("dead channel")?;
+            let close_tx = match self.close_tx.lock().infer_err()?.take() {
+                Some(c) => c,
+                None => return Ok(None),
+            };
+            close_tx.send(()).ok().bad_err("dead channel")?;
             let cache = self
                 .cache_rx
                 .lock()
