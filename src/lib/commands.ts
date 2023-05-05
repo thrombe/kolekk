@@ -94,7 +94,7 @@ export class Searcher<T> {
     }
 }
 
-
+// TODO: searching for Tag should call 'search_tags' command
 export type RObject<T> = T extends Tag ? Meta<T, TypeFacet> : Meta<Taggable<T>, TypeFacet>;
 
 export async function search<T>(

@@ -130,6 +130,9 @@
             $search_query = '';
             bookmark_search_input.focus();
             event.preventDefault();
+        } else if (new_bookmarks.length > 0 && event.key == 'Escape') {
+            new_bookmarks = [];
+            event.preventDefault();
         } else if (tag_box.show && event.key == 'Escape') {
             tag_box.show = false;
             event.preventDefault();
@@ -259,7 +262,7 @@
                         >
                     </div>
                     <div class={'content'}>
-                        <span>{bk.data.title}</span>
+                        <span>{bk.data.title ? bk.data.title : bk.data.url}</span>
                         <tags>
                             {#each bk.tags as tag}
                                 <tag>{tag}</tag>
@@ -295,7 +298,7 @@
                     >
                 </div>
                 <div class={'content'}>
-                    <span class={''}>{bk.data.data.title}</span>
+                    <span class={''}>{bk.data.data.title ? bk.data.data.title : bk.data.data.url}</span>
                     {#if tag_box.show}
                         <floating-tag-box
                             style={'top: ' + tag_box.top + 'px;left: ' + tag_box.left + 'px;'}
