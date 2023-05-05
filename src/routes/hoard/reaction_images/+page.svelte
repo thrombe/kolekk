@@ -9,7 +9,7 @@
 
 <script lang="ts">
     import { invoke } from '@tauri-apps/api/tauri';
-    import type { DragDropPaste, Image, Indexed } from 'types';
+    import type { DragDropPaste, Image, Indexed, Path } from 'types';
     import DataListener from '$lib/DataListener.svelte';
     import { files_to_bytearrays } from '$lib/data_listener';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
@@ -92,8 +92,15 @@
         }
     };
     const copy = async (img: Image) => {
-        await invoke('copy_image_to_clipboard', { imgPath: img.path });
-        console.log("copied image", img.title);
+        let p: Path = {
+            base: 'AbsolutePath',
+            path: await invoke('image_thumbnail', {
+                uri: await get_path(img.path),
+                thumbnailSize: 'w350'
+            })
+        };
+        await invoke('copy_image_to_clipboard', { imgPath: p });
+        console.log('copied image', img.title);
     };
     const copy_selected = async () => {
         await copy(items[$selected].data.data.data);
@@ -110,7 +117,12 @@
 <svelte:window bind:innerWidth={window_width} />
 
 <cl class="inputs">
-    <input bind:value={$search_query} on:input={search_images} bind:this={search_input} on:keydown={on_enter}/>
+    <input
+        bind:value={$search_query}
+        on:input={search_images}
+        bind:this={search_input}
+        on:keydown={on_enter}
+    />
     <button on:click={search_images}>refresh</button>
 
     <input bind:value={tag_name} />
