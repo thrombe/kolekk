@@ -384,15 +384,25 @@ pub fn direct_search<T: DbAble + Debug>(
             Box::new(BooleanQuery::new(
                 query
                     .split_whitespace()
-                    .map(|t| {
-                        (
+                    .flat_map(|t| {
+                        [(
                             Occur::Should,
                             Box::new(FuzzyTermQuery::new(
                                 Term::from_field_text(db.get_field(Fields::Text), t),
                                 2,    // ?
                                 true, // what??
                             )) as _,
-                        )
+                        ),
+                        (
+                            Occur::Should,
+                            Box::new(BoostQuery::new(
+                                Box::new(TermQuery::new(
+                                    Term::from_field_text(db.get_field(Fields::Text), t),
+                                    IndexRecordOption::Basic,
+                                )) as _,
+                                2.0,
+                            )) as _,
+                        )].into_iter()
                     })
                     .collect(),
             )),
@@ -404,7 +414,7 @@ pub fn direct_search<T: DbAble + Debug>(
         .into_iter()
         .map(|(score, address)| {
             let mut doc = searcher.doc(address).infer_err()?;
-            DbAble::take(db, &mut doc).look(|e| dbg!(e))
+            DbAble::take(db, &mut doc).look(|e| dbg!(score, e))
         })
         .collect::<Result<Vec<_>, _>>()
 }
@@ -472,15 +482,25 @@ pub fn search_object<T: DbAble + Debug>(
             Box::new(BooleanQuery::new(
                 query
                     .split_whitespace()
-                    .map(|t| {
-                        (
+                    .flat_map(|t| {
+                        [(
                             Occur::Should,
                             Box::new(FuzzyTermQuery::new(
                                 Term::from_field_text(db.get_field(Fields::Text), t),
                                 2,    // ?
                                 true, // what??
                             )) as _,
-                        )
+                        ),
+                        (
+                            Occur::Should,
+                            Box::new(BoostQuery::new(
+                                Box::new(TermQuery::new(
+                                    Term::from_field_text(db.get_field(Fields::Text), t),
+                                    IndexRecordOption::Basic,
+                                )) as _,
+                                2.0,
+                            )) as _,
+                        )].into_iter()
                     })
                     .collect(),
             )),
@@ -524,15 +544,25 @@ pub fn search_object<T: DbAble + Debug>(
         // TODO: implement these as methods of Fields and ObjectType
         query
             .split_whitespace()
-            .map(|t| {
-                (
+            .flat_map(|t| {
+                [(
                     Occur::Should, // TODO: should this be Must instead?
                     Box::new(FuzzyTermQuery::new(
                         Term::from_field_text(db.get_field(Fields::Text), t),
                         2,    // ?
                         true, // what??
                     )) as _,
-                )
+                ),
+                (
+                    Occur::Should,
+                    Box::new(BoostQuery::new(
+                        Box::new(TermQuery::new(
+                            Term::from_field_text(db.get_field(Fields::Text), t),
+                            IndexRecordOption::Basic,
+                        )) as _,
+                        2.0,
+                    )) as _,
+                )].into_iter()
             })
             .collect(),
     ));
