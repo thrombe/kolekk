@@ -17,37 +17,39 @@
     import { Searcher, type RObject } from '$lib/commands';
 
     interface TempTaggable<T> {
-        data: T,
-        tags: Array<string>,
+        data: T;
+        tags: Array<string>;
     }
     let new_bookmarks = new Array<TempTaggable<Bookmark>>();
     const on_receive = async (e: DragDropPaste<File>) => {
         console.log(e);
         console.log(e.text_html);
-        if (e.kolekk_text?.filter(e => e.type == 'kolekk/ignore').length) {
+        if (e.kolekk_text?.filter((e) => e.type == 'kolekk/ignore').length) {
             return;
         }
         let bks: [Bookmark] = await invoke('get_bookmarks', { data: await files_to_bytearrays(e) });
         console.log(bks, new_bookmarks);
-        new_bookmarks = bks.map(t => {
+        new_bookmarks = bks.map((t) => {
             return { data: t, tags: [] };
         });
     };
 
     const save_bookmarks = async (bks: [Bookmark]) => {
-        await $searcher.add_item(...bks.map(e => {
-            let searchable: Indexed[] = e.title ? [{ data: e.title, field: 'Text' }] : [];
-            return { data: e, searchable };
-        }));
+        await $searcher.add_item(
+            ...bks.map((e) => {
+                let searchable: Indexed[] = e.title ? [{ data: e.title, field: 'Text' }] : [];
+                return { data: e, searchable };
+            })
+        );
     };
 
     let bookmarks = new Array<RObject<Bookmark>>();
     const search_bookmarks = async () => {
-        bookmarks = await $searcher.set_query($search_query);;
+        bookmarks = await $searcher.set_query($search_query);
         $selected = 0;
     };
     const next_page = async () => {
-        bookmarks = await $searcher.next_page();;
+        bookmarks = await $searcher.next_page();
     };
 
     search_bookmarks();
@@ -55,7 +57,8 @@
         // document.addEventListener("item-added", search_bookmarks, true);
         let unlisten: UnlistenFn | undefined;
         let destroyed = false;
-        listen('item-added', (_event: Event<number>) => { // TODO: no such event sent from rust
+        listen('item-added', (_event: Event<number>) => {
+            // TODO: no such event sent from rust
             search_bookmarks();
         }).then((e) => {
             if (destroyed) {
@@ -78,8 +81,8 @@
     let tag_name = '';
     const add_tag = async () => {
         let tag: Tag = {
-            object_type: "main_tag",
-            name: tag_search_query,
+            object_type: 'main_tag',
+            name: tag_search_query
         };
         let id: number = await invoke('save_new_tag', { tag });
         await search_tags();
@@ -235,18 +238,26 @@
 <svelte:window on:keyup={on_keyup} on:keydown={on_keydown} />
 
 <buttons>
-    <input bind:value={$search_query} on:input={search_bookmarks} bind:this={bookmark_search_input} />
+    <input
+        bind:value={$search_query}
+        on:input={search_bookmarks}
+        bind:this={bookmark_search_input}
+    />
     <button on:click={search_bookmarks}>refresh</button>
 
     <input bind:value={tag_name} />
     <button on:click={add_tag}>add tag</button>
     <button on:click={remove_tag}>remove tag</button>
-    <button on:click={async () => {
-        await invoke('delete_facet_objects', { facet: "Bookmark" });
-        await search_bookmarks();
-        await invoke('delete_facet_objects', { facet: "Tag" });
-        await search_tags();
-    }}>delete objects</button>
+    <button
+        on:click={async () => {
+            await invoke('delete_facet_objects', { facet: 'Bookmark' });
+            await search_bookmarks();
+            await invoke('delete_facet_objects', { facet: 'Tag' });
+            await search_tags();
+        }}
+    >
+        delete objects
+    </button>
 </buttons>
 <buttons-blok />
 
@@ -256,7 +267,9 @@
             {#each new_bookmarks as bk, i}
                 <bookmark>
                     <div class={'bookmark-buttons'}>
-                        <button on:click={() => (bk.tags = [...bk.tags, tag_name])}>add tag</button>
+                        <button on:click={() => (bk.tags = [...bk.tags, tag_name])}>
+                            add tag
+                        </button>
                         <button
                             on:click={async () => {
                                 await save_bookmarks([bk.data]);
@@ -267,11 +280,15 @@
                         <button
                             on:click={() => {
                                 new_bookmarks = new_bookmarks.filter((e) => !Object.is(bk, e));
-                            }}>remove</button
+                            }}
                         >
+                            remove
+                        </button>
                     </div>
                     <div class={'content'}>
-                        <span>{bk.data.title ? bk.data.title : bk.data.url}</span>
+                        <span>
+                            {bk.data.title ? bk.data.title : bk.data.url}
+                        </span>
                         <tags>
                             {#each bk.tags as tag}
                                 <tag>{tag}</tag>
@@ -291,26 +308,33 @@
                 style={'width: 50%;border-radius: 15px;overflow:hidden;'}
                 bind:this={selected_element}
                 draggable="true"
-                on:dragstart={async (e) => {await dragstart(e, bk)}}
+                on:dragstart={async (e) => {
+                    await dragstart(e, bk);
+                }}
                 on:dragend={() => {}}
             >
                 <div class={'bookmark-buttons'}>
-                    <button on:click={add_tag_button}
-                        >{tag_box.show ? tag_search_query : 'add tag'}</button
-                    >
+                    <button on:click={add_tag_button}>
+                        {tag_box.show ? tag_search_query : 'add tag'}
+                    </button>
                     <button
                         on:click={() => {
-                            console.warn("this button does nothing!!!!");
-                        }}>add to db</button
-                    >
+                            console.warn('this button does nothing!!!!');
+                        }}
+                        >add to db
+                    </button>
                     <button
                         on:click={() => {
-                            console.warn("this button does nothing!!!!");
-                        }}>remove</button
+                            console.warn('this button does nothing!!!!');
+                        }}
                     >
+                        remove
+                    </button>
                 </div>
                 <div class={'content'}>
-                    <span class={''}>{bk.data.data.title ? bk.data.data.title : bk.data.data.url}</span>
+                    <span class={''}>
+                        {bk.data.data.title ? bk.data.data.title : bk.data.data.url}
+                    </span>
                     {#if tag_box.show}
                         <floating-tag-box
                             style={'top: ' + tag_box.top + 'px;left: ' + tag_box.left + 'px;'}
@@ -342,8 +366,10 @@
                                             )
                                                 ? '#dd8a8a'
                                                 : '#8add8a') +
-                                            ';'}>{tag.data.name}</tag
+                                            ';'}
                                     >
+                                        {tag.data.name}
+                                    </tag>
                                 {/each}
                             </tags>
                         </floating-tag-box>
@@ -359,8 +385,10 @@
                                         await remove_tag_from_bookmark(bk, tag.id);
                                         bk.data.tags = bk.data.tags;
                                     }}
-                                    on:keydown={() => {}}>{tag.data.name}</tag
+                                    on:keydown={() => {}}
                                 >
+                                    {tag.data.name}
+                                </tag>
                             {/each}
                         {/await}
                     </tags>
@@ -372,8 +400,10 @@
                 on:click={() => {
                     $selected = i;
                 }}
-                on:keyup={() => {}}>{bk.data.data.title ? bk.data.data.title : bk.data.data.url}</span
+                on:keyup={() => {}}
             >
+                {bk.data.data.title ? bk.data.data.title : bk.data.data.url}
+            </span>
         {/if}
     {/each}
     <Observer enter_screen={next_page} margin={200} />
