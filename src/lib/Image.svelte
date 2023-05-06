@@ -7,8 +7,8 @@
     export let width: number;
     export let height: number;
     export let lazy: boolean;
+    export let img_source: string;
 
-    export let img_source = '';
     export let bg_color = 'transparent';
     export let scale = '100%';
     export let root: HTMLElement | null = null;

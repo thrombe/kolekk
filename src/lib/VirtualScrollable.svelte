@@ -1,13 +1,15 @@
 <script lang="ts">
     import Observer from '$lib/Observer.svelte';
     import { tick } from 'svelte';
+    import type { Unique } from './virtual';
 
     export let item_width: number;
     export let item_height: number;
-    export let items: Array<any>;
+    export let items: Array<Unique<unknown, unknown>>;
     export let selected: number;
     export let gap: number;
 
+    export let selected_item: Unique<unknown, unknown> | null = null;
     export let end_reached = async () => {};
     export let on_keydown = async (_: KeyboardEvent, _a: any) => {};
     export let on_item_click = async () => {};
@@ -90,14 +92,14 @@
     $: if (width && root && items) {
         on_update();
     }
-    let selected_item: HTMLElement;
+    let _selected_item: HTMLElement;
     let try_scroll_into_view = async () => {
         await tick();
         if (!(selected === undefined) && items) {
             console.log(items[selected]);
         }
-        if (selected_item) {
-            selected_item.scrollIntoView({ block: "nearest" });
+        if (_selected_item) {
+            _selected_item.scrollIntoView({ block: "nearest" });
         } else {
             let row = selected/columns;
             // if (row*item_height > root.scrollTop + root.clientHeight) {
@@ -113,6 +115,14 @@
         try_scroll_into_view();
     }
 
+    $: if (_selected_item) {
+        let index = selected;
+        if (selected >= items.length) {
+            index = items.length - 1;
+        }
+        selected_item = items[index];
+    }
+
     const _on_item_click = async (i: number) => {
         selected = i + start*columns;
         await tick();
@@ -125,7 +135,7 @@
     <gd style="--item-width: {item_width}px; --gap: {gap}px;" bind:this={grid}>
     {#each visible as item, i (item.id)}
         {#if (selected == i + start*columns) || (i + start*columns == items.length - 1 && selected >= items.length)}
-            <sel bind:this={selected_item}>
+            <sel bind:this={_selected_item}>
                 <slot {item_width} {item_height} {root} item={item.data} index={i + start*columns} selected={true} />
             </sel>
         {:else}
