@@ -202,6 +202,8 @@
             if (ev.ctrlKey && !searched_tags.map((t) => t.data.name).includes(tag_search_query)) {
                 let id = await add_tag();
                 await add_tag_to_bookmark(bk, id);
+                await $searcher.reload_reader();
+                await search_tags();
                 bk.data.tags = bk.data.tags;
             } else if (searched_tags.length > 0) {
                 if (!bk.data.tags.includes(searched_tags[0].id)) {
