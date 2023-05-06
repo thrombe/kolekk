@@ -115,13 +115,18 @@
         try_scroll_into_view();
     }
 
-    $: if (_selected_item) {
+    $: if (_selected_item || items) {
+        set_selected_item();
+    }
+
+    const set_selected_item = () => {
         let index = selected;
         if (selected >= items.length) {
             index = items.length - 1;
         }
         selected_item = items[index];
-    }
+    };
+    set_selected_item();
 
     const _on_item_click = async (i: number) => {
         selected = i + start*columns;
