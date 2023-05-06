@@ -56,6 +56,8 @@
             await copy_selected();
             // await add_tag_button();
             // event.preventDefault();
+        } else if (event.key == 'i') {
+            show_item_info = !show_item_info;
         } else if (event.key == 'a') {
             tag_box_show = true;
             await tick();
@@ -109,9 +111,17 @@
         }
     };
 
-    let info_width = 350;
-    let info_margin = 20;
+    let info_width = 0;
+    let info_margin = 0;
+    let show_item_info = true;
     let selected_item: Unique<RObject<Image>, string>;
+    $: if (show_item_info) {
+        info_width = 350;
+        info_margin = 20;
+    } else {
+        info_width = 0;
+        info_margin = 0;
+    }
 
     let searched_tags = new Array();
     $tag_searcher.on_update = async (e: RSearcher<Tag>) => {
@@ -171,6 +181,11 @@
     />
     <button on:click={search_images}>refresh</button>
     <button>{end_is_visible}</button>
+    <button
+        on:click={() => {
+            show_item_info = !show_item_info;
+        }}
+    >show item info</button>
 </cl>
 
 <cl class="main" style="--info-width: {info_width}px; --info-margin: {info_margin}px;">
@@ -206,7 +221,7 @@
         </VirtualScrollable>
     </scrollable>
 
-    {#if selected_item}
+    {#if selected_item && show_item_info}
         {#key selected_item.id}
             <info-box>
                 <InfoBox
