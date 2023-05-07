@@ -5,7 +5,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
     ops::Deref,
-    sync::{atomic::AtomicU32, RwLock},
+    sync::{atomic::AtomicU32, Arc, RwLock},
 };
 
 use kolekk_types::{
@@ -16,11 +16,12 @@ use kolekk_types::{
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tantivy::{
-    collector::TopDocs,
+    collector::{ScoreSegmentTweaker, ScoreTweaker, TopDocs},
     directory::{ManagedDirectory, MmapDirectory},
+    fastfield::Column,
     query::{AllQuery, BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, PhraseQuery, TermQuery},
     schema::{Facet, FacetOptions, Field, IndexRecordOption, FAST, INDEXED, STORED, TEXT},
-    DocAddress, Document, Index, IndexReader, IndexWriter, Term,
+    DocAddress, Document, Index, IndexReader, IndexWriter, SegmentReader, Term,
 };
 use tauri::{AppHandle, Manager, State, WindowEvent};
 
@@ -87,7 +88,14 @@ pub async fn search_jsml_object(
     limit: usize,
     offset: usize,
 ) -> Result<Vec<Meta<Taggable<serde_json::Map<String, serde_json::Value>>, TypeFacet>>, Error> {
-    search_object(db.inner(), facet, query, limit, offset)
+    search_object(
+        db.inner(),
+        facet,
+        query,
+        limit,
+        offset,
+        ObjectSearchScoreTweaker::new(db.inner())?,
+    )
 }
 
 #[tauri::command]
@@ -422,14 +430,14 @@ pub fn direct_search<T: DbAble + Debug>(
         .collect::<Result<Vec<_>, _>>()
 }
 
-// TODO: sort by recently added / most recent interations / total interactions + most recent interactions
-//       collect this stat inside the objects
+// TODO: most recent interations | total interactions
 pub fn search_object<T: DbAble + Debug>(
     db: &AppDatabase,
     ob_type: TypeFacet,
     query: impl AsRef<str>,
     limit: usize,
     offset: usize,
+    tweaker: ObjectSearchScoreTweaker,
 ) -> Result<Vec<T>, Error> {
     // TODO: look into using QueryParser, or maybe somehow including regex queries and stuff
     // TODO: is query is empty, return results by recently added or recently viewed or a mixture of this stuff
@@ -590,7 +598,9 @@ pub fn search_object<T: DbAble + Debug>(
                 (Occur::Should, Box::new(AllQuery)),
                 (Occur::Should, search_query),
             ]),
-            &TopDocs::with_limit(limit).and_offset(offset),
+            &TopDocs::with_limit(limit)
+                .and_offset(offset)
+                .tweak_score(tweaker),
         )
         .infer_err()?
         .into_iter()
@@ -599,6 +609,73 @@ pub fn search_object<T: DbAble + Debug>(
             DbAble::take(db, &mut doc).look(|e| dbg!((_score, e)))
         })
         .collect()
+}
+
+pub struct ObjectSearchScoreTweaker {
+    pub now: u64,
+    pub ctime_field: Field,
+    pub id_field: Field,
+}
+
+impl ObjectSearchScoreTweaker {
+    pub fn new(db: &AppDatabase) -> Result<Self, Error> {
+        let ctime_field = db.get_field(Fields::Ctime);
+        let id_field = db.get_field(Fields::Id);
+        let now = db.now_time()?;
+        let s = Self {
+            now,
+            ctime_field,
+            id_field,
+        };
+        Ok(s)
+    }
+}
+
+pub struct ObjectSearchScoreSegmentTweaker {
+    pub ctime_reader: Arc<dyn Column<u64>>,
+    pub id_reader: Arc<dyn Column<u64>>,
+    pub now: u64,
+}
+
+type ObjectSearchTweakedScore = (tantivy::Score, f64, u64);
+
+impl ScoreSegmentTweaker<ObjectSearchTweakedScore> for ObjectSearchScoreSegmentTweaker {
+    fn score(&mut self, doc: tantivy::DocId, score: tantivy::Score) -> ObjectSearchTweakedScore {
+        let ctime = self.ctime_reader.get_val(doc);
+        let id = self.id_reader.get_val(doc);
+
+        // https://www.desmos.com/calculator/nqrwqablae
+        let sub = (self.now - ctime) as f32;
+        let days = sub / (60.0 * 60.0 * 24.0);
+        let pow = -(days / 8.0);
+        let epow = std::f64::consts::E.powf(pow as _);
+        let sigmoid = 1.0 / (1.0 + epow);
+        let fin = 1.0 - (sigmoid - 0.5) * 2.0;
+
+        // let s = format!("{now} {ctime} {days} {pow} {epow} {sigmoid} {fin}");
+        // dbg!(s);
+
+        // PartialOrd on tuples: https://stackoverflow.com/a/61323034
+        (
+            score, fin,
+            id, // include id here - so that even if everything else is same, ordering remains consistent
+        )
+    }
+}
+impl ScoreTweaker<ObjectSearchTweakedScore> for ObjectSearchScoreTweaker {
+    type Child = ObjectSearchScoreSegmentTweaker;
+
+    fn segment_tweaker(&self, segment_reader: &SegmentReader) -> tantivy::Result<Self::Child> {
+        let ctime_reader = segment_reader.fast_fields().u64(self.ctime_field)?;
+        let id_reader = segment_reader.fast_fields().u64(self.id_field)?;
+
+        let tw = ObjectSearchScoreSegmentTweaker {
+            ctime_reader,
+            id_reader,
+            now: self.now,
+        };
+        Ok(tw)
+    }
 }
 
 pub async fn init_database(app_handle: &AppHandle, conf: &AppConfig) -> Result<(), Error> {

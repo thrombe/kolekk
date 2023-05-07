@@ -13,7 +13,7 @@ use tauri::{http::Uri, State};
 
 use crate::{
     bad_error::{Error, InferBadError, Inspectable},
-    database::AppDatabase,
+    database::{AppDatabase, ObjectSearchScoreTweaker},
 };
 
 #[tauri::command]
@@ -23,7 +23,14 @@ pub async fn search_bookmarks(
     limit: usize,
     offset: usize,
 ) -> Result<Vec<serde_json::Map<String, serde_json::Value>>, Error> {
-    crate::database::search_object(db.inner(), TypeFacet::Bookmark, query, limit, offset)
+    crate::database::search_object(
+        db.inner(),
+        TypeFacet::Bookmark,
+        query,
+        limit,
+        offset,
+        ObjectSearchScoreTweaker::new(db.inner())?,
+    )
 }
 
 #[tauri::command]
