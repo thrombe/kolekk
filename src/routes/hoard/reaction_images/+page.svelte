@@ -315,7 +315,7 @@
                             on:click={async () => {
                                 await $tag_searcher.remove_tag_from_object(
                                     selected_item.data.id,
-                                    searched_tags[0].id
+                                    tag.id
                                 );
                                 selected_item.data.data.tags = selected_item.data.data.tags.filter(
                                     (e) => e != tag.id
