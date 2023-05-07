@@ -183,7 +183,9 @@
         on:click={() => {
             show_item_info = !show_item_info;
         }}
-    >show item info</button>
+    >
+        show item info
+    </button>
 </cl>
 
 <cl class="main" style="--info-width: {info_width}px; --info-margin: {info_margin}px;">
@@ -236,6 +238,31 @@
                                 '<wbr>_<wbr>'
                             )}
                         </info-title>
+                        <facet>
+                            <field>Type: </field>
+                            {selected_item.data.facet}
+                        </facet>
+                        <date>
+                            <field>Created On: </field>
+                            {new Date(Number(selected_item.data.ctime) * 1000).toLocaleDateString(
+                                'en-US',
+                                {
+                                    month: 'long',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                }
+                            )}
+                        </date>
+                        <date>
+                            <field>Last Modified: </field>
+                            {new Date(
+                                Number(selected_item.data.last_update) * 1000
+                            ).toLocaleDateString('en-US', {
+                                month: 'long',
+                                day: 'numeric',
+                                year: 'numeric'
+                            })}
+                        </date>
 
                         <tags>
                             {#key selected_item.data.data.tags.length}
@@ -414,6 +441,24 @@
         font-size: 1.7rem;
         font-weight: 130;
         word-wrap: break-all;
+        color: #cccccc;
+    }
+
+    field {
+        font-weight: 140;
+    }
+
+    date {
+        font-size: 1rem;
+        font-weight: 150;
+        word-wrap: break-all;
+        color: #cccccc;
+    }
+
+    facet {
+        text-align: right;
+        font-size: 0.8rem;
+        font-weight: 150;
         color: #cccccc;
     }
 
