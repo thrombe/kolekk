@@ -37,7 +37,7 @@
     };
 
     let chapter: Chapter;
-    let items: any[];
+    let items: any[] = new Array();
     invoke('tachidesk_get_chapter', {
         mangaId: parseInt($page.params.id),
         chapterIndex: parseInt($page.params.index)

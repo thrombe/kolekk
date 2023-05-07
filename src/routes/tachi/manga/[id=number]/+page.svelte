@@ -5,6 +5,7 @@
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
     import ImageCard from '$lib/ImageCard.svelte';
     import type { Chapter, Manga } from 'types';
+    import type { Unique } from '$lib/virtual';
 
     let end_is_visible = true;
     let window_width = 100;
@@ -32,14 +33,14 @@
         console.log(manga);
     });
     let chapters: Chapter[];
-    let items: any[];
+    let items: Unique<Chapter, number>[] = new Array();
     invoke('tachidesk_get_manga_chapter_list', { mangaId: parseInt($page.params.id) }).then((c) => {
         chapters = c as Chapter[];
         console.log(chapters);
     });
     $: if (chapters) {
         items = chapters.map((c) => {
-            return { id: c.id, data: c };
+            return { id: Number(c.id), data: c };
         });
     }
 </script>
@@ -66,9 +67,9 @@
     <cl>
         <VirtualScrollable
             bind:items
-            columns={1}
-            width={window_width}
+            item_width={window_width}
             item_height={window_width / item_aspect_ratio}
+            gap={15}
             bind:selected
             {on_keydown}
             bind:end_is_visible
