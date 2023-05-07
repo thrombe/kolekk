@@ -20,6 +20,11 @@
     import { tick } from 'svelte';
     import InfoBox from '$lib/InfoBox.svelte';
     import type { Unique } from '$lib/virtual';
+    import MetaBox from '$lib/infobox/MetaBox.svelte';
+    import TitleBox from '$lib/infobox/TitleBox.svelte';
+    import TagsBox from '$lib/infobox/TagsBox.svelte';
+    import TagBox from '$lib/TagBox.svelte';
+    import TagSearchBox from '$lib/TagSearchBox.svelte';
 
     const file_drop = async (e: DragDropPaste<File>) => {
         let images: Image[] = await invoke('get_images', { data: await files_to_bytearrays(e) });
@@ -41,12 +46,13 @@
 
     let window_width = 100;
     let search_images = async () => {
+        await $searcher.reload_reader();
         await $searcher.set_query($search_query);
         end_reached();
     };
 
     $: $searcher.set_query($search_query);
-    let items = new Array();
+    let items = new Array<Unique<RObject<Image>, number>>();
 
     let end_is_visible = true;
     let search_input: any;
@@ -57,11 +63,8 @@
         } else if (event.key == 'i') {
             show_item_info = !show_item_info;
         } else if (event.key == 'a') {
-            tag_box_show = true;
-            await tick();
-            tag_search_input.focus();
-            $tag_query = '';
             event.preventDefault();
+            await show_tag_searchbox();
         } else if (event.key == 'Escape') {
             tag_box_show = false;
         } else if (event.key == '?') {
@@ -78,6 +81,14 @@
             search_input.focus();
             event.preventDefault();
         }
+    };
+
+    const show_tag_searchbox = async () => {
+        tag_box_show = true;
+        await tick();
+        tag_search_input.focus();
+        $tag_query = '';
+        await $tag_searcher.set_query($tag_query);
     };
 
     const end_reached = async () => {
@@ -112,7 +123,7 @@
     let info_width = 0;
     let info_margin = 0;
     let show_item_info = true;
-    let selected_item: Unique<RObject<Image>, string>;
+    let selected_item: Unique<RObject<Image>, number>;
     $: if (show_item_info) {
         info_width = 350;
         info_margin = 20;
@@ -121,12 +132,8 @@
         info_margin = 0;
     }
 
-    let searched_tags = new Array();
-    $tag_searcher.on_update = async (e: RSearcher<Tag>) => {
-        searched_tags = e.search_results;
-    };
     $tag_searcher.set_query($tag_query);
-    const tag_box_input_handle = async (ev: KeyboardEvent, ob: RObject<Image>) => {
+    const tag_box_input_handle = async (ev: KeyboardEvent) => {
         if (ev.key == 'Enter') {
             if (
                 ev.ctrlKey &&
@@ -137,20 +144,25 @@
                     name: $tag_query
                 };
                 let tag_id = await $tag_searcher.add_tag(tag);
-                await $tag_searcher.add_tag_to_object(ob.id, tag_id);
-                ob.data.tags.push(tag_id);
+                await $tag_searcher.add_tag_to_object(selected_item.data.id, tag_id);
+                selected_item.data.data.tags.push(tag_id);
                 $tag_query = '';
 
                 await $searcher.reload_reader();
-                searched_tags = await $tag_searcher.set_query($tag_query);
-            } else if (searched_tags.length > 0) {
-                let tag_id = searched_tags[0].id;
-                if (!ob.data.tags.includes(tag_id)) {
-                    await $tag_searcher.add_tag_to_object(ob.id, tag_id);
-                    ob.data.tags.push(tag_id);
+                await $tag_searcher.set_query($tag_query);
+            } else if ($tag_searcher.search_results.length > 0) {
+                let tag_id = $tag_searcher.search_results[0].id;
+                if (!selected_item.data.data.tags.includes(tag_id)) {
+                    await $tag_searcher.add_tag_to_object(selected_item.data.id, tag_id);
+                    selected_item.data.data.tags.push(tag_id);
                 } else {
-                    await $tag_searcher.remove_tag_from_object(ob.id, searched_tags[0].id);
-                    ob.data.tags = ob.data.tags.filter((e) => e != tag_id);
+                    await $tag_searcher.remove_tag_from_object(
+                        selected_item.data.id,
+                        $tag_searcher.search_results[0].id
+                    );
+                    selected_item.data.data.tags = selected_item.data.data.tags.filter(
+                        (e) => e != tag_id
+                    );
                 }
 
                 await $tag_searcher.reload_reader();
@@ -164,6 +176,22 @@
     };
 
     let tag_box_show = false;
+
+    const on_search_box_tag_click = async (tag: RObject<Tag>) => {
+        if (selected_item.data.data.tags.includes(tag.id)) {
+            await $tag_searcher.remove_tag_from_object(selected_item.data.id, tag.id);
+            selected_item.data.data.tags = selected_item.data.data.tags.filter((e) => e != tag.id);
+        } else {
+            await $tag_searcher.add_tag_to_object(selected_item.data.id, tag.id);
+            selected_item.data.data.tags.push(tag.id);
+        }
+
+        selected_item.data.data.tags = selected_item.data.data.tags;
+    };
+    const searchbox_tag_highlight = (tag: RObject<Tag>) => {
+        let highlight = selected_item.data.data.tags.includes(tag.id);
+        return highlight;
+    };
 </script>
 
 <DataListener on_receive={file_drop} />
@@ -222,7 +250,7 @@
     </scrollable>
 
     {#if selected_item && show_item_info}
-        {#key selected_item.id}
+        {#key selected_item.data.data.tags.length}
             <info-box>
                 <InfoBox
                     item={selected_item}
@@ -232,64 +260,18 @@
                     }}
                 >
                     <info>
-                        <info-title>
-                            {@html selected_item.data.data.data.title?.replace(
-                                new RegExp('_', 'g'),
-                                '<wbr>_<wbr>'
-                            )}
-                        </info-title>
-                        <facet>
-                            <field>Type: </field>
-                            {selected_item.data.facet}
-                        </facet>
-                        <date>
-                            <field>Created On: </field>
-                            {new Date(Number(selected_item.data.ctime) * 1000).toLocaleDateString(
-                                'en-US',
-                                {
-                                    month: 'long',
-                                    day: 'numeric',
-                                    year: 'numeric'
-                                }
-                            )}
-                        </date>
-                        <date>
-                            <field>Last Modified: </field>
-                            {new Date(
-                                Number(selected_item.data.last_update) * 1000
-                            ).toLocaleDateString('en-US', {
-                                month: 'long',
-                                day: 'numeric',
-                                year: 'numeric'
-                            })}
-                        </date>
+                        <TitleBox title={selected_item.data.data.data.title} />
+                        <MetaBox item={selected_item.data} />
 
-                        <tags>
-                            {#key selected_item.data.data.tags.length}
-                                {#await $tag_searcher.get_tags_from_ids(...selected_item.data.data.tags) then tags}
-                                    {#each tags as tag}
-                                        <tag
-                                            on:click={async () => {
-                                                if (!tag_box_show) {
-                                                    return;
-                                                }
-                                                await $tag_searcher.remove_tag_from_object(
-                                                    selected_item.data.id,
-                                                    tag.id
-                                                );
-                                                selected_item.data.data.tags =
-                                                    selected_item.data.data.tags.filter(
-                                                        (e) => e != tag.id
-                                                    );
-                                            }}
-                                            on:keydown={() => {}}
-                                        >
-                                            {tag.data.name}
-                                        </tag>
-                                    {/each}
-                                {/await}
-                            {/key}
-                        </tags>
+                        <TagsBox
+                            item={selected_item.data}
+                            tag_searcher={$tag_searcher}
+                            add_button_callback={show_tag_searchbox}
+                            let:tag
+                        >
+                            <TagBox tag={tag.data} highlight={false} />
+                            <button slot="add_button">+</button>
+                        </TagsBox>
                     </info>
                 </InfoBox>
             </info-box>
@@ -297,134 +279,21 @@
     {/if}
 
     {#if tag_box_show}
-        <tag-box>
-            <input
-                bind:this={tag_search_input}
-                bind:value={$tag_query}
-                placeholder="Search"
-                on:input={async () => await $tag_searcher.set_query($tag_query)}
-                on:keydown={async (e) => {
-                    await tag_box_input_handle(e, selected_item.data);
-                }}
+        {#key selected_item.data.id}
+            <TagSearchBox
+                bind:tag_searcher={$tag_searcher}
+                bind:search_query={$tag_query}
+                bind:tag_search_input
+                on_input={async () => await $tag_searcher.set_query($tag_query)}
+                on_keydown={tag_box_input_handle}
+                tag_highlight={searchbox_tag_highlight}
+                on_tag_click={on_search_box_tag_click}
             />
-            <tags>
-                {#each searched_tags as tag (tag.id)}
-                    {#if selected_item.data.data.tags.includes(tag.id)}
-                        <tag
-                            class="contains"
-                            on:click={async () => {
-                                await $tag_searcher.remove_tag_from_object(
-                                    selected_item.data.id,
-                                    tag.id
-                                );
-                                selected_item.data.data.tags = selected_item.data.data.tags.filter(
-                                    (e) => e != tag.id
-                                );
-
-                                // to make svelte detect updates to tags
-                                selected_item.data.data.tags = selected_item.data.data.tags;
-                            }}
-                            on:keydown={() => {}}
-                        >
-                            {tag.data.name}
-                        </tag>
-                    {:else}
-                        <tag
-                            on:click={async () => {
-                                await $tag_searcher.add_tag_to_object(
-                                    selected_item.data.id,
-                                    tag.id
-                                );
-                                selected_item.data.data.tags.push(tag.id);
-
-                                // to make svelte detect updates to tags
-                                selected_item.data.data.tags = selected_item.data.data.tags;
-                            }}
-                            on:keydown={() => {}}
-                        >
-                            {tag.data.name}
-                        </tag>
-                    {/if}
-                {/each}
-            </tags>
-        </tag-box>
+        {/key}
     {/if}
 </cl>
 
 <style>
-    tag-box {
-        display: flex;
-        flex-direction: column;
-        --padding: 15px;
-
-        position: absolute;
-        top: calc(var(--input-height) + var(--top-margin));
-        left: var(--gap);
-        width: calc(100% - var(--info-width) - var(--gap) * 2 - var(--padding) * 2);
-        height: calc(100% - var(--gap) - var(--input-height) - 5px - var(--padding) * 2);
-        padding: var(--padding);
-        row-gap: var(--padding);
-
-        border: 1px solid;
-        border-color: #cccccc;
-        background-color: #443944cc;
-        -webkit-backdrop-filter: blur(3px);
-    }
-
-    tag-box input {
-        margin-left: 7%;
-        margin-right: 7%;
-        height: var(--input-height);
-        border: 1px solid;
-        border-color: #666666;
-        background-color: #00000055;
-        border-radius: 9px;
-        padding-left: 20px;
-        padding-right: 20px;
-        font-size: 1rem;
-        color: #aaaaaa;
-        -webkit-backdrop-filter: blur(10px);
-    }
-    tag-box input:focus {
-        outline: none;
-        border-color: #999999;
-    }
-    tag-box input::-webkit-input-placeholder {
-        color: #777777;
-    }
-
-    tags {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-
-        column-gap: 7px;
-        row-gap: 6px;
-
-        overflow-y: auto;
-        overscroll-behavior-block: contain;
-    }
-
-    tag {
-        display: block;
-        border: 1px solid;
-        border-color: #666666;
-        background-color: #00000055;
-        border-radius: 9px;
-        font-size: 1rem;
-        color: #aaaaaa;
-        -webkit-backdrop-filter: blur(10px);
-
-        padding-left: 12px;
-        padding-right: 12px;
-        padding-top: 3.5px;
-        padding-bottom: 3.5px;
-    }
-    tags .contains {
-        border-color: #668866;
-        background-color: #00220055;
-    }
-
     info {
         display: flex;
         flex-direction: column;
@@ -434,32 +303,6 @@
         margin: var(--margin);
         width: calc(100% - var(--margin) * 2);
         height: calc(100% - var(--margin) * 2);
-    }
-
-    info-title {
-        display: block;
-        font-size: 1.7rem;
-        font-weight: 130;
-        word-wrap: break-all;
-        color: #cccccc;
-    }
-
-    field {
-        font-weight: 140;
-    }
-
-    date {
-        font-size: 1rem;
-        font-weight: 150;
-        word-wrap: break-all;
-        color: #cccccc;
-    }
-
-    facet {
-        text-align: right;
-        font-size: 0.8rem;
-        font-weight: 150;
-        color: #cccccc;
     }
 
     * {

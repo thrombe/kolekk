@@ -1,16 +1,19 @@
 <script lang="ts">
     import ImageCard from './ImageCard.svelte';
+    import type { Unique } from './virtual';
 
-    export let item: any;
+    export let item: Unique<unknown, unknown>;
     export let width: number;
     export let get_img_source = async (): Promise<string> => {
         return '';
     };
 
     let img_source = '';
-    (async () => {
-        img_source = await get_img_source();
-    })();
+    $: if (item.id) {
+        (async () => {
+            img_source = await get_img_source();
+        })();
+    }
 
     let height = 100;
     let border_radius = 1;
