@@ -18,7 +18,7 @@
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
     import Card from '$lib/Card.svelte';
     import { tick } from 'svelte';
-    import InfoBox from '$lib/InfoBox.svelte';
+    import InfoBox from '$lib/infobox/InfoBox.svelte';
     import type { Unique } from '$lib/virtual';
     import MetaBox from '$lib/infobox/MetaBox.svelte';
     import TitleBox from '$lib/infobox/TitleBox.svelte';

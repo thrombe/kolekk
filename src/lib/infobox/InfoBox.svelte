@@ -1,6 +1,6 @@
 <script lang="ts">
-    import ImageCard from './ImageCard.svelte';
-    import type { Unique } from './virtual';
+    import ImageCard from '$lib/ImageCard.svelte';
+    import type { Unique } from '$lib/virtual';
 
     export let item: Unique<unknown, unknown>;
     export let width: number;
