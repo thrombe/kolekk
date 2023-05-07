@@ -54,8 +54,6 @@
     const on_keydown = async (event: KeyboardEvent, scroll_selected_into_view: any) => {
         if (event.key == 'Enter') {
             await copy_selected();
-            // await add_tag_button();
-            // event.preventDefault();
         } else if (event.key == 'i') {
             show_item_info = !show_item_info;
         } else if (event.key == 'a') {

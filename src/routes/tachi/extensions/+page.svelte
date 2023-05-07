@@ -1,11 +1,11 @@
 <script lang="ts" context="module">
     import type { Extension, ExtensionAction, Indexed } from 'types';
-    import { Searcher } from '$lib/commands';
+    import { new_searcher, type RSearcher } from '$lib/commands';
     import { writable } from 'svelte/store';
 
     const facet = { Temp: '/temp/tachi/extension' };
 
-    let searcher = writable(new Searcher<Extension>(facet , 50));
+    let searcher = writable(new_searcher<Extension>(facet , 50));
     let selected = writable(0);
     let search_query = writable('');
 </script>
@@ -27,7 +27,7 @@
         );
     };
 
-    $searcher.on_update = async (e: Searcher<Extension>) => {
+    $searcher.on_update = async (e: RSearcher<Extension>) => {
         items = e.search_results.map((e) => {
             return { id: e.id, data: e };
         });
