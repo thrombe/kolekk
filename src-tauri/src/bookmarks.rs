@@ -40,8 +40,7 @@ pub async fn bookmarks_from_ddp(
     data: DragDropPaste<ByteArrayFile>,
     client: &Client,
 ) -> Vec<Bookmark> {
-    data
-        .file_uris
+    data.file_uris
         .as_ref()
         .map(|v| v.iter().map(String::as_str).collect::<HashSet<_>>())
         .or_else(|| data.text.as_ref().map(|t| t.lines().collect()))

@@ -385,24 +385,27 @@ pub fn direct_search<T: DbAble + Debug>(
                 query
                     .split_whitespace()
                     .flat_map(|t| {
-                        [(
-                            Occur::Should,
-                            Box::new(FuzzyTermQuery::new(
-                                Term::from_field_text(db.get_field(Fields::Text), t),
-                                2,    // ?
-                                true, // what??
-                            )) as _,
-                        ),
-                        (
-                            Occur::Should,
-                            Box::new(BoostQuery::new(
-                                Box::new(TermQuery::new(
+                        [
+                            (
+                                Occur::Should,
+                                Box::new(FuzzyTermQuery::new(
                                     Term::from_field_text(db.get_field(Fields::Text), t),
-                                    IndexRecordOption::Basic,
+                                    2,    // ?
+                                    true, // what??
                                 )) as _,
-                                2.0,
-                            )) as _,
-                        )].into_iter()
+                            ),
+                            (
+                                Occur::Should,
+                                Box::new(BoostQuery::new(
+                                    Box::new(TermQuery::new(
+                                        Term::from_field_text(db.get_field(Fields::Text), t),
+                                        IndexRecordOption::Basic,
+                                    )) as _,
+                                    2.0,
+                                )) as _,
+                            ),
+                        ]
+                        .into_iter()
                     })
                     .collect(),
             )),
@@ -483,24 +486,27 @@ pub fn search_object<T: DbAble + Debug>(
                 query
                     .split_whitespace()
                     .flat_map(|t| {
-                        [(
-                            Occur::Should,
-                            Box::new(FuzzyTermQuery::new(
-                                Term::from_field_text(db.get_field(Fields::Text), t),
-                                2,    // ?
-                                true, // what??
-                            )) as _,
-                        ),
-                        (
-                            Occur::Should,
-                            Box::new(BoostQuery::new(
-                                Box::new(TermQuery::new(
+                        [
+                            (
+                                Occur::Should,
+                                Box::new(FuzzyTermQuery::new(
                                     Term::from_field_text(db.get_field(Fields::Text), t),
-                                    IndexRecordOption::Basic,
+                                    2,    // ?
+                                    true, // what??
                                 )) as _,
-                                2.0,
-                            )) as _,
-                        )].into_iter()
+                            ),
+                            (
+                                Occur::Should,
+                                Box::new(BoostQuery::new(
+                                    Box::new(TermQuery::new(
+                                        Term::from_field_text(db.get_field(Fields::Text), t),
+                                        IndexRecordOption::Basic,
+                                    )) as _,
+                                    2.0,
+                                )) as _,
+                            ),
+                        ]
+                        .into_iter()
                     })
                     .collect(),
             )),
@@ -545,24 +551,27 @@ pub fn search_object<T: DbAble + Debug>(
         query
             .split_whitespace()
             .flat_map(|t| {
-                [(
-                    Occur::Should, // TODO: should this be Must instead?
-                    Box::new(FuzzyTermQuery::new(
-                        Term::from_field_text(db.get_field(Fields::Text), t),
-                        2,    // ?
-                        true, // what??
-                    )) as _,
-                ),
-                (
-                    Occur::Should,
-                    Box::new(BoostQuery::new(
-                        Box::new(TermQuery::new(
+                [
+                    (
+                        Occur::Should, // TODO: should this be Must instead?
+                        Box::new(FuzzyTermQuery::new(
                             Term::from_field_text(db.get_field(Fields::Text), t),
-                            IndexRecordOption::Basic,
+                            2,    // ?
+                            true, // what??
                         )) as _,
-                        2.0,
-                    )) as _,
-                )].into_iter()
+                    ),
+                    (
+                        Occur::Should,
+                        Box::new(BoostQuery::new(
+                            Box::new(TermQuery::new(
+                                Term::from_field_text(db.get_field(Fields::Text), t),
+                                IndexRecordOption::Basic,
+                            )) as _,
+                            2.0,
+                        )) as _,
+                    ),
+                ]
+                .into_iter()
             })
             .collect(),
     ));
