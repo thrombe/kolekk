@@ -12,11 +12,13 @@ export function new_searcher<T>(facet: TypeFacet, page_size: number): RSearcher<
     }
 }
 
-export type RObject<T> = T extends Tag ? Meta<T, TypeFacet> : Meta<Taggable<T>, TypeFacet>;
+export type RObject<T> = T extends Tag ? Meta<T, TypeFacet> : RObjectNotTag<T>;
 
 export type RSearcher<T> = T extends Tag ? TagSearcher : Searcher<T>;
 
 export type RSearchable<T> = T extends Tag ? Tag : SearchableEntry<T>;
+
+export type RObjectNotTag<T> = Meta<Taggable<T>, TypeFacet>;
 
 class Searcher<T> {
     _limit: number;
