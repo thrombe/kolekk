@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-    import { get_path, new_searcher, type RSearcher, type RObject } from '$lib/commands';
+    import { get_path, new_searcher, type RObject } from '$lib/commands';
     import { writable } from 'svelte/store';
 
     let searcher = writable(new_searcher<Image>('Image', 50));

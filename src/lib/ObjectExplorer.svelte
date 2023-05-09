@@ -46,7 +46,6 @@
         });
     };
 
-    let window_width = 100;
     let search_objects = async () => {
         await searcher.reload_reader();
         await searcher.set_query(search_query);
@@ -180,8 +179,6 @@
         return highlight;
     };
 </script>
-
-<svelte:window bind:innerWidth={window_width} />
 
 <cl class="inputs">
     <input
