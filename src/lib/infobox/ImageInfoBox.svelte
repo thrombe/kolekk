@@ -12,7 +12,7 @@
     export let item: Unique<RObject<Image>, number>;
     export let info_width: number;
     export let info_margin: number;
-    export let on_tag_add_button: any;
+    export let on_tag_add_button: (() => void) | (() => Promise<void>);
 </script>
 
 <info-box style="--info-width: {info_width}px; --info-margin: {info_margin}px;">

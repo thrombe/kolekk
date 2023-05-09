@@ -5,7 +5,7 @@
     export let item: Meta<Taggable<unknown>, unknown>;
     export let tag_searcher: RSearcher<Tag>;
 
-    export let add_button_callback: any = () => {};
+    export let add_button_callback: (() => void) | (() => Promise<void>);
 
     let tags = new Array<RObject<Tag>>();
     $: if (item.data.tags.length || true) {
@@ -17,11 +17,11 @@
 
 <tags>
     <field>Tags: </field>
-        {#each tags as tag}
-            <tag>
-                <slot {tag} />
-            </tag>
-        {/each}
+    {#each tags as tag}
+        <tag>
+            <slot {tag} />
+        </tag>
+    {/each}
 
     <bu on:click={add_button_callback} on:keydown={() => {}}>
         <slot name="add_button" />

@@ -20,8 +20,11 @@
     export let item_width: number;
     export let item_height: number;
     export let search_query: string;
-    export let on_item_click: any;
-    export let on_keydown: any;
+    export let on_item_click: () => Promise<void>;
+    export let on_keydown: (
+        e: KeyboardEvent,
+        scroll_selected_into_view: () => Promise<void>
+    ) => Promise<void>;
 
     type T = $$Generic;
     interface $$Slots {
@@ -34,7 +37,7 @@
             tag_searcher: RSearcher<Tag>;
             info_margin: number;
             info_width: number;
-            show_tag_searchbox: any;
+            show_tag_searchbox: () => Promise<void>;
         };
         infobox: {};
     }
@@ -56,9 +59,12 @@
     let items = new Array<Unique<RObjectNotTag<T>, number>>();
 
     let end_is_visible = true;
-    let search_input: any;
-    let tag_search_input: any;
-    const _on_keydown = async (event: KeyboardEvent, scroll_selected_into_view: any) => {
+    let search_input: HTMLElement;
+    let tag_search_input: HTMLElement;
+    const _on_keydown = async (
+        event: KeyboardEvent,
+        scroll_selected_into_view: () => Promise<void>
+    ) => {
         if (event.key == 'i') {
             show_item_info = !show_item_info;
         } else if (event.key == 'a') {
@@ -241,7 +247,9 @@
             bind:search_query={$tag_query}
             bind:tag_search_input
             rerender_on_update={selected_item.data.id}
-            on_input={async () => await $tag_searcher.set_query($tag_query)}
+            on_input={async () => {
+                await $tag_searcher.set_query($tag_query);
+            }}
             on_keydown={tag_box_input_handle}
             tag_highlight={searchbox_tag_highlight}
             on_tag_click={on_search_box_tag_click}

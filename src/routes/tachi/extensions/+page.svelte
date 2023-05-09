@@ -5,7 +5,7 @@
 
     const facet = { Temp: '/temp/tachi/extension' };
 
-    let searcher = writable(new_searcher<Extension>(facet , 50));
+    let searcher = writable(new_searcher<Extension>(facet, 50));
     let selected = writable(0);
     let search_query = writable('');
 </script>
@@ -59,7 +59,10 @@
         await invoke('tachidesk_extension_action', { pkgName, action });
     };
 
-    const on_keydown = async (_: KeyboardEvent, _scroll_selected_into_view: any) => {};
+    const on_keydown = async (
+        _: KeyboardEvent,
+        _scroll_selected_into_view: () => Promise<void>
+    ) => {};
 
     let window_width = 100;
     let end_is_visible = false;

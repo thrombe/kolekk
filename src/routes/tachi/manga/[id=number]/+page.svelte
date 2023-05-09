@@ -12,7 +12,10 @@
     let window_height = 100;
     let selected = 0;
     let search_input: any;
-    const on_keydown = async (event: KeyboardEvent, scroll_selected_into_view: any) => {
+    const on_keydown = async (
+        event: KeyboardEvent,
+        scroll_selected_into_view: () => Promise<void>
+    ) => {
         if (event.key == 'a') {
             // await add_tag_button();
             // event.preventDefault();

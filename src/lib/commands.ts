@@ -28,7 +28,7 @@ class Searcher<T> {
     _results_valid: boolean;
     _has_next_page: boolean;
     search_results: Array<RObject<T>>;
-    on_update: any;
+    on_update: (s: RSearcher<T>) => Promise<void>;
 
     constructor(facet: TypeFacet, page_size: number) {
         this.facet = facet;
@@ -37,7 +37,7 @@ class Searcher<T> {
         this._results_valid = false;
         this._has_next_page = false;
         this.search_results = [];
-        this.on_update = async (_e: any) => {};
+        this.on_update = async (_e: any) => { };
     }
 
     get query() {
@@ -149,7 +149,7 @@ class TagSearcher extends Searcher<Tag> {
 
 
 export async function get_path(path: Path) {
-    let p: string =  await invoke('get_path', { path });
+    let p: string = await invoke('get_path', { path });
     // let p1 = convertFileSrc(p);
     return p;
 }

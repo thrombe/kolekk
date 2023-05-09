@@ -4,7 +4,7 @@
     export let tag: Tag;
     export let highlight: boolean;
 
-    export let on_click: any = () => {};
+    export let on_click: (() => void) | (() => Promise<void>) = () => {};
 </script>
 
 <tag draggable="true" class:highlight on:click={on_click} on:keydown={() => {}}>

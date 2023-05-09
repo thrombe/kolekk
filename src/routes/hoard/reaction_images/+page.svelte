@@ -30,7 +30,10 @@
         );
     };
 
-    const on_keydown = async (event: KeyboardEvent, scroll_selected_into_view: any) => {
+    const on_keydown = async (
+        event: KeyboardEvent,
+        scroll_selected_into_view: () => Promise<void>
+    ) => {
         if (event.key == 'Enter') {
             await copy_selected();
         }

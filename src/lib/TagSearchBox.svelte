@@ -1,17 +1,17 @@
 <script lang="ts">
-    import type { Tag } from "types";
-    import type { RSearcher } from "./commands";
-    import TagBox from "$lib/TagBox.svelte";
+    import type { Tag } from 'types';
+    import type { RObject, RSearcher } from './commands';
+    import TagBox from '$lib/TagBox.svelte';
 
     export let tag_searcher: RSearcher<Tag>;
     export let search_query: string;
     export let tag_search_input: HTMLElement;
 
-    export let on_input: any;
-    export let on_keydown: any;
+    export let on_input: () => Promise<void>;
+    export let on_keydown: (e: KeyboardEvent) => Promise<void>;
 
-    export let tag_highlight: any;
-    export let on_tag_click: any;
+    export let tag_highlight: (t: RObject<Tag>) => boolean;
+    export let on_tag_click: (t: RObject<Tag>) => Promise<void>;
 
     export let rerender_on_update: any = 0;
     $: if (rerender_on_update || true) {
@@ -31,7 +31,7 @@
         bind:this={tag_search_input}
         bind:value={search_query}
         placeholder="Search"
-        on:input={ async () => {
+        on:input={async () => {
             await on_input();
             key += 1;
         }}

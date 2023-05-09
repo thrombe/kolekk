@@ -5,12 +5,12 @@
     export let height: number;
     export let item: any;
     export let title: string;
-    export let get_img_source = async (): Promise<string> => { return "" };
-    export let border_radius = "15px";
-    
+    export let get_img_source: () => Promise<string>;
+    export let border_radius = '15px';
+
     export let selected = false;
     export let img_scale = '100%';
-    export let on_click: any = () => {};
+    export let on_click: (() => void) | (() => Promise<void>) = () => {};
     export let root: HTMLElement | null = null;
 
     let img_source = '';
@@ -39,7 +39,15 @@
 
 <this-helps-position-the-title>
     <cl bind:this={ele} draggable="true" on:click={on_click} on:keydown={() => {}}>
-        <ImageCard scale={img_scale} {img_source} width={width-4} aspect_ratio={width / height} {bg_color} lazy={false} {root} />
+        <ImageCard
+            scale={img_scale}
+            {img_source}
+            width={width - 4}
+            aspect_ratio={width / height}
+            {bg_color}
+            lazy={false}
+            {root}
+        />
 
         {#if title && title.length > 0}
             <title-box style={'height: ' + shade_height}>

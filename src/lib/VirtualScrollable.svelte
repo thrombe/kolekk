@@ -11,7 +11,7 @@
 
     export let selected_item: Unique<T, unknown> | null = null;
     export let end_reached = async () => {};
-    export let on_keydown = async (_: KeyboardEvent, _a: any) => {};
+    export let on_keydown = async (_: KeyboardEvent, _a: () => Promise<void>) => {};
     export let on_item_click = async () => {};
     export let end_is_visible = true;
     export let keyboard_control = true;
@@ -40,19 +40,19 @@
         if (!items) {
             return;
         }
-        let st = window.getComputedStyle(grid)
-        columns = st.getPropertyValue("grid-template-columns").split(" ").length
+        let st = window.getComputedStyle(grid);
+        columns = st.getPropertyValue('grid-template-columns').split(' ').length;
         // console.log(root.scrollTop, root.clientHeight, start, end, top_padding, bottom_padding);
-        let s = Math.floor(root.scrollTop/item_height);
-        top_padding = s*item_height;
-        let e = start + Math.ceil(root.clientHeight/item_height) + 1;
-        bottom_padding = (Math.ceil(items.length/columns) - e)*item_height;
+        let s = Math.floor(root.scrollTop / item_height);
+        top_padding = s * item_height;
+        let e = start + Math.ceil(root.clientHeight / item_height) + 1;
+        bottom_padding = (Math.ceil(items.length / columns) - e) * item_height;
 
         if ((start != s || end != e || edited) && items.length != 0) {
             start = s;
             end = e;
             edited = false;
-            visible = items.slice(start*columns, Math.ceil(end)*columns);
+            visible = items.slice(start * columns, Math.ceil(end) * columns);
         }
         // console.log("update", end, start, e, s, visible.length, items.length);
     };
@@ -101,14 +101,14 @@
             console.log(items[selected]);
         }
         if (_selected_item) {
-            _selected_item.scrollIntoView({ block: "nearest" });
+            _selected_item.scrollIntoView({ block: 'nearest' });
         } else {
-            let row = selected/columns;
+            let row = selected / columns;
             // if (row*item_height > root.scrollTop + root.clientHeight) {
-            if (row*item_height > root.scrollTop) {
-                root.scrollTo(0, Math.floor(row)*item_height - root.clientHeight + item_height);
+            if (row * item_height > root.scrollTop) {
+                root.scrollTo(0, Math.floor(row) * item_height - root.clientHeight + item_height);
             } else {
-                root.scrollTo(0, Math.floor(row)*item_height);
+                root.scrollTo(0, Math.floor(row) * item_height);
             }
             on_update();
         }
@@ -131,7 +131,7 @@
     set_selected_item();
 
     const _on_item_click = async (i: number) => {
-        selected = i + start*columns;
+        selected = i + start * columns;
         await tick();
         await on_item_click();
     };
@@ -140,19 +140,38 @@
 <cl on:scroll={on_update} bind:this={root} bind:clientWidth={width}>
     <pad style="height: {top_padding}px; width: 100%;" />
     <gd style="--item-width: {item_width}px; --gap: {gap}px;" bind:this={grid}>
-    {#each visible as item, i (item.id)}
-        {#if (selected == i + start*columns) || (i + start*columns == items.length - 1 && selected >= items.length)}
-            <sel bind:this={_selected_item}>
-                <slot {item_width} {item_height} {root} item={item.data} index={i + start*columns} selected={true} />
-            </sel>
-        {:else}
-            <clk on:click={() => {_on_item_click(i)}} on:keydown={() => {}}>
-                <slot {item_width} {item_height} {root} item={item.data} index={i + start*columns} selected={false} />
-            </clk>
-        {/if}
-    {/each}
+        {#each visible as item, i (item.id)}
+            {#if selected == i + start * columns || (i + start * columns == items.length - 1 && selected >= items.length)}
+                <sel bind:this={_selected_item}>
+                    <slot
+                        {item_width}
+                        {item_height}
+                        {root}
+                        item={item.data}
+                        index={i + start * columns}
+                        selected={true}
+                    />
+                </sel>
+            {:else}
+                <clk
+                    on:click={() => {
+                        _on_item_click(i);
+                    }}
+                    on:keydown={() => {}}
+                >
+                    <slot
+                        {item_width}
+                        {item_height}
+                        {root}
+                        item={item.data}
+                        index={i + start * columns}
+                        selected={false}
+                    />
+                </clk>
+            {/if}
+        {/each}
     </gd>
-    <pad  style="height: {bottom_padding}px; width: 100%;" />
+    <pad style="height: {bottom_padding}px; width: 100%;" />
 
     <!-- observer -->
     <div style="width: 100%; position: relative; top: -{margin}px;">
@@ -187,5 +206,7 @@
         width: calc(100% - var(--gap) * 0);
     }
 
-    sel,clk {}
+    sel,
+    clk {
+    }
 </style>
