@@ -13,6 +13,11 @@
     export let tag_highlight: any;
     export let on_tag_click: any;
 
+    export let rerender_on_update: any = 0;
+    $: if (rerender_on_update || true) {
+        key += 1;
+    }
+
     const _on_keydown = async (e: KeyboardEvent) => {
         await on_keydown(e);
         key += 1;

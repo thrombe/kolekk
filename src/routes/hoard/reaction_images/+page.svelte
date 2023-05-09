@@ -277,17 +277,16 @@
     {/if}
 
     {#if tag_box_show}
-        {#key selected_item.data.id}
-            <TagSearchBox
-                bind:tag_searcher={$tag_searcher}
-                bind:search_query={$tag_query}
-                bind:tag_search_input
-                on_input={async () => await $tag_searcher.set_query($tag_query)}
-                on_keydown={tag_box_input_handle}
-                tag_highlight={searchbox_tag_highlight}
-                on_tag_click={on_search_box_tag_click}
-            />
-        {/key}
+        <TagSearchBox
+            bind:tag_searcher={$tag_searcher}
+            bind:search_query={$tag_query}
+            bind:tag_search_input
+            rerender_on_update={selected_item.data.id}
+            on_input={async () => await $tag_searcher.set_query($tag_query)}
+            on_keydown={tag_box_input_handle}
+            tag_highlight={searchbox_tag_highlight}
+            on_tag_click={on_search_box_tag_click}
+        />
     {/if}
 </cl>
 
