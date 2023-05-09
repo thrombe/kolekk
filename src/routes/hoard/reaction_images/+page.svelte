@@ -250,32 +250,30 @@
     </scrollable>
 
     {#if selected_item && show_item_info}
-        {#key selected_item.data.data.tags.length}
-            <info-box>
-                <InfoBox
-                    item={selected_item}
-                    width={info_width - info_margin}
-                    get_img_source={async () => {
-                        return await get_path(selected_item.data.data.data.path);
-                    }}
-                >
-                    <info>
-                        <TitleBox title={selected_item.data.data.data.title} />
-                        <MetaBox item={selected_item.data} />
+        <info-box>
+            <InfoBox
+                item={selected_item}
+                width={info_width - info_margin}
+                get_img_source={async () => {
+                    return await get_path(selected_item.data.data.data.path);
+                }}
+            >
+                <info>
+                    <TitleBox bind:title={selected_item.data.data.data.title} />
+                    <MetaBox item={selected_item.data} />
 
-                        <TagsBox
-                            item={selected_item.data}
-                            tag_searcher={$tag_searcher}
-                            add_button_callback={show_tag_searchbox}
-                            let:tag
-                        >
-                            <TagBox tag={tag.data} highlight={false} />
-                            <button slot="add_button">+</button>
-                        </TagsBox>
-                    </info>
-                </InfoBox>
-            </info-box>
-        {/key}
+                    <TagsBox
+                        item={selected_item.data}
+                        tag_searcher={$tag_searcher}
+                        add_button_callback={show_tag_searchbox}
+                        let:tag
+                    >
+                        <TagBox tag={tag.data} highlight={false} />
+                        <button slot="add_button">+</button>
+                    </TagsBox>
+                </info>
+            </InfoBox>
+        </info-box>
     {/if}
 
     {#if tag_box_show}

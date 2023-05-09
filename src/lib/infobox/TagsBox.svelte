@@ -8,7 +8,7 @@
     export let add_button_callback: any = () => {};
 
     let tags = new Array<RObject<Tag>>();
-    if (item.data.tags.length) {
+    $: if (item.data.tags.length || true) {
         (async () => {
             tags = await tag_searcher.get_tags_from_ids(...item.data.tags);
         })();
