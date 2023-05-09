@@ -88,7 +88,7 @@ pub async fn search_jsml_object(
     limit: usize,
     offset: usize,
 ) -> Result<Vec<Meta<Taggable<serde_json::Map<String, serde_json::Value>>, TypeFacet>>, Error> {
-    search_object(
+    tagged_search(
         db.inner(),
         facet,
         query,
@@ -369,13 +369,20 @@ pub async fn reload_reader(db: State<'_, AppDatabase>) -> Result<(), Error> {
     db.index_reader.reload().infer_err()
 }
 
-pub fn direct_search<T: DbAble + Debug>(
+pub fn direct_search<T, TScore, TScoreSegmentTweaker, TScoreTweaker>(
     db: &AppDatabase,
     ob_type: TypeFacet,
     query: impl AsRef<str>,
     limit: usize,
     offset: usize,
-) -> Result<Vec<T>, Error> {
+    search_tweaker: TScoreTweaker,
+) -> Result<Vec<T>, Error>
+where
+    T: DbAble + Debug,
+    TScore: 'static + Send + Sync + Clone + PartialOrd + Debug,
+    TScoreSegmentTweaker: ScoreSegmentTweaker<TScore> + 'static,
+    TScoreTweaker: ScoreTweaker<TScore, Child = TScoreSegmentTweaker> + Send + Sync,
+{
     let searcher = db.get_searcher();
     let query = query.as_ref();
 
@@ -420,7 +427,12 @@ pub fn direct_search<T: DbAble + Debug>(
         ),
     ]);
     searcher
-        .search(&q, &TopDocs::with_limit(limit).and_offset(offset))
+        .search(
+            &q,
+            &TopDocs::with_limit(limit)
+                .and_offset(offset)
+                .tweak_score(search_tweaker),
+        )
         .infer_err()?
         .into_iter()
         .map(|(score, address)| {
@@ -431,14 +443,20 @@ pub fn direct_search<T: DbAble + Debug>(
 }
 
 // TODO: most recent interations | total interactions
-pub fn search_object<T: DbAble + Debug>(
+pub fn tagged_search<T, TScore, TScoreSegmentTweaker, TScoreTweaker>(
     db: &AppDatabase,
     ob_type: TypeFacet,
     query: impl AsRef<str>,
     limit: usize,
     offset: usize,
-    tweaker: ObjectSearchScoreTweaker,
-) -> Result<Vec<T>, Error> {
+    search_tweaker: TScoreTweaker,
+) -> Result<Vec<T>, Error>
+where
+    T: DbAble + Debug,
+    TScore: 'static + Send + Sync + Clone + PartialOrd + Debug,
+    TScoreSegmentTweaker: ScoreSegmentTweaker<TScore> + 'static,
+    TScoreTweaker: ScoreTweaker<TScore, Child = TScoreSegmentTweaker> + Send + Sync,
+{
     // TODO: look into using QueryParser, or maybe somehow including regex queries and stuff
     // TODO: is query is empty, return results by recently added or recently viewed or a mixture of this stuff
     //       - 2 fast values, 1 each for when added timestamp and for last viewed timestamp
@@ -600,7 +618,7 @@ pub fn search_object<T: DbAble + Debug>(
             ]),
             &TopDocs::with_limit(limit)
                 .and_offset(offset)
-                .tweak_score(tweaker),
+                .tweak_score(search_tweaker),
         )
         .infer_err()?
         .into_iter()
@@ -609,6 +627,59 @@ pub fn search_object<T: DbAble + Debug>(
             DbAble::take(db, &mut doc).look(|e| dbg!((_score, e)))
         })
         .collect()
+}
+
+pub struct TagSearchScoreTweaker {
+    pub now: u64,
+    pub last_interaction: Field,
+    pub id_field: Field,
+}
+
+impl TagSearchScoreTweaker {
+    pub fn new(db: &AppDatabase) -> Result<Self, Error> {
+        let id_field = db.get_field(Fields::Id);
+        let last_interaction = db.get_field(Fields::LastInteraction);
+        let now = db.now_time()?;
+        let s = Self {
+            now,
+            last_interaction,
+            id_field,
+        };
+        Ok(s)
+    }
+}
+
+pub struct TagSearchScoreSegmentTweaker {
+    pub last_interaction: Arc<dyn Column<u64>>,
+    pub id_reader: Arc<dyn Column<u64>>,
+    pub now: u64,
+}
+
+type TagSearchTweakedScore = (tantivy::Score, u64, u64);
+
+impl ScoreSegmentTweaker<TagSearchTweakedScore> for TagSearchScoreSegmentTweaker {
+    fn score(&mut self, doc: tantivy::DocId, score: tantivy::Score) -> TagSearchTweakedScore {
+        let last_interaction = self.last_interaction.get_val(doc);
+        let id = self.id_reader.get_val(doc);
+
+        // PartialOrd on tuples: https://stackoverflow.com/a/61323034
+        (score, last_interaction, id)
+    }
+}
+impl ScoreTweaker<TagSearchTweakedScore> for TagSearchScoreTweaker {
+    type Child = TagSearchScoreSegmentTweaker;
+
+    fn segment_tweaker(&self, segment_reader: &SegmentReader) -> tantivy::Result<Self::Child> {
+        let last_interaction = segment_reader.fast_fields().u64(self.last_interaction)?;
+        let id_reader = segment_reader.fast_fields().u64(self.id_field)?;
+
+        let tw = TagSearchScoreSegmentTweaker {
+            last_interaction,
+            id_reader,
+            now: self.now,
+        };
+        Ok(tw)
+    }
 }
 
 pub struct ObjectSearchScoreTweaker {
@@ -637,7 +708,7 @@ pub struct ObjectSearchScoreSegmentTweaker {
     pub now: u64,
 }
 
-type ObjectSearchTweakedScore = (tantivy::Score, f64, u64);
+type ObjectSearchTweakedScore = (tantivy::Score, u64, u64);
 
 impl ScoreSegmentTweaker<ObjectSearchTweakedScore> for ObjectSearchScoreSegmentTweaker {
     fn score(&mut self, doc: tantivy::DocId, score: tantivy::Score) -> ObjectSearchTweakedScore {
@@ -645,21 +716,18 @@ impl ScoreSegmentTweaker<ObjectSearchTweakedScore> for ObjectSearchScoreSegmentT
         let id = self.id_reader.get_val(doc);
 
         // https://www.desmos.com/calculator/nqrwqablae
-        let sub = (self.now - ctime) as f32;
-        let days = sub / (60.0 * 60.0 * 24.0);
-        let pow = -(days / 8.0);
-        let epow = std::f64::consts::E.powf(pow as _);
-        let sigmoid = 1.0 / (1.0 + epow);
-        let fin = 1.0 - (sigmoid - 0.5) * 2.0;
+        // let sub = (self.now - ctime) as f32;
+        // let days = sub / (60.0 * 60.0 * 24.0);
+        // let pow = -(days / 8.0);
+        // let epow = std::f64::consts::E.powf(pow as _);
+        // let sigmoid = 1.0 / (1.0 + epow);
+        // let fin = 1.0 - (sigmoid - 0.5) * 2.0;
 
         // let s = format!("{now} {ctime} {days} {pow} {epow} {sigmoid} {fin}");
         // dbg!(s);
 
         // PartialOrd on tuples: https://stackoverflow.com/a/61323034
-        (
-            score, fin,
-            id, // include id here - so that even if everything else is same, ordering remains consistent
-        )
+        (score, ctime, id) // id for - fallback order consistency
     }
 }
 impl ScoreTweaker<ObjectSearchTweakedScore> for ObjectSearchScoreTweaker {

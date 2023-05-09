@@ -7,7 +7,7 @@ use tauri::State;
 
 use crate::{
     bad_error::{BadError, Error, InferBadError, Inspectable},
-    database::{AppDatabase, DbAble},
+    database::{AppDatabase, DbAble, TagSearchScoreTweaker},
 };
 
 #[tauri::command]
@@ -17,7 +17,14 @@ pub async fn search_tags(
     limit: usize,
     offset: usize,
 ) -> Result<Vec<Meta<serde_json::Map<String, serde_json::Value>, TypeFacet>>, Error> {
-    crate::database::direct_search(db.inner(), TypeFacet::Tag, query, limit, offset)
+    crate::database::direct_search(
+        db.inner(),
+        TypeFacet::Tag,
+        query,
+        limit,
+        offset,
+        TagSearchScoreTweaker::new(db.inner())?,
+    )
 }
 
 #[tauri::command]

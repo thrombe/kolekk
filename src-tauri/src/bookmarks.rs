@@ -23,7 +23,7 @@ pub async fn search_bookmarks(
     limit: usize,
     offset: usize,
 ) -> Result<Vec<serde_json::Map<String, serde_json::Value>>, Error> {
-    crate::database::search_object(
+    crate::database::tagged_search(
         db.inner(),
         TypeFacet::Bookmark,
         query,
