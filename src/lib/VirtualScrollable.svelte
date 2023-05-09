@@ -5,16 +5,18 @@
 
     export let item_width: number;
     export let item_height: number;
-    export let items: Array<Unique<unknown, unknown>>;
+    export let items: Array<Unique<T, unknown>>;
     export let selected: number;
     export let gap: number;
 
-    export let selected_item: Unique<unknown, unknown> | null = null;
+    export let selected_item: Unique<T, unknown> | null = null;
     export let end_reached = async () => {};
     export let on_keydown = async (_: KeyboardEvent, _a: any) => {};
     export let on_item_click = async () => {};
     export let end_is_visible = true;
     export let keyboard_control = true;
+
+    type T = $$Generic;
 
     let width: number;
     let columns = 1;
@@ -23,7 +25,7 @@
 
     let start = 0;
     let end = 0;
-    let visible = new Array();
+    let visible = new Array<Unique<T, unknown>>();
     let edited = false;
     $: if (items) {
         edited = true;
