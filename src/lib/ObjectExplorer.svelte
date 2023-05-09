@@ -23,6 +23,22 @@
     export let on_item_click: any;
     export let on_keydown: any;
 
+    type T = $$Generic;
+    interface $$Slots {
+        default: {
+            item: RObjectNotTag<T>;
+            item_width: number;
+            item_height: number;
+            selected: boolean;
+            root: HTMLElement;
+            tag_searcher: RSearcher<Tag>;
+            info_margin: number;
+            info_width: number;
+            show_tag_searchbox: any;
+        };
+        infobox: {};
+    }
+
     searcher.next_page();
     searcher.on_update = async (e: RSearcher<T>) => {
         items = e.search_results.map((e) => {
