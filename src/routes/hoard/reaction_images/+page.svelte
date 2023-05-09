@@ -25,6 +25,7 @@
     import TagsBox from '$lib/infobox/TagsBox.svelte';
     import TagBox from '$lib/TagBox.svelte';
     import TagSearchBox from '$lib/TagSearchBox.svelte';
+    import ImageInfoBox from '$lib/infobox/ImageInfoBox.svelte';
 
     const file_drop = async (e: DragDropPaste<File>) => {
         let images: Image[] = await invoke('get_images', { data: await files_to_bytearrays(e) });
@@ -250,30 +251,13 @@
     </scrollable>
 
     {#if selected_item && show_item_info}
-        <info-box>
-            <InfoBox
-                item={selected_item}
-                width={info_width - info_margin}
-                get_img_source={async () => {
-                    return await get_path(selected_item.data.data.data.path);
-                }}
-            >
-                <info>
-                    <TitleBox bind:title={selected_item.data.data.data.title} />
-                    <MetaBox item={selected_item.data} />
-
-                    <TagsBox
-                        item={selected_item.data}
-                        tag_searcher={$tag_searcher}
-                        add_button_callback={show_tag_searchbox}
-                        let:tag
-                    >
-                        <TagBox tag={tag.data} highlight={false} />
-                        <button slot="add_button">+</button>
-                    </TagsBox>
-                </info>
-            </InfoBox>
-        </info-box>
+        <ImageInfoBox
+            tag_searcher={$tag_searcher}
+            item={selected_item}
+            {info_width}
+            {info_margin}
+            on_tag_add_button={show_tag_searchbox}
+        />
     {/if}
 
     {#if tag_box_show}
@@ -291,17 +275,6 @@
 </cl>
 
 <style>
-    info {
-        display: flex;
-        flex-direction: column;
-        row-gap: 15px;
-
-        --margin: 15px;
-        margin: var(--margin);
-        width: calc(100% - var(--margin) * 2);
-        height: calc(100% - var(--margin) * 2);
-    }
-
     * {
         --input-height: 33px;
         --gap: 20px;
@@ -332,14 +305,5 @@
     scrollable {
         width: calc(100% - var(--info-width));
         height: 100%;
-    }
-
-    info-box {
-        width: calc(var(--info-width) - var(--info-margin));
-        margin-left: auto;
-
-        height: calc(100% - 20px);
-        margin-top: auto;
-        margin-bottom: auto;
     }
 </style>
