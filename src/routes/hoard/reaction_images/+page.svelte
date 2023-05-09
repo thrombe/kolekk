@@ -18,12 +18,7 @@
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
     import Card from '$lib/Card.svelte';
     import { tick } from 'svelte';
-    import InfoBox from '$lib/infobox/InfoBox.svelte';
     import type { Unique } from '$lib/virtual';
-    import MetaBox from '$lib/infobox/MetaBox.svelte';
-    import TitleBox from '$lib/infobox/TitleBox.svelte';
-    import TagsBox from '$lib/infobox/TagsBox.svelte';
-    import TagBox from '$lib/TagBox.svelte';
     import TagSearchBox from '$lib/TagSearchBox.svelte';
     import ImageInfoBox from '$lib/infobox/ImageInfoBox.svelte';
 
@@ -242,7 +237,7 @@
                 }}
                 title={''}
                 {width}
-                aspect_ratio={width / item_height}
+                height={item_height}
                 selected={s}
                 item={image}
                 {root}

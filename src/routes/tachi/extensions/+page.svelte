@@ -98,7 +98,7 @@
                 }}
                 title={ext.data.data.name}
                 {width}
-                aspect_ratio={1}
+                height={width}
                 selected={s}
                 item={ext}
                 {root}

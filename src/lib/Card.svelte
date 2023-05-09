@@ -2,7 +2,7 @@
     import ImageCard from '$lib/ImageCard.svelte';
 
     export let width: number;
-    export let aspect_ratio: number;
+    export let height: number;
     export let item: any;
     export let title: string;
     export let get_img_source = async (): Promise<string> => { return "" };
@@ -28,8 +28,8 @@
 
         let w = width - 4;
         ele.style.width = w.toString() + 'px';
-        let height = w / aspect_ratio - 4;
-        ele.style.height = height.toString() + 'px';
+        let h = height - 4;
+        ele.style.height = h.toString() + 'px';
     }
 
     $: wrap = selected ? 'normal' : 'nowrap';
@@ -39,7 +39,7 @@
 
 <this-helps-position-the-title>
     <cl bind:this={ele} draggable="true" on:click={on_click} on:keydown={() => {}}>
-        <ImageCard scale={img_scale} {img_source} width={width-4} {aspect_ratio} {bg_color} lazy={false} {root} />
+        <ImageCard scale={img_scale} {img_source} width={width-4} aspect_ratio={width / height} {bg_color} lazy={false} {root} />
 
         {#if title && title.length > 0}
             <title-box style={'height: ' + shade_height}>

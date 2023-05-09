@@ -188,7 +188,7 @@
     >
         <Card
             {width}
-            aspect_ratio={width / item_height}
+            height={item_height}
             selected={s}
             item={manga}
             {root}
