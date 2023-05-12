@@ -1,9 +1,9 @@
 <script lang="ts">
-    import type { RDbHandle, RObject } from '$lib/better_commands';
+    import type { RObject, RSearcher } from '$lib/searcher/searcher';
     import type { Meta, Tag, Taggable } from 'types';
 
     export let item: Meta<Taggable<unknown>, unknown>;
-    export let tag_searcher: RDbHandle<Tag>;
+    export let tag_searcher: RSearcher<Tag>;
 
     export let add_button_callback: (() => void) | (() => Promise<void>);
 

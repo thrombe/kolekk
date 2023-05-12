@@ -1,9 +1,9 @@
 <script lang="ts" context="module">
     import { writable, type Writable } from 'svelte/store';
     import type { ListResults, MultiSearchResult } from 'types';
+    import { Tmdb } from '$lib/searcher/tmdb';
 
-    const ty = TmdbSearcher();
-    let searcher = writable(new ty());
+    let searcher = writable(Tmdb.new());
     let search_query = writable('');
 </script>
 
@@ -14,7 +14,7 @@
     import Scrollable from '$lib/Scrollable.svelte';
     import Virtual from '$lib/Virtual.svelte';
     import Selectable from '$lib/Selectable.svelte';
-    import { TmdbSearcher, type RObject } from '$lib/better_commands';
+    import type { RObject } from '$lib/searcher/searcher';
 
     let items = new Array<RObject<MultiSearchResult>>();
     $searcher.on_update = async () => {

@@ -1,7 +1,7 @@
 <script lang="ts" context="module">
     import { writable } from 'svelte/store';
 
-    let tag_searcher = writable(new_searcher<Tag>('Tag'));
+    let tag_searcher = writable(TagSearch.new());
     let tag_query = writable('');
 </script>
 
@@ -11,11 +11,11 @@
     import { tick } from 'svelte';
     import type { Unique } from '$lib/virtual';
     import TagSearchBox from '$lib/TagSearchBox.svelte';
-    import { new_searcher, type RDbHandle, type RObject, type RObjectNotTag } from './better_commands';
+    import { TagSearch, type ForceDb, type RObject, type RSearcher } from './searcher/searcher';
 
-    export let searcher: RDbHandle<T>;
+    export let searcher: RSearcher<T>;
     export let selected_item_index: number;
-    export let selected_item: Unique<RObjectNotTag<T>, number>;
+    export let selected_item: Unique<RObject<ForceDb<T>>, number>;
     export let item_width: number;
     export let item_height: number;
     export let search_query: string;
@@ -28,12 +28,12 @@
     type T = $$Generic;
     interface $$Slots {
         default: {
-            item: RObjectNotTag<T>;
+            item: RObject<ForceDb<T>>;
             item_width: number;
             item_height: number;
             selected: boolean;
             root: HTMLElement;
-            tag_searcher: RDbHandle<Tag>;
+            tag_searcher: RSearcher<Tag>;
             info_margin: number;
             info_width: number;
             show_tag_searchbox: () => Promise<void>;
@@ -44,7 +44,7 @@
     searcher.next_page();
     searcher.on_update = async () => {
         items = searcher.search_results.map((e) => {
-            return { id: e.id, data: e } as Unique<RObjectNotTag<T>, number>;
+            return { id: e.id, data: e } as Unique<RObject<ForceDb<T>>, number>;
         });
     };
 
@@ -54,7 +54,7 @@
     };
 
     $: searcher.set_query(search_query);
-    let items = new Array<Unique<RObjectNotTag<T>, number>>();
+    let items = new Array<Unique<RObject<ForceDb<T>>, number>>();
 
     let end_is_visible = true;
     let search_input: HTMLElement;

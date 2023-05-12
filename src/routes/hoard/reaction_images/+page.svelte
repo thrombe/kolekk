@@ -1,8 +1,7 @@
 <script lang="ts" context="module">
     import { writable } from 'svelte/store';
-    import { get_path, new_searcher, type RObject } from '$lib/better_commands';
 
-    let searcher = writable(new_searcher<Image>('Image'));
+    let searcher = writable(new_db<Image>('Image'));
     let selected = writable(0);
     let search_query = writable('');
 </script>
@@ -16,6 +15,8 @@
     import type { Unique } from '$lib/virtual';
     import ImageInfoBox from '$lib/infobox/ImageInfoBox.svelte';
     import ObjectExplorer from '$lib/ObjectExplorer.svelte';
+    import { new_db, type RObject } from '$lib/searcher/searcher';
+    import { get_path } from '$lib/commands';
 
     let selected_item: Unique<RObject<Image>, number>;
 

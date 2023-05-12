@@ -1,9 +1,9 @@
 <script lang="ts">
     import type { Tag } from 'types';
     import TagBox from '$lib/TagBox.svelte';
-    import type { RDbHandle, RObject } from './better_commands';
+    import type { RObject, RSearcher } from './searcher/searcher';
 
-    export let tag_searcher: RDbHandle<Tag>;
+    export let tag_searcher: RSearcher<Tag>;
     export let search_query: string;
     export let tag_search_input: HTMLElement;
 

@@ -6,9 +6,10 @@
     import TagsBox from '$lib/infobox/TagsBox.svelte';
     import TitleBox from '$lib/infobox/TitleBox.svelte';
     import type { Image, Tag } from 'types';
-    import { get_path, type RDbHandle, type RObject } from '$lib/better_commands';
+    import type { RObject, RSearcher } from '$lib/searcher/searcher';
+    import { get_path } from '$lib/commands';
 
-    export let tag_searcher: RDbHandle<Tag>;
+    export let tag_searcher: RSearcher<Tag>;
     export let item: Unique<RObject<Image>, number>;
     export let info_width: number;
     export let info_margin: number;

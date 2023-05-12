@@ -1,10 +1,8 @@
 <script lang="ts" context="module">
-    import type { Extension, ExtensionAction, Indexed } from 'types';
-    import { TachiExtensionSearcher, type RObject } from '$lib/better_commands';
+    import type { Extension, ExtensionAction } from 'types';
     import { writable } from 'svelte/store';
 
-    const ty = TachiExtensionSearcher();
-    let searcher = writable(new ty());
+    let searcher = writable(TachiExtensions.new());
     let selected = writable(0);
     let search_query = writable('');
 </script>
@@ -15,6 +13,8 @@
     import Card from '$lib/Card.svelte';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
     import type { Unique } from '$lib/virtual';
+    import { TachiExtensions } from '$lib/searcher/tachi';
+    import type { RObject } from '$lib/searcher/searcher';
 
     const get_all_extensions = async () => {
         await $searcher.reload();

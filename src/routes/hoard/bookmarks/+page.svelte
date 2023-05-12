@@ -1,8 +1,7 @@
 <script lang="ts" context="module">
     import { writable } from 'svelte/store';
-    import { new_searcher, type RObject } from '$lib/commands';
 
-    let searcher = writable(new_searcher<Bookmark>('Bookmark', 50));
+    let searcher = writable(new_db<Bookmark>('Bookmark'));
     let selected = writable(0);
     let search_query = writable('');
 </script>
@@ -15,6 +14,7 @@
     import { invoke } from '@tauri-apps/api/tauri';
     import { tick } from 'svelte';
     import type { Bookmark, DragDropPaste, Indexed, Tag } from 'types';
+    import { new_db, type RObject } from '$lib/searcher/searcher';
 
     interface TempTaggable<T> {
         data: T;
