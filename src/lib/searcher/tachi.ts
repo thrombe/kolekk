@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import type { Chapter, Extension, ExtensionAction, Indexed, Manga, MangaListPage, MangaSource, SourceFilter, TypeFacet } from "types";
 import { Db } from "./database";
-import { Paged, ResetSearch, SavedSearch, UniqueSearch } from "./mixins";
+import { Paged, ResetSearch, SavedSearch, SlowSearch, UniqueSearch } from "./mixins";
 import type { ForceDb, RObject } from "./searcher";
 
 
@@ -120,11 +120,17 @@ export class TachiMangaSearch extends Paged<Manga> {
         const RS = ResetSearch(TachiMangaSearch);
         const US = UniqueSearch<Manga, typeof RS>(RS);
         const SS = SavedSearch<Manga, typeof US>(US);
-        return new SS(source);
+        const SL = SlowSearch<Manga, typeof SS>(SS);
+        return new SL(source);
     }
 
     async search(page: number) {
-        let r = await this.search_manga(page, this.query);
+        let r: MangaListPage;
+        if (this.query.length == 0) {
+            r = await this.get_popular_manga(page);
+        } else {
+            r = await this.search_manga(page, this.query);
+        }
         this.has_next_page = r.hasNextPage && r.mangaList.length > 0;
         return r.mangaList;
     }
