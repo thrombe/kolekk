@@ -5,7 +5,53 @@ import type { RObject } from "./searcher";
 
 type Constructor<T> = new (...args: any[]) => T;
 
-export type TSaved<T, S> = S & ISaved<T>;
+const sleep = (ms: number) => {
+    return new Promise(
+        (r) => setTimeout(r, ms)
+    )
+};
+
+export interface ISlow {
+    last_search: number;
+    search_generation: number;
+}
+export function SlowSearch<T, S extends Constructor<{
+    set_query(q: string): Promise<RObject<T>[]>;
+    query: string;
+}>>(s: S) {
+    return class SlowSearch extends s implements ISlow {
+        last_search: number;
+        search_generation: number;
+        constructor(...args: any[]) {
+            super(...args);
+            this.last_search = 0;
+            this.search_generation = 0;
+        }
+
+        async set_query(q: string) {
+            this.search_generation += 1;
+            let current_generation = this.search_generation;
+            let del = 500;
+            let now = Date.now();
+            if (now - this.last_search < del) {
+                await sleep(del);
+            }
+
+            // some other (concurrent) call to this method may change current_generation
+            if (this.search_generation == current_generation) {
+                this.last_search = Date.now();
+                let r = await super.set_query(q);
+
+                // to make sure that latest searches are not overwritten by searches that started earlier
+                if (this.search_generation == current_generation) {
+                    return r;
+                }
+            }
+            return new Array<RObject<T>>();
+        }
+    } as S & Constructor<ISlow>
+}
+
 export interface ISaved<T> {
     invalidate_search_results(): void;
     next_page(): Promise<RObject<T>[]>;
@@ -65,7 +111,6 @@ export function SavedSearch<T, S extends Constructor<{
 }
 
 
-export type TUnique<T, S> = S & IUnique<T>;
 export interface IUnique<T> {
     next_page(): Promise<RObject<T>[]>;
     reset_search(): void;
@@ -106,7 +151,6 @@ export function UniqueSearch<T, S extends Constructor<{
 }
 
 
-export type TReset<S> = S & IReset;
 export interface IReset {
     reset_search(): void;
 }
