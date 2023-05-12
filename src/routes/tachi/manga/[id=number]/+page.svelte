@@ -35,7 +35,7 @@
         manga = m as Manga;
         console.log(manga);
     });
-    let chapters: Chapter[];
+    let chapters: Chapter[] = new Array();
     let items: Unique<Chapter, number>[] = new Array();
     invoke('tachidesk_get_manga_chapter_list', { mangaId: parseInt($page.params.id) }).then((c) => {
         chapters = c as Chapter[];
@@ -55,6 +55,12 @@
                 <text-box>Title: {manga.title}</text-box>
                 <text-box>Author: {manga.author}</text-box>
                 <text-box>Id: {manga.id}</text-box>
+                <text-box>
+                    total pages: {chapters
+                        .filter((e) => e.pageCount)
+                        .map((c) => c.pageCount)
+                        .reduce((acc, v) => acc + Number(v), 0)}
+                </text-box>
             {/if}
         </bg>
         {#if manga}
