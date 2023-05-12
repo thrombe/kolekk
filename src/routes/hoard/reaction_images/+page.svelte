@@ -1,8 +1,8 @@
 <script lang="ts" context="module">
-    import { get_path, new_searcher, type RObject } from '$lib/commands';
     import { writable } from 'svelte/store';
+    import { get_path, new_searcher, type RObject } from '$lib/better_commands';
 
-    let searcher = writable(new_searcher<Image>('Image', 50));
+    let searcher = writable(new_searcher<Image>('Image'));
     let selected = writable(0);
     let search_query = writable('');
 </script>

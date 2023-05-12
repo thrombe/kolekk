@@ -1,11 +1,10 @@
 <script lang="ts" context="module">
     import type { Extension, ExtensionAction, Indexed } from 'types';
-    import { new_searcher, type RSearcher } from '$lib/commands';
+    import { TachiExtensionSearcher, type RObject } from '$lib/better_commands';
     import { writable } from 'svelte/store';
 
-    const facet = { Temp: '/temp/tachi/extension' };
-
-    let searcher = writable(new_searcher<Extension>(facet, 50));
+    const ty = TachiExtensionSearcher();
+    let searcher = writable(new ty());
     let selected = writable(0);
     let search_query = writable('');
 </script>
@@ -15,20 +14,15 @@
     import { onMount, tick } from 'svelte';
     import Card from '$lib/Card.svelte';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
+    import type { Unique } from '$lib/virtual';
 
     const get_all_extensions = async () => {
-        let exts: Extension[] = await invoke('tachidesk_get_all_extensions');
-        await invoke('delete_facet_objects', { facet });
-        await $searcher.add_item(
-            ...exts.map((e) => {
-                let searchable: Indexed[] = [{ data: e.name, field: 'Text' }];
-                return { data: e, searchable };
-            })
-        );
+        await $searcher.reload();
+        let r = await $searcher.next_page();
     };
 
-    $searcher.on_update = async (e: RSearcher<Extension>) => {
-        items = e.search_results.map((e) => {
+    $searcher.on_update = async () => {
+        items = $searcher.search_results.map((e) => {
             return { id: e.id, data: e };
         });
     };
@@ -46,7 +40,7 @@
     };
     const end_reached = async () => {
         while (true) {
-            if (!end_is_visible || !$searcher._has_next_page) {
+            if (!end_is_visible || !$searcher.has_next_page) {
                 break;
             }
             await $searcher.next_page();
@@ -67,8 +61,8 @@
     let window_width = 100;
     let end_is_visible = false;
 
-    let items = new Array();
-    $searcher.on_update($searcher);
+    let items = new Array<Unique<RObject<Extension>, number>>();
+    $searcher.on_update();
 </script>
 
 <svelte:window bind:innerWidth={window_width} />

@@ -1,8 +1,7 @@
 <script lang="ts" context="module">
-    import { new_searcher, type RObjectNotTag } from '$lib/commands';
     import { writable } from 'svelte/store';
 
-    let tag_searcher = writable(new_searcher<Tag>('Tag', 50));
+    let tag_searcher = writable(new_searcher<Tag>('Tag'));
     let tag_query = writable('');
 </script>
 
@@ -12,9 +11,9 @@
     import { tick } from 'svelte';
     import type { Unique } from '$lib/virtual';
     import TagSearchBox from '$lib/TagSearchBox.svelte';
-    import type { RObject, RSearcher } from './commands';
+    import { new_searcher, type RDbHandle, type RObject, type RObjectNotTag } from './better_commands';
 
-    export let searcher: RSearcher<T>;
+    export let searcher: RDbHandle<T>;
     export let selected_item_index: number;
     export let selected_item: Unique<RObjectNotTag<T>, number>;
     export let item_width: number;
@@ -34,7 +33,7 @@
             item_height: number;
             selected: boolean;
             root: HTMLElement;
-            tag_searcher: RSearcher<Tag>;
+            tag_searcher: RDbHandle<Tag>;
             info_margin: number;
             info_width: number;
             show_tag_searchbox: () => Promise<void>;
@@ -43,14 +42,13 @@
     }
 
     searcher.next_page();
-    searcher.on_update = async (e: RSearcher<T>) => {
-        items = e.search_results.map((e) => {
+    searcher.on_update = async () => {
+        items = searcher.search_results.map((e) => {
             return { id: e.id, data: e } as Unique<RObjectNotTag<T>, number>;
         });
     };
 
     let search_objects = async () => {
-        await searcher.reload_reader();
         await searcher.set_query(search_query);
         end_reached();
     };
@@ -100,7 +98,7 @@
 
     const end_reached = async () => {
         while (true) {
-            if (!end_is_visible || !searcher._has_next_page) {
+            if (!end_is_visible || !searcher.has_next_page) {
                 break;
             }
             await searcher.next_page();
@@ -140,7 +138,6 @@
                 selected_item.data.data.tags.push(tag_id);
                 $tag_query = '';
 
-                await searcher.reload_reader();
                 await $tag_searcher.set_query($tag_query);
             } else if ($tag_searcher.search_results.length > 0) {
                 let tag_id = $tag_searcher.search_results[0].id;
@@ -157,7 +154,6 @@
                     );
                 }
 
-                await $tag_searcher.reload_reader();
                 $tag_query = '';
                 await $tag_searcher.set_query($tag_query);
             }

@@ -2,56 +2,33 @@
     import { writable, type Writable } from 'svelte/store';
     import type { ListResults, MultiSearchResult } from 'types';
 
-    let search_results: Writable<ListResults<MultiSearchResult>> = writable({
-        results: new Array(),
-        page: null,
-        total_results: null,
-        total_pages: null
-    });
+    const ty = TmdbSearcher();
+    let searcher = writable(new ty());
     let search_query = writable('');
-    let include_adult = writable(false);
 </script>
 
 
 <script lang="ts">
-    import { invoke } from '@tauri-apps/api/tauri';
     import { tick } from 'svelte';
     import Card from './Card.svelte';
     import Scrollable from '$lib/Scrollable.svelte';
     import Virtual from '$lib/Virtual.svelte';
     import Selectable from '$lib/Selectable.svelte';
+    import { TmdbSearcher, type RObject } from '$lib/better_commands';
 
-    const search_tmdb_multi = async (
-        query: string,
-        page: number,
-        include_adult: Boolean
-    ): Promise<ListResults<MultiSearchResult>> => {
-        console.log('searched for page', page, 'with query', query);
-        return await invoke('search_tmdb_multi', {
-            query: query,
-            page: page,
-            includeAdult: include_adult
-        });
+    let items = new Array<RObject<MultiSearchResult>>();
+    $searcher.on_update = async () => {
+        items = $searcher.search_results;
     };
 
     const search = async () => {
         if ($search_query == '') {
-            $search_results.results.length = 0;
-            $search_results.page = null;
+            $searcher.reset_search();
+            await $searcher.on_update();
         } else {
-            $search_results = await search_tmdb_multi($search_query, 1, $include_adult);
-            id_set = new Set();
-            collisions = new Array();
-            $search_results.results = $search_results.results.filter((item) => {
-                if (id_set.has(item.id)) {
-                    collisions.push(item);
-                    return false;
-                } else {
-                    id_set.add(item.id);
-                    return true;
-                }
-            });
+            await $searcher.set_query($search_query);
 
+            await tick();
             setTimeout(end_reached, 500);
         }
     };
@@ -59,36 +36,12 @@
     let id_set = new Set();
     let collisions = new Array();
     const end_reached = async () => {
-        await tick();
-
-        if (!end_is_visible) {
+        if (!end_is_visible || !$searcher.has_next_page) {
             return;
         }
-
-        if ($search_results.page! < $search_results.total_pages!) {
-            let new_res = await search_tmdb_multi(
-                $search_query,
-                $search_results.page! + 1,
-                $include_adult
-            );
-
-            // tmdb returns duplicates for some reason :(
-            new_res.results = new_res.results.filter((item) => {
-                if (id_set.has(item.id)) {
-                    collisions.push(item);
-                    return false;
-                } else {
-                    id_set.add(item.id);
-                    return true;
-                }
-            });
-
-            $search_results.results.push(...new_res.results);
-            new_res.results = $search_results.results;
-            $search_results = new_res;
-
-            setTimeout(end_reached, 500);
-        }
+        await $searcher.next_page();
+        await tick();
+        setTimeout(end_reached, 500);
     };
 
     let end_is_visible = true;
@@ -116,27 +69,27 @@
     <button on:click={search}>Search</button>
     <button
         on:click={() => {
-            $include_adult = !$include_adult;
+            $searcher.include_adult = !$searcher.include_adult;
             search();
         }}
     >
-        include mature: {$include_adult}
+        include mature: {$searcher.include_adult}
     </button>
     <button
         on:click={() => {
-            console.log($search_results.results, collisions, id_set);
-            let ids = $search_results.results.map((e) => e.id);
+            console.log($searcher.search_results, collisions, id_set);
+            let ids = $searcher.search_results.map((e) => e.id);
             console.log(collisions.filter((e) => !ids.includes(e.id)));
         }}
     >
-        {$search_results.results.length} | end visible: {end_is_visible}
+        {$searcher.search_results.length} | end visible: {end_is_visible}
     </button>
 </cl>
 
 <cl>
     <Scrollable
         columns={5}
-        num_items={$search_results.results.length}
+        num_items={$searcher.search_results.length}
         bind:selected
         width={window_width}
         {end_reached}
@@ -147,13 +100,13 @@
         let:item_width={width}
         let:root
     >
-        {#each $search_results.results as media, i (media.id)}
+        {#each items as media, i (media.id)}
             <Selectable
                 {width}
                 {item_aspect_ratio}
                 selected={selected == i ||
-                    (i == $search_results.results.length - 1 &&
-                        selected >= $search_results.results.length)}
+                    (i == $searcher.search_results.length - 1 &&
+                        selected >= $searcher.search_results.length)}
                 let:selected={s}
             >
                 <Virtual {width} aspect_ratio={item_aspect_ratio} {root}>
