@@ -95,7 +95,7 @@
         on_update();
     }
     let _selected_item: HTMLElement;
-    let try_scroll_into_view = async () => {
+    export const try_scroll_into_view = async () => {
         await tick();
         if (!(selected === undefined) && items) {
             console.log(items[selected]);

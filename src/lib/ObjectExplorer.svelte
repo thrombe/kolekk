@@ -47,6 +47,8 @@
         $searcher = await fac.with_query(search_query);
         await next_page();
         await tick();
+        selected_item_index = 0;
+        await try_scroll_into_view();
         end_reached();
     };
     search_objects();
@@ -74,12 +76,10 @@
             search_input.focus();
             event.preventDefault();
         } else if (event.key == '/') {
-            selected_item_index = 0;
-            await tick();
-            await scroll_selected_into_view();
             search_query = '';
             search_input.focus();
             event.preventDefault();
+            await search_objects();
         } else {
             await on_keydown(event, scroll_selected_into_view);
         }
@@ -182,6 +182,7 @@
         let highlight = selected_item.data.data.tags.includes(tag.id);
         return highlight;
     };
+    let try_scroll_into_view: () => Promise<void>;
 </script>
 
 <cl class="inputs">
@@ -217,6 +218,7 @@
             {item_height}
             {on_item_click}
             {end_reached}
+            bind:try_scroll_into_view
             bind:selected={selected_item_index}
             on_keydown={_on_keydown}
             bind:end_is_visible
