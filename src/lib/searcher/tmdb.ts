@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api";
 import type { ListResults, MultiSearchResult } from "types";
-import { Paged, ResetSearch, SavedSearch, SlowSearch, UniqueSearch } from "./mixins";
+import { Paged, QuerySet, ResetSearch, SavedSearch, SlowSearch, UniqueSearch } from "./mixins";
 import type { RObject } from "./searcher";
 
 
@@ -18,10 +18,11 @@ export class Tmdb extends Paged<MultiSearchResult> {
 
     static new() {
         const RS = ResetSearch(Tmdb);
-        const US = UniqueSearch<MultiSearchResult, typeof RS>(RS);
-        const SS = SavedSearch<MultiSearchResult, typeof US>(US);
-        const SL = SlowSearch<MultiSearchResult, typeof SS>(SS);
-        return new SL();
+        const QS = QuerySet<MultiSearchResult, typeof RS>(RS);
+        const US = UniqueSearch<MultiSearchResult, typeof QS>(QS);
+        const SL = SlowSearch<MultiSearchResult, typeof US>(US);
+        const SS = SavedSearch<MultiSearchResult, typeof SL>(SL);
+        return new SS();
     }
 
     override reset_offset() {

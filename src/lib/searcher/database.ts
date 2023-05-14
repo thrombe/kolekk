@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api";
 import type { Meta, Tag, Taggable, TypeFacet } from "types";
-import { Offset, ResetSearch, SavedSearch } from "./mixins";
+import { Offset, QuerySet, ResetSearch, SavedSearch } from "./mixins";
 import type { RObject, RDbEntry } from "./searcher";
 
 
@@ -8,7 +8,8 @@ import type { RObject, RDbEntry } from "./searcher";
 // facet and T should match
 export function new_db<T>(facet: TypeFacet) {
     const RS = ResetSearch(Db<T>);
-    const SS = SavedSearch<T, typeof RS>(RS);
+    const QS = QuerySet<T, typeof RS>(RS);
+    const SS = SavedSearch<T, typeof QS>(QS);
     return new SS(facet);
 }
 
@@ -63,7 +64,8 @@ export class TagSearch extends Offset<Tag> {
 
     static new() {
         const RS = ResetSearch(TagSearch);
-        const SS = SavedSearch<Tag, typeof RS>(RS);
+        const QS = QuerySet<Tag, typeof RS>(RS);
+        const SS = SavedSearch<Tag, typeof QS>(QS);
         return new SS();
     }
 

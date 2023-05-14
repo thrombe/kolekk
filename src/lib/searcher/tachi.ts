@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import type { Chapter, Extension, ExtensionAction, Indexed, Manga, MangaListPage, MangaSource, SourceFilter, TypeFacet } from "types";
 import { Db } from "./database";
-import { Paged, ResetSearch, SavedSearch, SlowSearch, UniqueSearch } from "./mixins";
+import { Paged, QuerySet, ResetSearch, SavedSearch, SlowSearch, UniqueSearch } from "./mixins";
 import type { ForceDb, RObject } from "./searcher";
 
 
@@ -57,7 +57,8 @@ export class TachiExtensions extends Db<Extension> {
 
     static new() {
         const RS = ResetSearch(TachiExtensions);
-        const SS = SavedSearch<Extension, typeof RS>(RS);
+        const QS = QuerySet<Extension, typeof RS>(RS);
+        const SS = SavedSearch<Extension, typeof QS>(QS);
         return new SS();
     }
     
@@ -86,7 +87,8 @@ export class TachiSources extends Db<MangaSource> {
 
     static new() {
         const RS = ResetSearch(TachiSources);
-        const SS = SavedSearch<MangaSource, typeof RS>(RS);
+        const QS = QuerySet<MangaSource, typeof RS>(RS);
+        const SS = SavedSearch<MangaSource, typeof QS>(QS);
         return new SS();
     }
 
@@ -118,10 +120,11 @@ export class TachiMangaSearch extends Paged<Manga> {
 
     static new(source: MangaSource) {
         const RS = ResetSearch(TachiMangaSearch);
-        const US = UniqueSearch<Manga, typeof RS>(RS);
-        const SS = SavedSearch<Manga, typeof US>(US);
-        const SL = SlowSearch<Manga, typeof SS>(SS);
-        return new SL(source);
+        const QS = QuerySet<Manga, typeof RS>(RS);
+        const US = UniqueSearch<Manga, typeof QS>(QS);
+        const SL = SlowSearch<Manga, typeof US>(US);
+        const SS = SavedSearch<Manga, typeof SL>(SL);
+        return new SS(source);
     }
 
     async search(page: number) {
@@ -201,7 +204,8 @@ export class TachiChapters extends Db<Chapter> {
 
     static new(manga: Manga) {
         const RS = ResetSearch(TachiChapters);
-        const SS = SavedSearch<Chapter, typeof RS>(RS);
+        const QS = QuerySet<Chapter, typeof RS>(RS);
+        const SS = SavedSearch<Chapter, typeof QS>(QS);
         return new SS(manga);
     }
 

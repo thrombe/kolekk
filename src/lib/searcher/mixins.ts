@@ -11,46 +11,7 @@ const sleep = (ms: number) => {
     )
 };
 
-export interface ISlow {
-    last_search: number;
-    search_generation: number;
-}
-export function SlowSearch<T, S extends Constructor<{
-    set_query(q: string): Promise<RObject<T>[]>;
-    query: string;
-}>>(s: S) {
-    return class SlowSearch extends s implements ISlow {
-        last_search: number;
-        search_generation: number;
-        constructor(...args: any[]) {
-            super(...args);
-            this.last_search = 0;
-            this.search_generation = 0;
-        }
 
-        async set_query(q: string) {
-            this.search_generation += 1;
-            let current_generation = this.search_generation;
-            let del = 500;
-            let now = Date.now();
-            if (now - this.last_search < del) {
-                await sleep(del);
-            }
-
-            // some other (concurrent) call to this method may change current_generation
-            if (this.search_generation == current_generation) {
-                this.last_search = Date.now();
-                let r = await super.set_query(q);
-
-                // to make sure that latest searches are not overwritten by searches that started earlier
-                if (this.search_generation == current_generation) {
-                    return r;
-                }
-            }
-            return new Array<RObject<T>>();
-        }
-    } as S & Constructor<ISlow>
-}
 
 export interface ISaved<T> {
     invalidate_search_results(): void;
@@ -63,8 +24,9 @@ export interface ISaved<T> {
 }
 export function SavedSearch<T, S extends Constructor<{
     next_page(): Promise<RObject<T>[]>;
-    query: string;
+    set_query(q: string): Promise<RObject<T>[]>;
     reset_search(): void;
+    query: string;
 }>>(s: S) {
     return class SavedSearch extends s  implements ISaved<T> {
         search_results: Array<RObject<T>>;
@@ -97,9 +59,8 @@ export function SavedSearch<T, S extends Constructor<{
 
         async set_query(q: string) {
             this.reset_search();
-            this.query = q;
             this.invalidate_search_results();
-            return await this.next_page();
+            return await super.set_query(q);
         }
 
         override reset_search() {
@@ -108,6 +69,49 @@ export function SavedSearch<T, S extends Constructor<{
             this.results_valid = false;
         }
     } as S & Constructor<ISaved<T>>
+}
+
+
+export interface ISlow<T> {
+    last_search: number;
+    search_generation: number;
+    set_query(q: string): Promise<RObject<T>[]>;
+}
+export function SlowSearch<T, S extends Constructor<{
+    query: string;
+    set_query(q: string): Promise<RObject<T>[]>;
+}>>(s: S) {
+    return class SlowSearch extends s implements ISlow<T> {
+        last_search: number;
+        search_generation: number;
+        constructor(...args: any[]) {
+            super(...args);
+            this.last_search = 0;
+            this.search_generation = 0;
+        }
+
+        async set_query(q: string) {
+            this.search_generation += 1;
+            let current_generation = this.search_generation;
+            let del = 500;
+            let now = Date.now();
+            if (now - this.last_search < del) {
+                await sleep(del);
+            }
+
+            // some other (concurrent) call to this method may change current_generation
+            if (this.search_generation == current_generation) {
+                this.last_search = Date.now();
+                let r = await super.set_query(q);
+
+                // to make sure that latest searches are not overwritten by searches that started earlier
+                if (this.search_generation == current_generation) {
+                    return r;
+                }
+            }
+            return new Array<RObject<T>>();
+        }
+    } as S & Constructor<ISlow<T>>
 }
 
 
@@ -150,6 +154,20 @@ export function UniqueSearch<T, S extends Constructor<{
     } as S & Constructor<IUnique<T>>
 }
 
+export interface IQuerySet<T> {
+    set_query(q: string): Promise<RObject<T>[]>;
+}
+export function QuerySet<T, S extends Constructor<{
+    next_page(): Promise<RObject<T>[]>;
+    query: string;
+}>>(s: S) {
+    return class QuerySet extends s implements IQuerySet<T> {
+        async set_query(q: string) {
+            this.query = q;
+            return await this.next_page();
+        }
+    } as S & Constructor<IQuerySet<T>>
+}
 
 export interface IReset {
     reset_search(): void;
@@ -215,4 +233,3 @@ export abstract class Offset<T> {
         this.curr_offset = 0;
     }
 }
-
