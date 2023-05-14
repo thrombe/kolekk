@@ -64,7 +64,7 @@ export function SavedSearch<T, S extends Constructor<{
         constructor(...args: any[]) {
             super(...args);
             this.search_results = new Array();
-            this.last_op = this.next_page();
+            this.last_op = new Promise((resolve, reject) => resolve([]));
         }
 
         override next_page = async () => {

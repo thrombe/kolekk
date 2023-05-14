@@ -10,7 +10,7 @@ type ReturnType<Type> = Type extends (...args: never[]) => infer R ? R : never;
 export { TagSearch, Tmdb, Db, TachiExtensions, TachiSources, TachiMangaSearch, TachiChapterExplorer, new_db };
 
 
-// this should onlybe used for the type parameter in RObject and RSearcher
+// this should onlybe used for the type parameter in the types below
 export interface ForceDb<_> {
     force: null;
 }
