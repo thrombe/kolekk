@@ -1,16 +1,28 @@
 import { invoke } from "@tauri-apps/api";
 import type { Meta, Tag, Taggable, TypeFacet } from "types";
-import { Offset, QuerySet, ResetSearch, SavedSearch } from "./mixins";
+import { Offset, SavedSearch } from "./mixins";
 import type { RObject, RDbEntry } from "./searcher";
 
 
 
 // facet and T should match
-export function new_db<T>(facet: TypeFacet) {
-    const RS = ResetSearch(Db<T>);
-    const QS = QuerySet<T, typeof RS>(RS);
-    const SS = SavedSearch<T, typeof QS>(QS);
-    return new SS(facet);
+export function new_db<T>(facet: TypeFacet, q: string) {
+    const SS = SavedSearch<T, typeof Db<T>>(Db<T>);
+    return new SS(facet, q);
+}
+export function new_factory<T>(facet: TypeFacet) {
+    class Fac {
+        facet: TypeFacet;
+        constructor(facet: TypeFacet) {
+            this.facet = facet;
+        }
+
+        async with_query(q: string) {
+            let t = new_db<T>(this.facet, q);
+            return t;
+        }
+    }
+    return new Fac(facet);
 }
 
 export function db_obj_type<T>() {
@@ -19,11 +31,9 @@ export function db_obj_type<T>() {
 
 export class Db<T> extends Offset<T> {
     facet: TypeFacet;
-    query: string;
     limit: number;
-    constructor(facet: TypeFacet) {
-        super();
-        this.query = "";
+    constructor(facet: TypeFacet, q: string) {
+        super(q);
         this.limit = 50;
         this.facet = facet;
     }
@@ -54,19 +64,24 @@ export class Db<T> extends Offset<T> {
 
 
 export class TagSearch extends Offset<Tag> {
-    query: string;
     limit: number;
-    constructor() {
-        super();
-        this.query = "";
+    constructor(q: string) {
+        super(q);
         this.limit = 50;
     }
 
-    static new() {
-        const RS = ResetSearch(TagSearch);
-        const QS = QuerySet<Tag, typeof RS>(RS);
-        const SS = SavedSearch<Tag, typeof QS>(QS);
-        return new SS();
+    static new(q: string) {
+        const SS = SavedSearch<Tag, typeof TagSearch>(TagSearch);
+        return new SS(q);
+    }
+
+    static factory() {
+        class Fac {
+            async with_query(q: string) {
+                return TagSearch.new(q);
+            }
+        }
+        return new Fac();
     }
 
     async search(offset: number) {

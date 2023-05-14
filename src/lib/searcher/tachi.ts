@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api";
 import type { Chapter, Extension, ExtensionAction, Indexed, Manga, MangaListPage, MangaSource, SourceFilter, TypeFacet } from "types";
-import { Db } from "./database";
-import { Paged, QuerySet, ResetSearch, SavedSearch, SlowSearch, UniqueSearch } from "./mixins";
-import type { ForceDb, RObject } from "./searcher";
+import { Db, new_factory } from "./database";
+import { Paged, SavedSearch, SlowSearch, UniqueSearch } from "./mixins";
+import type { ForceDb, RObject, RSearcher } from "./searcher";
 
 
 
@@ -51,15 +51,17 @@ class TachiClient {
 
 const extension_facet = { Temp: '/temp/tachi/extension' };
 export class TachiExtensions extends Db<Extension> {
-    constructor() {
-        super(extension_facet);
+    constructor(q: string) {
+        super(extension_facet, q);
     }
 
-    static new() {
-        const RS = ResetSearch(TachiExtensions);
-        const QS = QuerySet<Extension, typeof RS>(RS);
-        const SS = SavedSearch<Extension, typeof QS>(QS);
-        return new SS();
+    static new(q: string) {
+        const SS = SavedSearch<Extension, typeof TachiExtensions>(TachiExtensions);
+        return new SS(q);
+    }
+
+    static factory() {
+        return new_factory<Extension>(extension_facet);
     }
     
     // TODO: reload on search if no objects. maybe use a mixin
@@ -81,17 +83,19 @@ export class TachiExtensions extends Db<Extension> {
 
 const source_facet = { Temp: '/temp/tachi/source' };
 export class TachiSources extends Db<MangaSource> {
-    constructor() {
-        super(extension_facet);
+    constructor(q: string) {
+        super(source_facet, q);
     }
 
-    static new() {
-        const RS = ResetSearch(TachiSources);
-        const QS = QuerySet<MangaSource, typeof RS>(RS);
-        const SS = SavedSearch<MangaSource, typeof QS>(QS);
-        return new SS();
+    static new(q: string) {
+        const SS = SavedSearch<MangaSource, typeof TachiSources>(TachiSources);
+        return new SS(q);
     }
 
+    static factory() {
+        return new_factory<MangaSource>(source_facet);
+    }
+    
     async reload() {
         let exts = await TachiClient.get_sources();
         await invoke('delete_facet_objects', { facet: source_facet });
@@ -109,21 +113,35 @@ export class TachiSources extends Db<MangaSource> {
 }
 
 export class TachiMangaSearch extends Paged<Manga> {
-    source: MangaSource;
-    query: string;
+    // TODO: source: MangaSource;
+    source: string;
 
-    constructor(source: MangaSource) {
-        super();
+    constructor(source: string, q: string) {
+        super(q);
         this.source = source;
-        this.query = '';
+        this.next_page_num = 1;
     }
 
-    static new(source: MangaSource) {
-        const RS = ResetSearch(TachiMangaSearch);
-        const QS = QuerySet<Manga, typeof RS>(RS);
-        const US = UniqueSearch<Manga, typeof QS>(QS);
-        const SL = SlowSearch<Manga, typeof US>(US);
-        const SS = SavedSearch<Manga, typeof SL>(SL);
+    static new(source: string, q: string) {
+        const US = UniqueSearch<Manga, typeof TachiMangaSearch>(TachiMangaSearch);
+        const SS = SavedSearch<Manga, typeof US>(US);
+        return new SS(source, q);
+    }
+
+    static factory(source: string) {
+        type R = RSearcher<Manga>;
+        class Fac {
+            source: string;
+            constructor(source: string) {
+                this.source = source;
+            }
+            
+            async with_query(q: string) {
+                let t = TachiMangaSearch.new(this.source, q);
+                return t as R | null;
+            }
+        }
+        const SS = SlowSearch<R, typeof Fac>(Fac);
         return new SS(source);
     }
 
@@ -138,10 +156,6 @@ export class TachiMangaSearch extends Paged<Manga> {
         return r.mangaList;
     }
 
-    override reset_offset() {
-        this.next_page_num = 1;
-    }
-
     get_key(t: RObject<Manga>) {
         return t.id;
     }
@@ -150,9 +164,8 @@ export class TachiMangaSearch extends Paged<Manga> {
         return null as unknown as Manga;
     }
 
-
     async get_filters() {
-        let filters: SourceFilter[] = await invoke('tachidesk_get_source_filters', { sourceId: this.source.id });
+        let filters: SourceFilter[] = await invoke('tachidesk_get_source_filters', { sourceId: this.source });
         // https://github.com/Suwayomi/Tachidesk-Server/blob/cde5dc5bfa4ce6cce6d565b41589672a754460c0/server/src/main/kotlin/suwayomi/tachidesk/manga/impl/Search.kt#L137
         // let r = await fetch(`http://localhost:4567/api/v1/source/${$page.params.src_id}/filters`, {
         //     method: 'POST',
@@ -173,7 +186,7 @@ export class TachiMangaSearch extends Paged<Manga> {
 
     async get_popular_manga(page: number) {
         let search_results: MangaListPage = await invoke('tachidesk_get_popular_manga_list', {
-            sourceId: this.source.id,
+            sourceId: this.source,
             page
         });
         return search_results;
@@ -181,7 +194,7 @@ export class TachiMangaSearch extends Paged<Manga> {
 
     async search_manga(page: number, query: string) {
         let search_results: MangaListPage = await invoke('tachidesk_search_manga_in', {
-            sourceId: this.source.id,
+            sourceId: this.source,
             query,
             page
         });
@@ -191,24 +204,28 @@ export class TachiMangaSearch extends Paged<Manga> {
 
 export class TachiChapters extends Db<Chapter> {
     manga: Manga;
-    query: string;
     facet: TypeFacet;
 
-    constructor(manga: Manga) {
+    constructor(manga: Manga, q: string) {
         let facet = { Temp: "/temp/tachi/chapters/" + manga.id }
-        super(facet);
+        super(facet, q);
         this.manga = manga;
-        this.query = '';
         this.facet = facet;
     }
 
-    static new(manga: Manga) {
-        const RS = ResetSearch(TachiChapters);
-        const QS = QuerySet<Chapter, typeof RS>(RS);
-        const SS = SavedSearch<Chapter, typeof QS>(QS);
-        return new SS(manga);
+    static new(manga: Manga, q: string) {
+        const SS = SavedSearch<Chapter, typeof TachiChapters>(TachiChapters);
+        return new SS(manga, q);
     }
 
+    static factory() {
+        return new_factory<Manga>(source_facet);
+    }
+
+    static obj_type() {
+        return null as unknown as RObject<ForceDb<Chapter>>;
+    }
+    
     async reload() {
         let r = await this.get_chapters();
         await invoke('delete_facet_objects', { facet: this.facet });

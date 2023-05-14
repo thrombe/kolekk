@@ -1,6 +1,6 @@
 
-import type { Tag, Meta, Taggable, TypeFacet, SearchableEntry, MultiSearchResult, Extension, MangaSource, Manga, Chapter } from 'types';
-import { TagSearch, Db, new_db, db_obj_type } from './database';
+import type { Tag, SearchableEntry, MultiSearchResult, Extension, MangaSource, Manga, Chapter } from 'types';
+import { TagSearch, Db, new_db, db_obj_type, new_factory } from './database';
 import type { TachiExtensions, TachiChapters, TachiSources, TachiMangaSearch, TachiChapterExplorer } from './tachi';
 import { Tmdb } from './tmdb';
 
@@ -35,6 +35,9 @@ export type RObject<T> =
     : T extends Manga
     ? ReturnType<typeof TachiMangaSearch.obj_type>
 
+    : T extends Chapter
+    ? ReturnType<typeof TachiChapters.obj_type>
+
     : ReturnType<typeof db_obj_type<T>>;
 
 
@@ -63,5 +66,30 @@ export type RSearcher<T> =
 
     : ReturnType<typeof new_db<T>>
 
+
+export type RFactory<T> = 
+    // a hacky way to force match this
+    T extends ForceDb<infer E>
+    ? ReturnType<typeof new_factory<E>>
+
+    : T extends Tag
+    ? ReturnType<typeof TagSearch.factory>
+
+    : T extends MultiSearchResult
+    ? ReturnType<typeof Tmdb.factory>
+
+    : T extends Extension
+    ? ReturnType<typeof TachiExtensions.factory>
+
+    : T extends MangaSource
+    ? ReturnType<typeof TachiSources.factory>
+
+    : T extends Manga
+    ? ReturnType<typeof TachiMangaSearch.factory>
+
+    : T extends Chapter
+    ? ReturnType<typeof TachiChapters.factory>
+
+    : ReturnType<typeof new_factory<T>>
 
 export type RDbEntry<T> = T extends Tag ? Tag : SearchableEntry<T>;

@@ -1,32 +1,35 @@
 import { invoke } from "@tauri-apps/api";
 import type { ListResults, MultiSearchResult } from "types";
-import { Paged, QuerySet, ResetSearch, SavedSearch, SlowSearch, UniqueSearch } from "./mixins";
-import type { RObject } from "./searcher";
+import { Paged, SavedSearch, SlowSearch, UniqueSearch, type ISlow } from "./mixins";
+import type { RObject, RSearcher } from "./searcher";
 
 
 
 
 export class Tmdb extends Paged<MultiSearchResult> {
-    query: string;
     include_adult: boolean;
-    constructor() {
-        super();
-        this.query = "";
+    constructor(q: string) {
+        super(q);
         this.include_adult = false;
         this.next_page_num = 1;
     }
 
-    static new() {
-        const RS = ResetSearch(Tmdb);
-        const QS = QuerySet<MultiSearchResult, typeof RS>(RS);
-        const US = UniqueSearch<MultiSearchResult, typeof QS>(QS);
-        const SL = SlowSearch<MultiSearchResult, typeof US>(US);
-        const SS = SavedSearch<MultiSearchResult, typeof SL>(SL);
-        return new SS();
+    static new(q: string) {
+        const US = UniqueSearch<MultiSearchResult, typeof Tmdb>(Tmdb);
+        const SS = SavedSearch<MultiSearchResult, typeof US>(US);
+        return new SS(q);
     }
 
-    override reset_offset() {
-        this.next_page_num = 1;
+    static factory() {
+        type R = RSearcher<MultiSearchResult>;
+        class Fac {
+            async with_query(q: string) {
+                let t = Tmdb.new(q);
+                return t as R | null;
+            }
+        }
+        const SS = SlowSearch<R, typeof Fac>(Fac);
+        return new SS();
     }
 
     static obj_type() {
