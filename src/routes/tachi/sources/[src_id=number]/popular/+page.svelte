@@ -1,10 +1,10 @@
 <script lang="ts" context="module">
     import { writable } from 'svelte/store';
 
-    let selected = writable(0);
-    let search_results = writable({ mangaList: new Array(), hasNextPage: false });
+    let searcher_factory = writable(TachiMangaSearch.factory(""));
+    let searcher = writable<RSearcher<Manga>>(TachiMangaSearch.new("", ""));
     let search_query = writable('');
-    let page_num_fetched = writable(1);
+    let selected = writable(0);
 </script>
 
 <script lang="ts">
@@ -12,88 +12,44 @@
     import Card from '$lib/Card.svelte';
     import { invoke } from '@tauri-apps/api/tauri';
     import { page } from '$app/stores';
-    import type { MangaListPage } from 'types';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
+    import { TachiMangaSearch } from '$lib/searcher/tachi';
+    import type { Unique } from '$lib/virtual';
+    import type { RObject, RSearcher } from '$lib/searcher/searcher';
+    import type { Manga } from 'types';
+
+    $searcher_factory.source = $page.params.src_id;
+
+    let items = new Array<Unique<RObject<Manga>, number>>();
 
     let include_adult = false;
     const search = async () => {
-        if ($search_query == '') {
-            $page_num_fetched = 1;
-            $search_results = await invoke('tachidesk_get_popular_manga_list', {
-                sourceId: $page.params.src_id,
-                page: 1
-            });
-            console.log($search_results);
-        } else {
-            $page_num_fetched = 1;
-            $search_results = await invoke('tachidesk_search_manga_in', {
-                sourceId: $page.params.src_id,
-                query: $search_query,
-                page: 1
-            });
-            console.log($search_results);
-        }
-
-        id_set = new Set();
-        collisions = new Array();
-        $search_results.mangaList = $search_results.mangaList.filter((item) => {
-            if (id_set.has(item.id)) {
-                collisions.push(item);
-                return false;
-            } else {
-                id_set.add(item.id);
-                return true;
-            }
-        });
-
-        setTimeout(end_reached, 500);
-    };
-
-    let id_set = new Set();
-    let collisions = new Array();
-    const end_reached = async () => {
-        // return;
-        await tick();
-
-        if (!end_is_visible) {
+        let s = await $searcher_factory.with_query($search_query);
+        if (!s) {
             return;
         }
+        $searcher = s;
+        items = []
+        console.log($searcher, s)
+        await tick();
+        setTimeout(end_reached, 500);
+    };
+    search();
 
-        if ($search_results.hasNextPage) {
-            let new_res: MangaListPage;
-            $page_num_fetched += 1;
-            if ($search_query == '') {
-                new_res = await invoke('tachidesk_get_popular_manga_list', {
-                    sourceId: $page.params.src_id,
-                    page: $page_num_fetched
-                });
-            } else {
-                new_res = await invoke('tachidesk_search_manga_in', {
-                    sourceId: $page.params.src_id,
-                    query: $search_query,
-                    page: $page_num_fetched
-                });
-            }
-            let hasNextPage = new_res.mangaList.length > 0;
-            new_res.mangaList = new_res.mangaList.filter((item) => {
-                if (id_set.has(item.id)) {
-                    collisions.push(item);
-                    return false;
-                } else {
-                    id_set.add(item.id);
-                    return true;
-                }
-            });
-            console.log(
-                $page_num_fetched,
-                new_res.mangaList.map((e) => e.id)
-            );
-            $search_results.hasNextPage = new_res.hasNextPage && hasNextPage;
-            $search_results.mangaList.push(...new_res.mangaList);
-            $search_results = $search_results;
-
-            setTimeout(end_reached, 500);
+    const end_reached = async () => {
+        if (!end_is_visible || !$searcher.has_next_page) {
+            return;
         }
+        let r = await $searcher.next_page();
+        items = r.map(e => {
+            return {
+                id: Number(e.id),
+                data: e,
+            };
+        })
+        console.log($searcher)
+        await tick();
+        setTimeout(end_reached, 500);
     };
 
     let end_is_visible = true;
@@ -114,13 +70,6 @@
         }
     };
 
-    $: items = $search_results.mangaList.map((e) => {
-        return { id: e.id, data: e };
-    });
-
-    if ($search_results.mangaList.length == 0) {
-        search();
-    }
     invoke('tachidesk_get_source_filters', { sourceId: $page.params.src_id }).then(async (e) => {
         console.log(e);
         // https://github.com/Suwayomi/Tachidesk-Server/blob/cde5dc5bfa4ce6cce6d565b41589672a754460c0/server/src/main/kotlin/suwayomi/tachidesk/manga/impl/Search.kt#L137
@@ -154,19 +103,10 @@
     </button>
     <button
         on:click={() => {
-            let id_set = new Set();
-            let collisions = new Array();
-            $search_results.mangaList.forEach((m) => {
-                if (id_set.has(m.id)) {
-                    collisions.push(m.id);
-                } else {
-                    id_set.add(m.id);
-                }
-            });
-            console.log(collisions);
+            console.log($searcher, end_is_visible);
         }}
     >
-        {$search_results.mangaList.length} | end visible: {end_is_visible}
+        {$searcher.search_results.length} | end visible: {end_is_visible}
     </button>
 </cl>
 

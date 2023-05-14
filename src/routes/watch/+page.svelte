@@ -1,9 +1,10 @@
 <script lang="ts" context="module">
-    import { writable, type Writable } from 'svelte/store';
-    import type { ListResults, MultiSearchResult } from 'types';
+    import { writable } from 'svelte/store';
+    import type { MultiSearchResult } from 'types';
     import { Tmdb } from '$lib/searcher/tmdb';
 
-    let searcher = writable(Tmdb.new());
+    let searcher_factory = writable(Tmdb.factory());
+    let searcher = writable(Tmdb.new(""));
     let search_query = writable('');
 </script>
 
@@ -17,20 +18,16 @@
     import type { RObject } from '$lib/searcher/searcher';
 
     let items = new Array<RObject<MultiSearchResult>>();
-    $searcher.on_update = async () => {
-        items = $searcher.search_results;
-    };
 
     const search = async () => {
-        if ($search_query == '') {
-            $searcher.reset_search();
-            await $searcher.on_update();
-        } else {
-            await $searcher.set_query($search_query);
-
-            await tick();
-            setTimeout(end_reached, 500);
+        let s = await $searcher_factory.with_query($search_query);
+        if (!s) {
+            return;
         }
+        $searcher = s;
+        items = [];
+        await tick();
+        setTimeout(end_reached, 500);
     };
 
     let id_set = new Set();
@@ -39,7 +36,8 @@
         if (!end_is_visible || !$searcher.has_next_page) {
             return;
         }
-        await $searcher.next_page();
+        items = await $searcher.next_page();
+        console.log($searcher);
         await tick();
         setTimeout(end_reached, 500);
     };

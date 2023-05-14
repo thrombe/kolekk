@@ -1,7 +1,8 @@
 <script lang="ts" context="module">
     import { writable } from 'svelte/store';
 
-    let searcher = writable(new_db<Image>('Image'));
+    let fac = writable(new_factory<Image>("Image"));
+    let searcher = writable(new_db<Image>('Image', ""));
     let selected = writable(0);
     let search_query = writable('');
 </script>
@@ -17,6 +18,7 @@
     import ObjectExplorer from '$lib/ObjectExplorer.svelte';
     import { new_db, type RObject } from '$lib/searcher/searcher';
     import { get_path } from '$lib/commands';
+    import { new_factory } from '$lib/searcher/database';
 
     let selected_item: Unique<RObject<Image>, number>;
 
@@ -59,7 +61,8 @@
 <DataListener on_receive={file_drop} />
 
 <ObjectExplorer
-    bind:searcher={$searcher}
+    bind:fac={$fac}
+    searcher={searcher}
     bind:search_query={$search_query}
     bind:selected_item_index={$selected}
     bind:selected_item

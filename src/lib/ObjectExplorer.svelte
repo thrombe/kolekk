@@ -1,7 +1,8 @@
 <script lang="ts" context="module">
-    import { writable } from 'svelte/store';
+    import { writable, type Writable } from 'svelte/store';
 
-    let tag_searcher = writable(TagSearch.new());
+    let tag_fac = writable(TagSearch.factory());
+    let tag_searcher = writable(TagSearch.new(""));
     let tag_query = writable('');
 </script>
 
@@ -11,9 +12,10 @@
     import { tick } from 'svelte';
     import type { Unique } from '$lib/virtual';
     import TagSearchBox from '$lib/TagSearchBox.svelte';
-    import { TagSearch, type ForceDb, type RObject, type RSearcher } from './searcher/searcher';
+    import { TagSearch, type ForceDb, type RFactory, type RObject, type RSearcher } from './searcher/searcher';
 
-    export let searcher: RSearcher<T>;
+    export let fac: RFactory<ForceDb<T>>;
+    export let searcher: Writable<RSearcher<ForceDb<T>>>;
     export let selected_item_index: number;
     export let selected_item: Unique<RObject<ForceDb<T>>, number>;
     export let item_width: number;
@@ -41,19 +43,14 @@
         infobox: {};
     }
 
-    searcher.next_page();
-    searcher.on_update = async () => {
-        items = searcher.search_results.map((e) => {
-            return { id: e.id, data: e } as Unique<RObject<ForceDb<T>>, number>;
-        });
-    };
-
     let search_objects = async () => {
-        await searcher.set_query(search_query);
+        $searcher = await fac.with_query(search_query);
+        items = [];
+        await tick();
         end_reached();
     };
+    search_objects();
 
-    $: searcher.set_query(search_query);
     let items = new Array<Unique<RObject<ForceDb<T>>, number>>();
 
     let end_is_visible = true;
@@ -93,15 +90,18 @@
         await tick();
         tag_search_input.focus();
         $tag_query = '';
-        await $tag_searcher.set_query($tag_query);
+        $tag_searcher = await $tag_fac.with_query($tag_query);
     };
 
     const end_reached = async () => {
         while (true) {
-            if (!end_is_visible || !searcher.has_next_page) {
+            if (!end_is_visible || !$searcher.has_next_page) {
                 break;
             }
-            await searcher.next_page();
+            let r = await $searcher.next_page();
+            items = r.map(e => {
+                return { id: e.id, data: e } as Unique<RObject<ForceDb<T>>, number>;
+            });
             await tick();
         }
     };
@@ -122,7 +122,6 @@
         info_margin = 0;
     }
 
-    $tag_searcher.set_query($tag_query);
     const tag_box_input_handle = async (ev: KeyboardEvent) => {
         if (ev.key == 'Enter') {
             if (
@@ -138,7 +137,7 @@
                 selected_item.data.data.tags.push(tag_id);
                 $tag_query = '';
 
-                await $tag_searcher.set_query($tag_query);
+                $tag_searcher = await $tag_fac.with_query($tag_query);
             } else if ($tag_searcher.search_results.length > 0) {
                 let tag_id = $tag_searcher.search_results[0].id;
                 if (!selected_item.data.data.tags.includes(tag_id)) {
@@ -155,7 +154,7 @@
                 }
 
                 $tag_query = '';
-                await $tag_searcher.set_query($tag_query);
+                $tag_searcher = await $tag_fac.with_query($tag_query);
             }
         }
 
@@ -190,7 +189,13 @@
         on:keydown={on_enter}
     />
     <button on:click={search_objects}>refresh</button>
-    <button>{end_is_visible}</button>
+    <button
+        on:click={() => {
+            console.log($searcher, items)
+        }}
+    >
+        {end_is_visible}
+    </button>
     <button
         on:click={() => {
             show_item_info = !show_item_info;
@@ -244,7 +249,7 @@
             bind:tag_search_input
             rerender_on_update={selected_item.data.id}
             on_input={async () => {
-                await $tag_searcher.set_query($tag_query);
+                $tag_searcher = await $tag_fac.with_query($tag_query);
             }}
             on_keydown={tag_box_input_handle}
             tag_highlight={searchbox_tag_highlight}
