@@ -67,7 +67,7 @@
     <button on:click={search}>Search</button>
     <button
         on:click={() => {
-            $searcher.include_adult = !$searcher.include_adult;
+            $searcher_factory.include_adult = !$searcher_factory.include_adult;
             search();
         }}
     >

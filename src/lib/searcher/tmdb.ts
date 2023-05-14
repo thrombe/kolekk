@@ -23,8 +23,10 @@ export class Tmdb extends Paged<MultiSearchResult> {
     static factory() {
         type R = RSearcher<MultiSearchResult>;
         class Fac {
+            include_adult: boolean = false;
             async with_query(q: string) {
                 let t = Tmdb.new(q);
+                t.include_adult = this.include_adult;
                 return t as R | null;
             }
         }
