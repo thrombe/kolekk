@@ -45,7 +45,7 @@
 
     let search_objects = async () => {
         $searcher = await fac.with_query(search_query);
-        items = [];
+        await next_page();
         await tick();
         end_reached();
     };
@@ -98,12 +98,15 @@
             if (!end_is_visible || !$searcher.has_next_page) {
                 break;
             }
-            let r = await $searcher.next_page();
-            items = r.map(e => {
-                return { id: e.id, data: e } as Unique<RObject<ForceDb<T>>, number>;
-            });
+            await next_page();
             await tick();
         }
+    };
+    const next_page = async () => {
+        let r = await $searcher.next_page();
+        items = r.map(e => {
+            return { id: e.id, data: e } as Unique<RObject<ForceDb<T>>, number>;
+        });
     };
     const on_enter = async (event: KeyboardEvent) => {
         if (event.key == 'Enter') {
