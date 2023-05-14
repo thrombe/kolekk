@@ -174,9 +174,15 @@
     <pad style="height: {bottom_padding}px; width: 100%;" />
 
     <!-- observer -->
-    <div style="width: 100%; position: relative; top: -{margin}px;">
-        <Observer enter_screen={end_reached} bind:visible={end_is_visible} {root} {margin} />
-    </div>
+    {#if bottom_padding < margin}
+        <obs style="width: 100%;">
+            <Observer enter_screen={end_reached} bind:visible={end_is_visible} {root} {margin} />
+        </obs>
+    {:else}
+        <obs style="width: 100%; position: relative; top: -{margin}px;">
+            <Observer enter_screen={end_reached} bind:visible={end_is_visible} {root} {margin} />
+        </obs>
+    {/if}
 </cl>
 
 <svelte:window on:keydown={_on_keydown} />
