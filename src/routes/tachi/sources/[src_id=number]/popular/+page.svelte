@@ -30,7 +30,6 @@
         }
         $searcher = s;
         items = []
-        console.log($searcher, s)
         await tick();
         setTimeout(end_reached, 500);
     };
@@ -47,7 +46,6 @@
                 data: e,
             };
         })
-        console.log($searcher)
         await tick();
         setTimeout(end_reached, 500);
     };
