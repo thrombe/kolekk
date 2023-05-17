@@ -552,7 +552,7 @@ pub mod thumbnails {
                     //     - sending some kinda Evicted error through the channels in the evicted items
                     //     - ignoring the ThumbnailWorkResult for the evicted items
                     //       - NOTE: make sure to delete any files that might have been created or undo anything that needs to be undone
-                    if let Some(v) = cache.put(r.uri.clone(), ThumbnailStatus::Waiting(vec![r])) {
+                    if let Some((k, v)) = cache.push(r.uri.clone(), ThumbnailStatus::Waiting(vec![r])) {
                         match v {
                             ThumbnailStatus::Completed { tmb, sizes } => {
                                 let _ = std::fs::remove_dir_all(dir.join(tmb.uuid));
