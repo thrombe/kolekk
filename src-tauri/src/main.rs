@@ -23,7 +23,10 @@ use tauri::Manager;
 
 pub use logg::{debug, error};
 
-use crate::{api::tmdb::TmdbClient, database::AppDatabase};
+use crate::{
+    api::{lastfm::LastFmClient, tmdb::TmdbClient},
+    database::AppDatabase,
+};
 
 #[derive(PartialEq, Eq)]
 pub enum AppInitialisationStatus {
@@ -68,6 +71,12 @@ fn main() {
             api::commands::tachidesk_search_manga_in,
             api::commands::tachidesk_get_chapter,
             api::commands::tachidesk_get_source_filters,
+            api::commands::lfm_search_track,
+            api::commands::lfm_search_album,
+            api::commands::lfm_search_artist,
+            api::commands::lfm_get_track_info,
+            api::commands::lfm_get_album_info,
+            api::commands::lfm_get_artist_info,
             database::enter_searchable,
             database::search_jsml_object,
             database::add_tag_to_object,
@@ -113,6 +122,10 @@ async fn setup(app_handle: &tauri::AppHandle) -> Result<(), Error> {
 
     app_handle
         .manage(TmdbClient::new(include_str!("../../cache/tmdb_v3_auth"), client.clone()).await?);
+    app_handle.manage(LastFmClient::new(
+        include_str!("../../cache/lastfm_api_key"),
+        client.clone(),
+    ));
     app_handle.manage(client.clone());
     app_handle.manage(clipboard::Clipboard::new()?);
 

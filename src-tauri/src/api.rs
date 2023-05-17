@@ -2,6 +2,10 @@ pub mod commands {
     use std::time::Duration;
 
     use kolekk_types::api::{
+        lastfm::{
+            AlbumInfo, AlbumListResult, AlbumTrack, ArtistInfo, ArtistInfoSimilar,
+            ArtistListResult, InfoQuery, LfmTag, Link, TrackInfo, TrackListResult,
+        },
         tachidesk::{
             Chapter, Extension, ExtensionAction, Manga, MangaListPage, MangaSource, SourceFilter,
         },
@@ -16,6 +20,7 @@ pub mod commands {
     };
 
     use super::{
+        lastfm::{LastFmClient, SearchResultsOk},
         tachidesk::TachideskClient,
         tmdb::{Id, TmdbClient},
     };
@@ -202,6 +207,64 @@ pub mod commands {
         page: u64,
     ) -> Result<MangaListPage, Error> {
         tachi.search_manga_in(source_id, query, page).await
+    }
+
+    #[tauri::command]
+    pub async fn lfm_search_track(
+        lfm: tauri::State<'_, LastFmClient>,
+        limit: Option<usize>,
+        page: usize,
+        track: String,
+        artist: Option<String>,
+    ) -> Result<SearchResultsOk<Vec<TrackListResult>>, Error> {
+        lfm.search_track(limit, page, track, artist).await
+    }
+
+    #[tauri::command]
+    pub async fn lfm_search_album(
+        lfm: tauri::State<'_, LastFmClient>,
+        limit: Option<usize>,
+        page: usize,
+        album: String,
+    ) -> Result<SearchResultsOk<Vec<AlbumListResult>>, Error> {
+        lfm.search_album(limit, page, album).await
+    }
+
+    #[tauri::command]
+    pub async fn lfm_search_artist(
+        lfm: tauri::State<'_, LastFmClient>,
+        limit: Option<usize>,
+        page: usize,
+        artist: String,
+    ) -> Result<SearchResultsOk<Vec<ArtistListResult>>, Error> {
+        lfm.search_artist(limit, page, artist).await
+    }
+
+    #[tauri::command]
+    pub async fn lfm_get_track_info(
+        lfm: tauri::State<'_, LastFmClient>,
+        track: InfoQuery<String>,
+        autocorrect: bool,
+    ) -> Result<TrackInfo<Link>, Error> {
+        lfm.track_info(track, autocorrect).await
+    }
+
+    #[tauri::command]
+    pub async fn lfm_get_album_info(
+        lfm: tauri::State<'_, LastFmClient>,
+        album: InfoQuery<String>,
+        autocorrect: bool,
+    ) -> Result<AlbumInfo<Vec<LfmTag>, Vec<AlbumTrack>>, Error> {
+        lfm.album_info(album, autocorrect).await
+    }
+
+    #[tauri::command]
+    pub async fn lfm_get_artist_info(
+        lfm: tauri::State<'_, LastFmClient>,
+        artist: InfoQuery<String>,
+        autocorrect: bool,
+    ) -> Result<ArtistInfo<Vec<ArtistInfoSimilar>, Vec<LfmTag>, Link>, Error> {
+        lfm.artist_info(artist, autocorrect).await
     }
 }
 
@@ -907,6 +970,339 @@ pub mod tachidesk {
                 .infer_err()?,
             )
             .await
+        }
+    }
+}
+
+pub mod lastfm {
+    #[allow(unused_imports)]
+    use crate::{dbg, debug, error};
+
+    use kolekk_types::api::lastfm::{
+        deser_parse_from_str, AlbumInfo, AlbumListResult, AlbumTrack, ArtistInfo,
+        ArtistInfoSimilar, ArtistListResult, Info, InfoQuery, InfoWiki, LfmTag, Link, Matches,
+        SearchQuery, SearchResults, Similar, TrackInfo, TrackListResult,
+    };
+    use reqwest::{Client, Url};
+    // use serde_with::NoneAsEmptyString;
+    use serde::{de::DeserializeOwned, Deserialize, Serialize};
+
+    use std::{borrow::Cow, fmt::Debug};
+
+    use crate::bad_error::{BadError, Error, InferBadError};
+    // use serde_with::serde_as;
+    // use serde_aux::prelude::*;
+
+    const BASE_URL: &str = "http://ws.audioscrobbler.com/2.0";
+
+    #[derive(Serialize, Deserialize, Debug, Clone)]
+    pub struct SearchResultsOk<T> {
+        #[serde(alias = "opensearch:Query")]
+        pub query: SearchQuery,
+        #[serde(alias = "opensearch:totalResults")]
+        #[serde(deserialize_with = "deser_parse_from_str")]
+        pub total_results: u64,
+        #[serde(alias = "opensearch:startIndex")]
+        #[serde(deserialize_with = "deser_parse_from_str")]
+        pub start_index: u64,
+        #[serde(alias = "opensearch:itemsPerPage")]
+        #[serde(deserialize_with = "deser_parse_from_str")]
+        pub items_per_page: u64,
+        // BAD: can't flatten in TS T-T so had to clone this type definition
+        #[serde(flatten)]
+        pub matches: T,
+        // #[serde(rename = "@attr")]
+        // attr: ?,
+    }
+
+    pub struct LastFmClient {
+        client: Client,
+        api_key: String,
+    }
+
+    impl LastFmClient {
+        pub fn new(api_key: impl AsRef<str>, client: Client) -> Self {
+            Self {
+                client,
+                api_key: api_key.as_ref().into(),
+            }
+        }
+
+        pub async fn test(self) -> Self {
+            // dbg!(self.search_album(None, 1, "Visions").await);
+            // dbg!(self.search_artist(None, 1, "Milet").await);
+            // dbg!(self.artist_info(InfoQuery::Artist("Milet"), false).await);
+            // dbg!(self.album_info(InfoQuery::Album{ artist: "Milet", album: "Visions"}, false).await);
+            // dbg!(self.track_info(InfoQuery::Track{ artist: "Milet", track: "US"}, false).await);
+            // dbg!(self.search_track(None, 1, "US", Some("Milet".to_string())).await);
+            self
+        }
+
+        async fn get_parsed<T: DeserializeOwned + Debug>(
+            &self,
+            url: impl reqwest::IntoUrl,
+        ) -> Result<T, Error> {
+            let res = super::common::get_parsed(&self.client, url).await?;
+            Ok(res)
+        }
+
+        pub async fn search_track(
+            &self,
+            limit: Option<usize>,
+            page: usize,
+            track: impl AsRef<str>,
+            artist: Option<String>,
+        ) -> Result<SearchResultsOk<Vec<TrackListResult>>, Error> {
+            let url = Url::parse_with_params(
+                &format!("{}/?method=track.search", BASE_URL),
+                [
+                    ("track", Cow::Borrowed(track.as_ref())),
+                    ("page", page.to_string().into()),
+                    ("api_key", self.api_key.as_str().into()),
+                    ("format", "json".into()),
+                ]
+                .into_iter()
+                .chain(limit.into_iter().map(|l| ("limit", l.to_string().into())))
+                .chain(artist.into_iter().map(|a| ("artist", a.into()))),
+            )
+            .infer_err()?;
+            let r = self.get_parsed::<SearchResults<Matches>>(url).await?;
+            let r = match r {
+                SearchResults::Ok { results } => results,
+                SearchResults::Err { error, message } => return None.bad_err("bad results"),
+            };
+            let Matches::Track { track } = r.matches else {
+                return None.bad_err("bad matches");
+            };
+            let r = SearchResultsOk {
+                matches: track,
+                query: r.query,
+                total_results: r.total_results,
+                start_index: r.start_index,
+                items_per_page: r.items_per_page,
+            };
+            Ok(r)
+        }
+
+        pub async fn search_album(
+            &self,
+            limit: Option<usize>,
+            page: usize,
+            album: impl AsRef<str>,
+        ) -> Result<SearchResultsOk<Vec<AlbumListResult>>, Error> {
+            let url = Url::parse_with_params(
+                &format!("{}/?method=album.search", BASE_URL),
+                [
+                    ("album", Cow::Borrowed(album.as_ref())),
+                    ("page", page.to_string().into()),
+                    ("api_key", self.api_key.as_str().into()),
+                    ("format", "json".into()),
+                ]
+                .into_iter()
+                .chain(limit.into_iter().map(|l| ("limit", l.to_string().into()))),
+            )
+            .infer_err()?;
+            let r = self.get_parsed::<SearchResults<Matches>>(url).await?;
+            let r = match r {
+                SearchResults::Ok { results } => results,
+                SearchResults::Err { error, message } => return None.bad_err("bad results"),
+            };
+            let Matches::Album { album } = r.matches else {
+                return None.bad_err("bad matches");
+            };
+            let r = SearchResultsOk {
+                matches: album,
+                query: r.query,
+                total_results: r.total_results,
+                start_index: r.start_index,
+                items_per_page: r.items_per_page,
+            };
+            Ok(r)
+        }
+
+        pub async fn search_artist(
+            &self,
+            limit: Option<usize>,
+            page: usize,
+            artist: impl AsRef<str>,
+        ) -> Result<SearchResultsOk<Vec<ArtistListResult>>, Error> {
+            let url = Url::parse_with_params(
+                &format!("{}/?method=artist.search", BASE_URL),
+                [
+                    ("artist", Cow::Borrowed(artist.as_ref())),
+                    ("page", page.to_string().into()),
+                    ("api_key", self.api_key.as_str().into()),
+                    ("format", "json".into()),
+                ]
+                .into_iter()
+                .chain(limit.into_iter().map(|l| ("limit", l.to_string().into()))),
+            )
+            .infer_err()?;
+            let r = self.get_parsed::<SearchResults<Matches>>(url).await?;
+            let r = match r {
+                SearchResults::Ok { results } => results,
+                SearchResults::Err { error, message } => return None.bad_err("bad results"),
+            };
+            let Matches::Artist { artist } = r.matches else {
+                return None.bad_err("bad matches");
+            };
+            let r = SearchResultsOk {
+                matches: artist,
+                query: r.query,
+                total_results: r.total_results,
+                start_index: r.start_index,
+                items_per_page: r.items_per_page,
+            };
+            Ok(r)
+        }
+
+        pub async fn artist_info<T: AsRef<str>>(
+            &self,
+            artist: InfoQuery<T>,
+            autocorrect: bool,
+        ) -> Result<ArtistInfo<Vec<ArtistInfoSimilar>, Vec<LfmTag>, Link>, Error> {
+            let url = Url::parse_with_params(
+                &format!("{}/?method=artist.getInfo", BASE_URL),
+                [
+                    match &artist {
+                        InfoQuery::Mbid(s) => ("mbid", Cow::Borrowed(s.as_ref())),
+                        InfoQuery::Artist(s) => ("artist", Cow::Borrowed(s.as_ref())),
+                        _ => return None.bad_err("bad query"),
+                    },
+                    ("api_key", self.api_key.as_str().into()),
+                    ("format", "json".into()),
+                    (
+                        "autocorrect",
+                        if autocorrect { 1 } else { 0 }.to_string().into(),
+                    ),
+                ]
+                .into_iter(),
+            )
+            .infer_err()?;
+            let r = self.get_parsed::<Info>(url).await?;
+            let Info::Artist { artist } = r else {
+                return None.bad_err("bad matches");
+            };
+            let i = ArtistInfo {
+                name: artist.name,
+                mbid: artist.mbid,
+                url: artist.url,
+                stats: artist.stats,
+                tags: artist.tags.tag,
+                bio: InfoWiki {
+                    links: artist.bio.links.map(|l| l.link),
+                    published: artist.bio.published,
+                    summary: artist.bio.summary,
+                    content: artist.bio.content,
+                },
+                similar: match artist.similar {
+                    Similar::ArtistInfo { artist } => artist,
+                    _ => return None.bad_err("bad similar artists"),
+                },
+            };
+            Ok(i)
+        }
+
+        pub async fn album_info<T: AsRef<str>>(
+            &self,
+            album: InfoQuery<T>,
+            autocorrect: bool,
+        ) -> Result<AlbumInfo<Vec<LfmTag>, Vec<AlbumTrack>>, Error> {
+            let url = Url::parse_with_params(
+                &format!("{}/?method=album.getInfo", BASE_URL),
+                [
+                    ("api_key", self.api_key.as_str().into()),
+                    ("format", "json".into()),
+                    (
+                        "autocorrect",
+                        if autocorrect { 1 } else { 0 }.to_string().into(),
+                    ),
+                ]
+                .into_iter()
+                .chain(
+                    match &album {
+                        InfoQuery::Mbid(s) => vec![("mbid", Cow::Borrowed(s.as_ref()))],
+                        InfoQuery::Album { artist, album } => vec![
+                            ("artist", Cow::Borrowed(artist.as_ref())),
+                            ("album", Cow::Borrowed(album.as_ref())),
+                        ],
+                        _ => return None.bad_err("bad query"),
+                    }
+                    .into_iter(),
+                ),
+            )
+            .infer_err()?;
+            let r = self.get_parsed::<Info>(url).await?;
+            let Info::Album { album } = r else {
+                return None.bad_err("bad matches");
+            };
+            let album = AlbumInfo {
+                name: album.name,
+                artist: album.artist,
+                id: album.id,
+                release_date: album.release_date,
+                mbid: album.mbid,
+                url: album.url,
+                stats: album.stats,
+                image: album.image,
+                tags: album.tags.tag,
+                tracks: album.tracks.track,
+            };
+            Ok(album)
+        }
+
+        pub async fn track_info<T: AsRef<str>>(
+            &self,
+            track: InfoQuery<T>,
+            autocorrect: bool,
+        ) -> Result<TrackInfo<Link>, Error> {
+            let url = Url::parse_with_params(
+                &format!("{}/?method=track.getInfo", BASE_URL),
+                [
+                    ("api_key", self.api_key.as_str().into()),
+                    ("format", "json".into()),
+                    (
+                        "autocorrect",
+                        if autocorrect { 1 } else { 0 }.to_string().into(),
+                    ),
+                ]
+                .into_iter()
+                .chain(
+                    match &track {
+                        InfoQuery::Mbid(s) => vec![("mbid", Cow::Borrowed(s.as_ref()))],
+                        InfoQuery::Track { artist, track } => vec![
+                            ("artist", Cow::Borrowed(artist.as_ref())),
+                            ("track", Cow::Borrowed(track.as_ref())),
+                        ],
+                        _ => return None.bad_err("bad query"),
+                    }
+                    .into_iter(),
+                ),
+            )
+            .infer_err()?;
+            let r = self.get_parsed::<Info>(url).await?;
+            let Info::Track { track } = r else {
+                return None.bad_err("bad matches");
+            };
+            let track = TrackInfo {
+                name: track.name,
+                id: track.id,
+                mbid: track.mbid,
+                url: track.url,
+                duration: track.duration,
+                // listeners: track.listeners,
+                // playcount: track.playcount,
+                stats: track.stats,
+                artist: track.artist,
+                album: track.album,
+                wiki: track.wiki.map(|w| InfoWiki {
+                    links: w.links.map(|l| l.link),
+                    published: w.published,
+                    summary: w.summary,
+                    content: w.content,
+                }),
+            };
+            Ok(track)
         }
     }
 }

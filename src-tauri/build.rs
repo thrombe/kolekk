@@ -6,6 +6,12 @@ use std::{
 
 use kolekk_types::{
     api::{
+        lastfm::{
+            AlbumInfo, AlbumListResult, AlbumTrack, AlbumTrackArtist, ArtistInfo,
+            ArtistInfoSimilar, ArtistListResult, InfoQuery, InfoStats, InfoWiki, LfmImage,
+            LfmImageSize, LfmTag, Link, SearchQuery, SearchResultsOk, SimilarTrack, TrackInfo,
+            TrackInfoAlbum, TrackInfoArtist, TrackListResult,
+        },
         tachidesk::{
             About, Chapter, Extension, ExtensionAction, Manga, MangaListPage, MangaSource,
             MetaValue, SelectableItem, SortFilter, SourceFilter,
@@ -20,7 +26,7 @@ use kolekk_types::{
         Bookmark, Content, Fields, Group, Image, Indexed, Meta, Notes, SearchableEntry, Tag,
         Taggable, TypeFacet,
     },
-    utility::{BasePath, ByteArrayFile, DragDropPaste, Path, Source, ThumbnailSize, DragDropData},
+    utility::{BasePath, ByteArrayFile, DragDropData, DragDropPaste, Path, Source, ThumbnailSize},
     FilderKind, TS,
 };
 
@@ -108,6 +114,29 @@ fn main() {
         SourceFilter,
         SortFilter,
         SelectableItem,
+    );
+    export!(
+        InfoQuery<()>,
+        SearchResultsOk<()>,
+        SearchQuery,
+        LfmImageSize,
+        LfmImage,
+        ArtistListResult,
+        AlbumListResult,
+        TrackListResult,
+        AlbumTrackArtist,
+        AlbumTrack,
+        AlbumInfo<(), ()>,
+        LfmTag,
+        ArtistInfo<(), (), ()>,
+        InfoStats,
+        TrackInfo<()>,
+        Link,
+        InfoWiki<()>,
+        TrackInfoAlbum,
+        TrackInfoArtist,
+        SimilarTrack,
+        ArtistInfoSimilar,
     );
 
     remove_dir(cache_dir).unwrap();

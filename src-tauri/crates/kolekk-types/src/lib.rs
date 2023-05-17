@@ -390,10 +390,453 @@ pub mod api {
             Type3(HashMap<String, String>),
         }
     }
+
+    pub mod lastfm {
+        use serde::{Deserialize, Serialize};
+        use ts_rs::TS;
+
+        use std::fmt::Debug;
+
+        #[derive(Serialize, Deserialize, Debug, Clone)]
+        #[serde(untagged)]
+        pub enum Similar {
+            Tracks {
+                #[serde(alias = "similartracks")]
+                similar_tracks: SimilarTracks,
+            },
+            ArtistInfo {
+                artist: Vec<ArtistInfoSimilar>,
+            },
+            Artists {
+                #[serde(alias = "similarartists")]
+                similar_artists: SimilarArtists,
+            },
+        }
+
+        #[derive(Serialize, Deserialize, Debug, Clone)]
+        pub struct SimilarTracks {
+            pub track: Vec<SimilarTrack>,
+        }
+        #[derive(Serialize, Deserialize, Debug, Clone)]
+        pub struct SimilarArtists {
+            pub artist: Vec<ArtistInfoSimilar>,
+        }
+
+        #[derive(Serialize, Deserialize, Debug, Clone)]
+        pub enum Matches {
+            #[serde(rename = "trackmatches")]
+            Track { track: Vec<TrackListResult> },
+            #[serde(rename = "albummatches")]
+            Album { album: Vec<AlbumListResult> },
+            #[serde(rename = "artistmatches")]
+            Artist { artist: Vec<ArtistListResult> },
+        }
+
+        #[derive(Serialize, Deserialize, Debug, Clone)]
+        #[serde(untagged)]
+        pub enum SearchResults<T> {
+            Ok { results: SearchResultsOk<T> },
+            Err { error: u32, message: String },
+        }
+
+        #[derive(Serialize, Deserialize, Debug, Clone)]
+        #[serde(untagged)]
+        pub enum Info {
+            // #[serde(rename = "track")]
+            Track {
+                track: TrackInfo<Links>,
+            },
+            // #[serde(rename = "album")]
+            Album {
+                album: AlbumInfo<Tags, AlbumTracks>,
+            },
+            // #[serde(rename = "artist")]
+            Artist {
+                artist: ArtistInfo<Similar, Tags, Links>,
+            },
+        }
+
+        #[derive(Serialize, Deserialize, Debug, Clone)]
+        pub struct AlbumTracks {
+            pub track: Vec<AlbumTrack>,
+        }
+
+        #[derive(Serialize, Deserialize, Debug, Clone)]
+        pub struct Tags {
+            pub tag: Vec<LfmTag>,
+        }
+
+        #[derive(Serialize, Deserialize, Debug, Clone)]
+        pub struct Links {
+            pub link: Link,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct ArtistInfoSimilar {
+            pub name: String,
+            #[serde(deserialize_with = "non_empty_str")]
+            #[serde(default)]
+            pub mbid: Option<String>,
+            pub url: String,
+            pub image: Vec<LfmImage>,
+            #[serde(alias = "match")]
+            #[serde(deserialize_with = "optional_deser_parse_from_str")]
+            #[serde(default)]
+            pub match_factor: Option<f64>,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct SimilarTrack {
+            pub name: String,
+            #[serde(deserialize_with = "non_empty_str")]
+            #[serde(default)]
+            pub mbid: Option<String>,
+            pub url: String,
+            #[serde(deserialize_with = "deser_parse_from_str")]
+            pub playcount: u64,
+            pub artist: TrackInfoArtist,
+            pub image: Vec<LfmImage>,
+            #[serde(alias = "match")]
+            pub match_factor: f64,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct TrackInfoArtist {
+            pub name: String,
+            pub url: String,
+            #[serde(deserialize_with = "non_empty_str")]
+            #[serde(default)]
+            pub mbid: Option<String>,
+        }
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct TrackInfoAlbum {
+            pub artist: String,
+            pub title: String,
+            pub url: String,
+            pub image: Vec<LfmImage>,
+            #[serde(deserialize_with = "non_empty_str")]
+            #[serde(default)]
+            pub mbid: Option<String>,
+        }
+
+        // TODO: Vec<Link>
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct InfoWiki<Links> {
+            pub links: Option<Links>,
+            pub published: String,
+            pub summary: String,
+            pub content: String,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct Link {
+            #[serde(alias = "#text")]
+            pub text: String,
+            pub rel: String,
+            pub href: String,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct TrackInfo<Links> {
+            pub name: String,
+            #[serde(deserialize_with = "deser_parse_optional_from_str")]
+            #[serde(default)]
+            pub id: Option<u64>,
+            #[serde(deserialize_with = "non_empty_str")]
+            #[serde(default)]
+            pub mbid: Option<String>,
+            pub url: String,
+            #[serde(deserialize_with = "deser_parse_from_str")]
+            pub duration: u64, // returns 0 for some tracks : /
+            // sereamable: ?,
+            // #[serde(deserialize_with = "deser_parse_from_str")]
+            // pub listeners: u64,
+            // #[serde(deserialize_with = "deser_parse_from_str")]
+            // pub playcount: u64,
+            #[serde(flatten)]
+            pub stats: InfoStats,
+            pub artist: TrackInfoArtist,
+            pub album: Option<TrackInfoAlbum>,
+            // TODO: Tags ?
+            // toptags: ?,
+            pub wiki: Option<InfoWiki<Links>>,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct InfoStats {
+            #[serde(deserialize_with = "deser_parse_from_str")]
+            listeners: u64,
+            #[serde(deserialize_with = "deser_parse_from_str")]
+            playcount: u64,
+        }
+
+        // TODO: Vec<Tag>
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct ArtistInfo<T, Tags, Links> {
+            pub name: String,
+            #[serde(deserialize_with = "non_empty_str")]
+            #[serde(default)]
+            pub mbid: Option<String>,
+            pub url: String,
+            pub stats: InfoStats,
+            pub tags: Tags,
+            pub bio: InfoWiki<Links>,
+            pub similar: T,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct LfmTag {
+            pub name: String,
+            pub url: String,
+        }
+
+        // TODO: Vec<AlbumTrack>
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct AlbumInfo<Tags, AlbumTracks> {
+            pub name: String,
+            pub artist: String,
+            #[serde(deserialize_with = "deser_parse_optional_from_str")]
+            #[serde(default)]
+            pub id: Option<u64>,
+            #[serde(alias = "releasedate")]
+            pub release_date: Option<String>,
+            #[serde(deserialize_with = "non_empty_str")]
+            #[serde(default)]
+            pub mbid: Option<String>,
+            pub url: String,
+            #[serde(flatten)]
+            pub stats: InfoStats,
+            pub image: Vec<LfmImage>,
+            pub tags: Tags,
+            pub tracks: AlbumTracks,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct AlbumTrack {
+            pub name: String,
+            pub url: String,
+            // time in seconds
+            #[serde(deserialize_with = "deser_parse_from_str")]
+            pub duration: u64, // returns 0 for some tracks : /
+            pub artist: AlbumTrackArtist,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct AlbumTrackArtist {
+            pub url: String,
+            pub name: String,
+            #[serde(deserialize_with = "non_empty_str")]
+            #[serde(default)]
+            pub mbid: Option<String>,
+        }
+
+        // #[serde_as]
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct TrackListResult {
+            pub name: String,
+            pub artist: String,
+            pub url: String,
+            #[serde(deserialize_with = "deser_parse_from_str")]
+            pub listeners: u64,
+            pub image: Vec<LfmImage>,
+            // #[serde_as(as = "NoneAsEmptyString")]
+            #[serde(deserialize_with = "non_empty_str")]
+            #[serde(default)]
+            pub mbid: Option<String>,
+        }
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct AlbumListResult {
+            pub name: String,
+            pub artist: String,
+            #[serde(deserialize_with = "deser_parse_optional_from_str")]
+            // #[serde(deserialize_with = "deser_parse_from_str")]
+            #[serde(default)]
+            pub id: Option<u64>,
+            pub url: String,
+            pub image: Vec<LfmImage>,
+            #[serde(deserialize_with = "non_empty_str")]
+            #[serde(default)]
+            pub mbid: Option<String>,
+        }
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct ArtistListResult {
+            pub name: String,
+            pub url: String,
+            #[serde(deserialize_with = "deser_parse_from_str")]
+            pub listeners: u64,
+            pub image: Vec<LfmImage>,
+            #[serde(deserialize_with = "non_empty_str")]
+            #[serde(default)]
+            pub mbid: Option<String>,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct LfmImage {
+            #[serde(alias = "#text")]
+            pub url: String,
+            pub size: LfmImageSize,
+        }
+
+        // MAYBE: instead of Vec<Image>, it should be a set of images as images often come as a set in lastfm
+        // i mean ImageSet { small: String, medium: String, .. }
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        #[serde(rename_all = "lowercase")]
+        pub enum LfmImageSize {
+            Small,
+            Medium,
+            Large,
+            ExtraLarge,
+            Mega,
+            #[serde(alias = "")]
+            Unknown,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct SearchQuery {
+            #[serde(alias = "#text")]
+            pub text: String,
+            pub role: String,
+            #[serde(alias = "startPage")]
+            #[serde(deserialize_with = "deser_parse_from_str")]
+            pub start_page: u64,
+            #[serde(alias = "searchTerms")]
+            pub search_terms: Option<String>,
+        }
+
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub struct SearchResultsOk<T> {
+            // #[serde(alias = "opensearch:Query")]
+            pub query: SearchQuery,
+            // #[serde(alias = "opensearch:totalResults")]
+            // #[serde(deserialize_with = "deser_parse_from_str")]
+            pub total_results: u64,
+            // #[serde(alias = "opensearch:startIndex")]
+            // #[serde(deserialize_with = "deser_parse_from_str")]
+            pub start_index: u64,
+            // #[serde(alias = "opensearch:itemsPerPage")]
+            // #[serde(deserialize_with = "deser_parse_from_str")]
+            pub items_per_page: u64,
+            // BAD: can't flatten in TS T-T so had to clone this type definition
+            // #[serde(flatten)]
+            pub matches: T,
+            // #[serde(rename = "@attr")]
+            // attr: ?,
+        }
+
+        // MAYBE: allows passing Self::Album too something that requires Self::Artist
+        // maybe have InfoQuery::{Mbid, T} and TrackQuery, AlbumQuery, String
+        #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+        pub enum InfoQuery<T> {
+            Mbid(T),
+            Artist(T),
+            Album { artist: T, album: T },
+            Track { artist: T, track: T },
+        }
+
+        // https://github.com/serde-rs/json/issues/412
+        pub fn deser_parse_from_str<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+            T: std::str::FromStr + serde::Deserialize<'de>,
+            <T as std::str::FromStr>::Err: std::fmt::Display,
+        {
+            #[derive(Deserialize, Debug)]
+            #[serde(untagged)]
+            enum StringOrT<T> {
+                String(String),
+                T(T),
+            }
+            let v = StringOrT::<T>::deserialize(deserializer).unwrap();
+            let v = match v {
+                StringOrT::String(s) => s.parse().map_err(serde::de::Error::custom)?,
+                StringOrT::T(t) => t,
+            };
+
+            // let value = String::deserialize(deserializer)?;
+            // let value = value.parse().map_err(serde::de::Error::custom)?;
+            Ok(v)
+        }
+
+        pub fn optional_deser_parse_from_str<'de, D, T>(
+            deserializer: D,
+        ) -> Result<Option<T>, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+            T: std::str::FromStr + serde::Deserialize<'de>,
+            <T as std::str::FromStr>::Err: std::fmt::Display,
+        {
+            #[derive(Deserialize, Debug)]
+            #[serde(untagged)]
+            enum StringOrT<T> {
+                String(String),
+                T(T),
+            }
+            let Some(v) = Option::<StringOrT<T>>::deserialize(deserializer).unwrap() else {
+                return Ok(None);
+            };
+            let v = match v {
+                StringOrT::String(s) => s.parse().map_err(serde::de::Error::custom)?,
+                StringOrT::T(t) => t,
+            };
+
+            // let value = String::deserialize(deserializer)?;
+            // let value = value.parse().map_err(serde::de::Error::custom)?;
+            Ok(Some(v))
+        }
+        pub fn deser_parse_optional_from_str<'de, T, D>(
+            deserializer: D,
+        ) -> Result<Option<T>, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+            T: std::str::FromStr + serde::Deserialize<'de>,
+            <T as std::str::FromStr>::Err: std::fmt::Display,
+        {
+            let s = Option::<String>::deserialize(deserializer)?;
+            let n = s.map(|s| s.parse::<T>());
+
+            match n {
+                Some(Ok(n)) => Ok(Some(n)),
+                Some(Err(e)) => Err(serde::de::Error::custom(e)),
+                None => Ok(None),
+            }
+        }
+        // fn u64_from_string<'de, D, T>(deserializer: D) -> Result<Option<u64>, D::Error>
+        // where
+        //     D: serde::Deserializer<'de>,
+        //     T: serde::Deserialize<'de>,
+        // {
+        //     use serde::Deserialize;
+        //     let value = String::deserialize(deserializer)?;
+        //     let value = value.parse().map_err(serde::de::Error::custom)?;
+        //     Ok(value)
+        // }
+
+        pub fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+            T: serde::Deserialize<'de>,
+        {
+            use serde::de::IntoDeserializer;
+            let opt = Option::<String>::deserialize(de)?;
+            let opt = opt.as_deref();
+            match opt {
+                None | Some("") => Ok(None),
+                Some(s) => T::deserialize(s.into_deserializer()).map(Some),
+            }
+        }
+
+        // https://github.com/serde-rs/serde/issues/1425
+        pub fn non_empty_str<'de, D: serde::Deserializer<'de>>(
+            d: D,
+        ) -> Result<Option<String>, D::Error> {
+            let o: Option<String> = Option::deserialize(d)?;
+            Ok(o.filter(|s| !s.is_empty()))
+        }
+    }
 }
 
 pub mod objects {
-    use std::{ops::Deref, borrow::Cow};
+    use std::{borrow::Cow, ops::Deref};
 
     use serde::{Deserialize, Serialize};
     use ts_rs::TS;
