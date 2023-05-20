@@ -1,6 +1,7 @@
 
-import type { Tag, SearchableEntry, MultiSearchResult, Extension, MangaSource, Manga, Chapter } from 'types';
+import type { Tag, SearchableEntry, MultiSearchResult, Extension, MangaSource, Manga, Chapter, AlbumListResult } from 'types';
 import { TagSearch, Db, new_db, db_obj_type, new_factory } from './database';
+import type { LastFm } from './lastfm';
 import type { TachiExtensions, TachiChapters, TachiSources, TachiMangaSearch, TachiChapterExplorer } from './tachi';
 import { Tmdb } from './tmdb';
 
@@ -38,6 +39,9 @@ export type RObject<T> =
     : T extends Chapter
     ? ReturnType<typeof TachiChapters.obj_type>
 
+    : T extends AlbumListResult
+    ? ReturnType<typeof LastFm.obj_type>
+
     : ReturnType<typeof db_obj_type<T>>;
 
 
@@ -63,6 +67,9 @@ export type RSearcher<T> =
 
     : T extends Chapter
     ? ReturnType<typeof TachiChapters.new>
+
+    : T extends AlbumListResult
+    ? ReturnType<typeof LastFm.new>
 
     : ReturnType<typeof new_db<T>>
 
@@ -90,8 +97,12 @@ export type RFactory<T> =
     : T extends Chapter
     ? ReturnType<typeof TachiChapters.factory>
 
+    : T extends AlbumListResult
+    ? ReturnType<typeof LastFm.factory>
+
     : ReturnType<typeof new_factory<T>>
 
 export type RDbEntry<T> = T extends Tag ? Tag : SearchableEntry<T>;
 
 export type Keyed  = { get_key(): unknown };
+
