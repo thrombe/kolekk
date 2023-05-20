@@ -4,7 +4,7 @@ pub mod commands {
     use kolekk_types::api::{
         lastfm::{
             AlbumInfo, AlbumListResult, AlbumTrack, ArtistInfo, ArtistInfoSimilar,
-            ArtistListResult, InfoQuery, LfmTag, Link, TrackInfo, TrackListResult,
+            ArtistListResult, InfoQuery, LfmTag, Link, TrackInfo, TrackListResult, SearchResultsOk,
         },
         tachidesk::{
             Chapter, Extension, ExtensionAction, Manga, MangaListPage, MangaSource, SourceFilter,
@@ -20,7 +20,7 @@ pub mod commands {
     };
 
     use super::{
-        lastfm::{LastFmClient, SearchResultsOk},
+        lastfm::LastFmClient,
         tachidesk::TachideskClient,
         tmdb::{Id, TmdbClient},
     };
@@ -996,21 +996,21 @@ pub mod lastfm {
     const BASE_URL: &str = "http://ws.audioscrobbler.com/2.0";
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
-    pub struct SearchResultsOk<T> {
+    struct SearchResultsOk<T> {
         #[serde(alias = "opensearch:Query")]
-        pub query: SearchQuery,
+        query: SearchQuery,
         #[serde(alias = "opensearch:totalResults")]
         #[serde(deserialize_with = "deser_parse_from_str")]
-        pub total_results: u64,
+        total_results: u64,
         #[serde(alias = "opensearch:startIndex")]
         #[serde(deserialize_with = "deser_parse_from_str")]
-        pub start_index: u64,
+        start_index: u64,
         #[serde(alias = "opensearch:itemsPerPage")]
         #[serde(deserialize_with = "deser_parse_from_str")]
-        pub items_per_page: u64,
+        items_per_page: u64,
         // BAD: can't flatten in TS T-T so had to clone this type definition
         #[serde(flatten)]
-        pub matches: T,
+        matches: T,
         // #[serde(rename = "@attr")]
         // attr: ?,
     }
@@ -1035,6 +1035,7 @@ pub mod lastfm {
             // dbg!(self.album_info(InfoQuery::Album{ artist: "Milet", album: "Visions"}, false).await);
             // dbg!(self.track_info(InfoQuery::Track{ artist: "Milet", track: "US"}, false).await);
             // dbg!(self.search_track(None, 1, "US", Some("Milet".to_string())).await);
+            // dbg!(self.search_track(None, 1, "US", None).await);
             self
         }
 
@@ -1052,7 +1053,7 @@ pub mod lastfm {
             page: usize,
             track: impl AsRef<str>,
             artist: Option<String>,
-        ) -> Result<SearchResultsOk<Vec<TrackListResult>>, Error> {
+        ) -> Result<kolekk_types::api::lastfm::SearchResultsOk<Vec<TrackListResult>>, Error> {
             let url = Url::parse_with_params(
                 &format!("{}/?method=track.search", BASE_URL),
                 [
@@ -1066,7 +1067,7 @@ pub mod lastfm {
                 .chain(artist.into_iter().map(|a| ("artist", a.into()))),
             )
             .infer_err()?;
-            let r = self.get_parsed::<SearchResults<Matches>>(url).await?;
+            let r = self.get_parsed::<SearchResults<SearchResultsOk<Matches>>>(url).await?;
             let r = match r {
                 SearchResults::Ok { results } => results,
                 SearchResults::Err { error, message } => return None.bad_err("bad results"),
@@ -1074,7 +1075,7 @@ pub mod lastfm {
             let Matches::Track { track } = r.matches else {
                 return None.bad_err("bad matches");
             };
-            let r = SearchResultsOk {
+            let r = kolekk_types::api::lastfm::SearchResultsOk {
                 matches: track,
                 query: r.query,
                 total_results: r.total_results,
@@ -1089,7 +1090,7 @@ pub mod lastfm {
             limit: Option<usize>,
             page: usize,
             album: impl AsRef<str>,
-        ) -> Result<SearchResultsOk<Vec<AlbumListResult>>, Error> {
+        ) -> Result<kolekk_types::api::lastfm::SearchResultsOk<Vec<AlbumListResult>>, Error> {
             let url = Url::parse_with_params(
                 &format!("{}/?method=album.search", BASE_URL),
                 [
@@ -1102,7 +1103,7 @@ pub mod lastfm {
                 .chain(limit.into_iter().map(|l| ("limit", l.to_string().into()))),
             )
             .infer_err()?;
-            let r = self.get_parsed::<SearchResults<Matches>>(url).await?;
+            let r = self.get_parsed::<SearchResults<SearchResultsOk<Matches>>>(url).await?;
             let r = match r {
                 SearchResults::Ok { results } => results,
                 SearchResults::Err { error, message } => return None.bad_err("bad results"),
@@ -1110,7 +1111,7 @@ pub mod lastfm {
             let Matches::Album { album } = r.matches else {
                 return None.bad_err("bad matches");
             };
-            let r = SearchResultsOk {
+            let r = kolekk_types::api::lastfm::SearchResultsOk {
                 matches: album,
                 query: r.query,
                 total_results: r.total_results,
@@ -1125,7 +1126,7 @@ pub mod lastfm {
             limit: Option<usize>,
             page: usize,
             artist: impl AsRef<str>,
-        ) -> Result<SearchResultsOk<Vec<ArtistListResult>>, Error> {
+        ) -> Result<kolekk_types::api::lastfm::SearchResultsOk<Vec<ArtistListResult>>, Error> {
             let url = Url::parse_with_params(
                 &format!("{}/?method=artist.search", BASE_URL),
                 [
@@ -1138,7 +1139,7 @@ pub mod lastfm {
                 .chain(limit.into_iter().map(|l| ("limit", l.to_string().into()))),
             )
             .infer_err()?;
-            let r = self.get_parsed::<SearchResults<Matches>>(url).await?;
+            let r = self.get_parsed::<SearchResults<SearchResultsOk<Matches>>>(url).await?;
             let r = match r {
                 SearchResults::Ok { results } => results,
                 SearchResults::Err { error, message } => return None.bad_err("bad results"),
@@ -1146,7 +1147,7 @@ pub mod lastfm {
             let Matches::Artist { artist } = r.matches else {
                 return None.bad_err("bad matches");
             };
-            let r = SearchResultsOk {
+            let r = kolekk_types::api::lastfm::SearchResultsOk {
                 matches: artist,
                 query: r.query,
                 total_results: r.total_results,

@@ -435,7 +435,7 @@ pub mod api {
         #[derive(Serialize, Deserialize, Debug, Clone)]
         #[serde(untagged)]
         pub enum SearchResults<T> {
-            Ok { results: SearchResultsOk<T> },
+            Ok { results: T },
             Err { error: u32, message: String },
         }
 
@@ -478,7 +478,7 @@ pub mod api {
             #[serde(default)]
             pub mbid: Option<String>,
             pub url: String,
-            pub image: Vec<LfmImage>,
+            // pub image: Vec<LfmImage>,
             #[serde(alias = "match")]
             #[serde(deserialize_with = "optional_deser_parse_from_str")]
             #[serde(default)]
@@ -495,7 +495,7 @@ pub mod api {
             #[serde(deserialize_with = "deser_parse_from_str")]
             pub playcount: u64,
             pub artist: TrackInfoArtist,
-            pub image: Vec<LfmImage>,
+            // pub image: Vec<LfmImage>,
             #[serde(alias = "match")]
             pub match_factor: f64,
         }
@@ -581,6 +581,7 @@ pub mod api {
             pub stats: InfoStats,
             pub tags: Tags,
             pub bio: InfoWiki<Links>,
+            // pub image: Vec<LfmImage>,
             pub similar: T,
         }
 
@@ -638,7 +639,8 @@ pub mod api {
             pub url: String,
             #[serde(deserialize_with = "deser_parse_from_str")]
             pub listeners: u64,
-            pub image: Vec<LfmImage>,
+            // - [API Announcement](https://www.reddit.com/r/lastfm/comments/bjwcqh/api_announcement_lastfm_support_community/)
+            // pub image: Vec<LfmImage>,
             // #[serde_as(as = "NoneAsEmptyString")]
             #[serde(deserialize_with = "non_empty_str")]
             #[serde(default)]
@@ -664,7 +666,7 @@ pub mod api {
             pub url: String,
             #[serde(deserialize_with = "deser_parse_from_str")]
             pub listeners: u64,
-            pub image: Vec<LfmImage>,
+            // pub image: Vec<LfmImage>,
             #[serde(deserialize_with = "non_empty_str")]
             #[serde(default)]
             pub mbid: Option<String>,
