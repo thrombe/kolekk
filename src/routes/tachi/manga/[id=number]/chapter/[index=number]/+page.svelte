@@ -93,6 +93,7 @@
             height={item_height}
             lazy={false}
             img_source={page.uri}
+            dynamic_thumbnail={false}
             scale="98%"
         />
     </VirtualScrollable>

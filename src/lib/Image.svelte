@@ -9,6 +9,7 @@
     export let lazy: boolean;
     export let img_source: string;
 
+    export let dynamic_thumbnail: boolean = true;
     export let bg_color = 'transparent';
     export let scale = '100%';
     export let root: HTMLElement | null = null;
@@ -31,12 +32,16 @@
     }
 
     let thumbnail_size: ThumbnailSize;
-    $: try_update_thumbnail_size(visible, lazy, width);
-    let try_update_thumbnail_size = async (visible: boolean, lazy: boolean, width: number) => {
+    $: try_update_thumbnail_size(visible, lazy, width, dynamic_thumbnail);
+    let try_update_thumbnail_size = async (visible: boolean, lazy: boolean, width: number, dynamic_thumbnail: boolean) => {
         if ((!visible && lazy && hasAPI) || !width) {
             return;
         }
-        thumbnail_size = await invoke('get_thumbnail_size', { width: width });
+        if (dynamic_thumbnail) {
+            thumbnail_size = await invoke('get_thumbnail_size', { width: width });
+        } else {
+            thumbnail_size = "original";
+        }
     };
     $: set_img(img_source, thumbnail_size);
 
