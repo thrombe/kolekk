@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import type { Meta, Tag, Taggable, TypeFacet } from "types";
 import { Offset, SavedSearch } from "./mixins";
-import type { RObject, RDbEntry } from "./searcher";
+import type { RObject, RDbEntry, ForceDb, Keyed } from "./searcher";
 
 
 
@@ -26,10 +26,10 @@ export function new_factory<T>(facet: TypeFacet) {
 }
 
 export function db_obj_type<T>() {
-    return null as unknown as Meta<Taggable<T>, TypeFacet>;
+    return null as unknown as Meta<Taggable<T>, TypeFacet> & Keyed;
 }
 
-export class Db<T> extends Offset<T> {
+export class Db<T> extends Offset<ForceDb<T>> {
     facet: TypeFacet;
     limit: number;
     constructor(facet: TypeFacet, q: string) {
@@ -44,7 +44,13 @@ export class Db<T> extends Offset<T> {
             facet: this.facet,
             limit: this.limit,
             offset,
-        }) as Array<RObject<T>>;
+        }) as Array<RObject<ForceDb<T>>>;
+        r = r.map(e => {
+            e.get_key = function() {
+                return this.id;
+            };
+            return e;
+        });
         if (r.length < this.limit) {
             this.has_next_page = false;
         }
@@ -90,6 +96,12 @@ export class TagSearch extends Offset<Tag> {
             limit: this.limit,
             offset: offset
         }) as Array<RObject<Tag>>;
+        r = r.map(e => {
+            e.get_key = function() {
+                return this.id;
+            };
+            return e;
+        });
         if (r.length < this.limit) {
             this.has_next_page = false;
         }
@@ -97,7 +109,7 @@ export class TagSearch extends Offset<Tag> {
     }
 
     static obj_type() {
-        return null as unknown as Meta<Tag, TypeFacet>;
+        return null as unknown as Meta<Tag, TypeFacet> & Keyed;
     }
 
     async add_tag(tag: Tag) {
@@ -124,4 +136,3 @@ export class TagSearch extends Offset<Tag> {
         await invoke("reload_reader");
     }
 }
-

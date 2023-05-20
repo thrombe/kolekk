@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api";
 import type { Chapter, Extension, ExtensionAction, Indexed, Manga, MangaListPage, MangaSource, SourceFilter, TypeFacet } from "types";
 import { Db, new_factory } from "./database";
 import { Paged, SavedSearch, SlowSearch, UniqueSearch } from "./mixins";
-import type { ForceDb, RObject, RSearcher } from "./searcher";
+import type { ForceDb, Keyed, RObject, RSearcher } from "./searcher";
 
 
 
@@ -153,7 +153,14 @@ export class TachiMangaSearch extends Paged<Manga> {
             r = await this.search_manga(page, this.query);
         }
         this.has_next_page = r.hasNextPage && r.mangaList.length > 0;
-        return r.mangaList;
+        let k =  r.mangaList.map(e => {
+            let p = e as Manga & Keyed;
+            p.get_key = function() {
+                return this.id;
+            };
+            return p;
+        });
+        return k;
     }
 
     get_key(t: RObject<Manga>) {
@@ -161,7 +168,7 @@ export class TachiMangaSearch extends Paged<Manga> {
     }
 
     static obj_type() {
-        return null as unknown as Manga;
+        return null as unknown as Manga & Keyed;
     }
 
     async get_filters() {

@@ -93,3 +93,5 @@ export type RFactory<T> =
     : ReturnType<typeof new_factory<T>>
 
 export type RDbEntry<T> = T extends Tag ? Tag : SearchableEntry<T>;
+
+export type Keyed  = { get_key(): unknown };

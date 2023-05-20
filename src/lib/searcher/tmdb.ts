@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import type { ListResults, MultiSearchResult } from "types";
 import { Paged, SavedSearch, SlowSearch, UniqueSearch, type ISlow } from "./mixins";
-import type { RObject, RSearcher } from "./searcher";
+import type { Keyed, RObject, RSearcher } from "./searcher";
 
 
 
@@ -35,7 +35,7 @@ export class Tmdb extends Paged<MultiSearchResult> {
     }
 
     static obj_type() {
-        return null as unknown as MultiSearchResult;
+        return null as unknown as MultiSearchResult & Keyed;
     }
 
 
@@ -51,7 +51,17 @@ export class Tmdb extends Paged<MultiSearchResult> {
             includeAdult: this.include_adult
         });
         this.has_next_page = page < (r.total_pages ? r.total_pages : 0);
-        return r.results;
+        let k =  r.results.map(e => {
+            let p = e as MultiSearchResult & Keyed;
+            p.get_key = function() {
+                if (!this.id) {
+                    console.warn("item does not have an id :/", this);
+                }
+                return this.id;
+            };
+            return p;
+        });
+        return k;
     }
 
     get_key(t: RObject<MultiSearchResult>) {
