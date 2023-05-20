@@ -1,0 +1,64 @@
+<script lang="ts" context="module">
+    import { writable, type Writable } from 'svelte/store';
+
+    let fac: Writable<RFactory<AlbumListResult>> = writable(LastFm.factory());
+    let searcher: Writable<RSearcher<AlbumListResult>> = writable(LastFm.new(""));
+    let selected = writable(0);
+    let search_query = writable('');
+</script>
+
+<script lang="ts">
+    import type { AlbumListResult } from 'types';
+    import Card from '$lib/Card.svelte';
+    import type { Unique } from '$lib/virtual';
+    import Explorer from '$lib/Explorer.svelte';
+    import { LastFm } from '$lib/searcher/lastfm';
+    import type { RFactory, RObject, RSearcher } from '$lib/searcher/searcher';
+
+    let selected_item: Unique<RObject<AlbumListResult>, unknown>;
+
+    let t: AlbumListResult;
+</script>
+
+<Explorer
+    {t}
+    bind:fac={$fac}
+    searcher={searcher}
+    bind:search_query={$search_query}
+    bind:selected_item_index={$selected}
+    bind:selected_item
+    on_keydown={async (e) => {}}
+    on_item_click={async () => {}}
+    item_width={150}
+    item_height={150}
+    let:item
+    let:item_width
+    let:item_height
+    let:selected
+    let:root
+    let:info_margin
+    let:info_width
+>
+    <Card
+        get_img_source={async () => {
+            let image = item.image;
+            let url = image[image.length - 1].url;
+            return url;
+        }}
+        title={''}
+        width={item_width}
+        height={item_height}
+        {selected}
+        {item}
+        {root}
+    />
+
+    <!-- <ImageInfoBox
+        slot="infobox"
+        {tag_searcher}
+        item={selected_item}
+        {info_width}
+        {info_margin}
+        on_tag_add_button={show_tag_searchbox}
+    /> -->
+</Explorer>

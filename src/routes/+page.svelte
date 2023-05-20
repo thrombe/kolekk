@@ -31,6 +31,9 @@
 <h>
     <a href="/tachi/sources">Tachidesk sources</a>
 </h>
+<h>
+    <a href="/music/album">Search Music</a>
+</h>
 
 <style>
     h {
