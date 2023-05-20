@@ -85,12 +85,17 @@
         }
     };
 
+    const new_tag_searcher = async () => {
+        let ts = await $tag_fac.with_query($tag_query);
+        await ts.next_page();
+        $tag_searcher = ts;
+    };
     const show_tag_searchbox = async () => {
         tag_box_show = true;
         await tick();
         tag_search_input.focus();
         $tag_query = '';
-        $tag_searcher = await $tag_fac.with_query($tag_query);
+        await new_tag_searcher();
     };
 
     const end_reached = async () => {
@@ -138,9 +143,9 @@
                 let tag_id = await $tag_searcher.add_tag(tag);
                 await $tag_searcher.add_tag_to_object(selected_item.data.id, tag_id);
                 selected_item.data.data.tags.push(tag_id);
-                $tag_query = '';
 
-                $tag_searcher = await $tag_fac.with_query($tag_query);
+                $tag_query = '';
+                await new_tag_searcher();
             } else if ($tag_searcher.search_results.length > 0) {
                 let tag_id = $tag_searcher.search_results[0].id;
                 if (!selected_item.data.data.tags.includes(tag_id)) {
@@ -157,7 +162,7 @@
                 }
 
                 $tag_query = '';
-                $tag_searcher = await $tag_fac.with_query($tag_query);
+                await new_tag_searcher();
             }
         }
 
@@ -249,13 +254,11 @@
 
     {#if tag_box_show}
         <TagSearchBox
-            bind:tag_searcher={$tag_searcher}
+            tag_searcher={tag_searcher}
             bind:search_query={$tag_query}
             bind:tag_search_input
             rerender_on_update={selected_item.data.id}
-            on_input={async () => {
-                $tag_searcher = await $tag_fac.with_query($tag_query);
-            }}
+            on_input={new_tag_searcher}
             on_keydown={tag_box_input_handle}
             tag_highlight={searchbox_tag_highlight}
             on_tag_click={on_search_box_tag_click}

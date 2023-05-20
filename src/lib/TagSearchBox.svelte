@@ -2,8 +2,9 @@
     import type { Tag } from 'types';
     import TagBox from '$lib/TagBox.svelte';
     import type { RObject, RSearcher } from './searcher/searcher';
+    import type { Writable } from 'svelte/store';
 
-    export let tag_searcher: RSearcher<Tag>;
+    export let tag_searcher: Writable<RSearcher<Tag>>;
     export let search_query: string;
     export let tag_search_input: HTMLElement;
 
@@ -39,7 +40,7 @@
     />
     {#key key}
         <tags>
-            {#each tag_searcher.search_results as tag (tag.id)}
+            {#each $tag_searcher.search_results as tag (tag.id)}
                 <TagBox
                     tag={tag.data}
                     highlight={tag_highlight(tag)}
