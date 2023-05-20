@@ -66,7 +66,7 @@
         {#if manga}
             <ImageCard
                 width={window_width}
-                aspect_ratio={2 / 3}
+                height={window_height * 2 / 3}
                 lazy={false}
                 img_source={'http://0.0.0.0:4567' + manga.thumbnailUrl}
             />

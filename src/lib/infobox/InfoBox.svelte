@@ -31,7 +31,7 @@
             <krop>
                 <ImageCard
                     width={width - border_radius * 2}
-                    aspect_ratio={(width - border_radius * 2) / (height - border_radius * 2)}
+                    height={height - border_radius * 2}
                     lazy={false}
                     {img_source}
                 />

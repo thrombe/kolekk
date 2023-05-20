@@ -5,7 +5,7 @@
     const hasAPI = 'IntersectionObserver' in window;
 
     export let width: number;
-    export let aspect_ratio: number;
+    export let height: number;
     export let lazy: boolean;
 
     export let img_source = '';
@@ -13,7 +13,6 @@
     export let scale = '100%';
     export let root: HTMLElement | null = null;
 
-    $: height = width / aspect_ratio;
     let abs: HTMLElement;
     $: if (abs) {
         abs.style.left = (width / 2).toString() + 'px';

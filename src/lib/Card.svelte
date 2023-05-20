@@ -28,7 +28,7 @@
 
         let w = width - 4;
         ele.style.width = w.toString() + 'px';
-        let h = height - 4;
+        let h = height - 0;
         ele.style.height = h.toString() + 'px';
     }
 
@@ -43,7 +43,7 @@
             scale={img_scale}
             {img_source}
             width={width - 4}
-            aspect_ratio={width / height}
+            {height}
             {bg_color}
             lazy={false}
             {root}

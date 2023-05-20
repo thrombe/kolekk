@@ -42,7 +42,7 @@
                         {img_source}
                         {width}
                         lazy={false}
-                        aspect_ratio={1}
+                        height={width}
                         scale={'130%'}
                         {root}
                     />

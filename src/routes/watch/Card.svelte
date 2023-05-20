@@ -65,7 +65,7 @@
     <cl bind:this={ele} draggable="true" on:click={on_click} on:keydown={() => {}}>
         <card-div bind:this={insides}>
             <card-insides>
-                <ImageCard {img_source} {width} {aspect_ratio} {bg_color} {root} lazy={false} />
+                <ImageCard {img_source} {width} height={width / aspect_ratio} {bg_color} {root} lazy={false} />
 
                 {#if title && title.length > 0}
                     <title-box style={'height: ' + shade_height}>
