@@ -8,6 +8,10 @@
         "resolveJsonModule": true,
         "skipLibCheck": true,
         "sourceMap": true,
+        "typeRoots": [
+            "node_modules/@types"
+        ],
+        "types": [ "youtube" ],
         "strict": true
     }
     // Path aliases are handled by https://kit.svelte.dev/docs/configuration#alias
