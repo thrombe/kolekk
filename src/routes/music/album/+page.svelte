@@ -14,6 +14,7 @@
     import Explorer from '$lib/Explorer.svelte';
     import { LastFm } from '$lib/searcher/lastfm';
     import type { RFactory, RObject, RSearcher } from '$lib/searcher/searcher';
+    import LastFmAlbum from '$lib/infobox/LastFmAlbum.svelte';
 
     let selected_item: Unique<RObject<AlbumListResult>, unknown>;
 
@@ -53,12 +54,10 @@
         {root}
     />
 
-    <!-- <ImageInfoBox
+    <LastFmAlbum
         slot="infobox"
-        {tag_searcher}
         item={selected_item}
         {info_width}
         {info_margin}
-        on_tag_add_button={show_tag_searchbox}
-    /> -->
+    />
 </Explorer>
