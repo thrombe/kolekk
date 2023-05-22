@@ -979,8 +979,8 @@ pub mod lastfm {
     use crate::{dbg, debug, error};
 
     use kolekk_types::api::lastfm::{
-        deser_parse_from_str, AlbumInfo, AlbumListResult, AlbumTrack, ArtistInfo,
-        ArtistInfoSimilar, ArtistListResult, Info, InfoQuery, InfoWiki, LfmTag, Link, Matches,
+        deser_parse_from_str, AlbumInfo, AlbumListResult, AlbumTrack, AlbumTracks, ArtistInfo,
+        ArtistInfoSimilar, ArtistListResult, Info, InfoQuery, InfoWiki, LfmTag, Tags, Link, Matches,
         SearchQuery, SearchResults, Similar, TrackInfo, TrackListResult,
     };
     use reqwest::{Client, Url};
@@ -1189,7 +1189,11 @@ pub mod lastfm {
                 mbid: artist.mbid,
                 url: artist.url,
                 stats: artist.stats,
-                tags: artist.tags.tag,
+                tags: match artist.tags {
+                    Tags::Tags { tag } => tag,
+                    Tags::Tag { tag } => vec![tag],
+                    Tags::None(_) => vec![],
+                },
                 bio: InfoWiki {
                     links: artist.bio.links.map(|l| l.link),
                     published: artist.bio.published,
@@ -1246,8 +1250,15 @@ pub mod lastfm {
                 url: album.url,
                 stats: album.stats,
                 image: album.image,
-                tags: album.tags.tag,
-                tracks: album.tracks.track,
+                tags: match album.tags {
+                    Tags::Tags { tag } => tag,
+                    Tags::Tag { tag } => vec![tag],
+                    Tags::None(_) => vec![],
+                },
+                tracks: album.tracks.map(|t| match t {
+                    AlbumTracks::Tracks { track } => track,
+                    AlbumTracks::Track { track } => vec![track],
+                }).unwrap_or_default(),
             };
             Ok(album)
         }

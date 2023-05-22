@@ -448,7 +448,7 @@ pub mod api {
             },
             // #[serde(rename = "album")]
             Album {
-                album: AlbumInfo<Tags, AlbumTracks>,
+                album: AlbumInfo<Tags, Option<AlbumTracks>>,
             },
             // #[serde(rename = "artist")]
             Artist {
@@ -457,13 +457,26 @@ pub mod api {
         }
 
         #[derive(Serialize, Deserialize, Debug, Clone)]
-        pub struct AlbumTracks {
-            pub track: Vec<AlbumTrack>,
+        #[serde(untagged)]
+        pub enum AlbumTracks {
+            Tracks {
+                track: Vec<AlbumTrack>,
+            },
+            Track {
+                track: AlbumTrack,
+            },
         }
 
         #[derive(Serialize, Deserialize, Debug, Clone)]
-        pub struct Tags {
-            pub tag: Vec<LfmTag>,
+        #[serde(untagged)]
+        pub enum Tags {
+            Tags {
+                tag: Vec<LfmTag>,
+            },
+            Tag {
+                tag: LfmTag,
+            },
+            None(String),
         }
 
         #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -617,8 +630,8 @@ pub mod api {
             pub name: String,
             pub url: String,
             // time in seconds
-            #[serde(deserialize_with = "deser_parse_from_str")]
-            pub duration: u64, // returns 0 for some tracks : /
+            // #[serde(deserialize_with = "deser_parse_from_str")]
+            pub duration: Option<u64>, // returns 0 for some tracks : /
             pub artist: AlbumTrackArtist,
         }
 
