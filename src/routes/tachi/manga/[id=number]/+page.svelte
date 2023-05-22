@@ -52,6 +52,7 @@
     <manga>
         <bg>
             {#if manga}
+                <text-box>Url: {manga.realUrl}</text-box>
                 <text-box>Title: {manga.title}</text-box>
                 <text-box>Author: {manga.author}</text-box>
                 <text-box>Id: {manga.id}</text-box>

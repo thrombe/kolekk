@@ -5,6 +5,7 @@
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
     import Image from '$lib/Image.svelte';
     import type { Chapter } from 'types';
+    import type { Unique } from '$lib/virtual';
 
     let end_is_visible = true;
     let window_width = 100;
@@ -36,8 +37,12 @@
         }
     };
 
+    interface Thumbnail {
+        uri: string;
+        fetched: boolean;
+    }
     let chapter: Chapter;
-    let items: any[] = new Array();
+    let items: Unique<Thumbnail, number>[] = new Array();
     invoke('tachidesk_get_chapter', {
         mangaId: parseInt($page.params.id),
         chapterIndex: parseInt($page.params.index)
