@@ -86,6 +86,8 @@ fn main() {
             database::get_path,
             database::reload_reader,
             clipboard::copy_image_to_clipboard,
+            logg_string,
+            logg_jsml,
         ])
         .setup(|app| {
             app.handle().manage(app.handle());
@@ -109,6 +111,15 @@ async fn initialise_app(
 
     setup(app.inner()).await?;
     Ok(())
+}
+
+#[tauri::command]
+async fn logg_string(string: String) {
+    debug!("{}", string);
+}
+#[tauri::command]
+async fn logg_jsml(jsml: serde_json::Value) {
+    dbg!(jsml);
 }
 
 async fn setup(app_handle: &tauri::AppHandle) -> Result<(), Error> {
