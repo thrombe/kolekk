@@ -12,13 +12,14 @@
     export let selected_item: Unique<T, unknown> | null = null;
     export let end_reached = async () => {};
     export let on_keydown = async (_: KeyboardEvent, _a: () => Promise<void>) => {};
-    export let on_item_click = async () => {};
+    export let on_item_click = async (t: Unique<T, unknown>) => {};
     export let end_is_visible = true;
     export let keyboard_control = true;
 
     type T = $$Generic;
 
     let width: number;
+    let height: number;
     let columns = 1;
 
     $: margin = item_height * 2;
@@ -91,14 +92,14 @@
             event.preventDefault();
         }
     };
-    $: if (width && root && items) {
+    $: if (height && width && root && items) {
         on_update();
     }
     let _selected_item: HTMLElement;
     export const try_scroll_into_view = async () => {
         await tick();
         if (!(selected === undefined) && items) {
-            console.log(items[selected]);
+            // console.log(items[selected]);
         }
         if (_selected_item) {
             _selected_item.scrollIntoView({ block: 'nearest' });
@@ -133,16 +134,21 @@
     const _on_item_click = async (i: number) => {
         selected = i + start * columns;
         await tick();
-        await on_item_click();
+        await on_item_click(items[selected]);
     };
 </script>
 
-<cl on:scroll={on_update} bind:this={root} bind:clientWidth={width}>
+<cl on:scroll={on_update} bind:this={root} bind:clientWidth={width} bind:clientHeight={height} >
     <pad style="height: {top_padding}px; width: 100%;" />
     <gd style="--item-width: {item_width}px; --gap: {gap}px;" bind:this={grid}>
         {#each visible as item, i (item.id)}
             {#if selected == i + start * columns || (i + start * columns == items.length - 1 && selected >= items.length)}
-                <sel bind:this={_selected_item}>
+                <sel bind:this={_selected_item}
+                    on:click={() => {
+                        _on_item_click(i);
+                    }}
+                    on:keydown={() => {}}
+                >
                     <slot
                         {item_width}
                         {item_height}
@@ -210,9 +216,5 @@
 
         overflow: visible;
         width: calc(100% - var(--gap) * 0);
-    }
-
-    sel,
-    clk {
     }
 </style>
