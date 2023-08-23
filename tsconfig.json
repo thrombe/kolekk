@@ -11,11 +11,21 @@
         "typeRoots": [
             "node_modules/@types"
         ],
-        "types": [ "youtube" ],
+        "paths": {
+            "$lib/*": [
+                "./src/lib/*"
+            ],
+            "types": [
+                "./src/rs_bindings.ts"
+            ]
+        },
+        "allowImportingTsExtensions": true,
+        // "include": [
+        //     "src/**/*"
+        // ],
+        "types": [
+            "youtube"
+        ],
         "strict": true
     }
-    // Path aliases are handled by https://kit.svelte.dev/docs/configuration#alias
-    //
-    // If you want to overwrite includes/excludes, make sure to copy over the relevant includes/excludes
-    // from the referenced tsconfig.json - TypeScript does not merge them in
 }

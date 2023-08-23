@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import type { AlbumListResult, SearchResultsOk } from "types";
-import { Paged, SavedSearch, SlowSearch, UniqueSearch } from "./mixins";
-import type { Keyed, RObject, RSearcher } from "./searcher";
+import { Paged, SavedSearch, SlowSearch, UniqueSearch } from "./mixins.ts";
+import type { Keyed, RObject, RSearcher } from "./searcher.ts";
 
 
 export class LastFm extends Paged<AlbumListResult> {

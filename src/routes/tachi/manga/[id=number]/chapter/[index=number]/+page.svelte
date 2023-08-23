@@ -5,7 +5,7 @@
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
     import Image from '$lib/Image.svelte';
     import type { Chapter } from 'types';
-    import type { Unique } from '$lib/virtual';
+    import type { Unique } from '$lib/virtual.ts';
 
     let end_is_visible = true;
     let window_width = 100;

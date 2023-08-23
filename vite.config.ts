@@ -1,8 +1,25 @@
-import { sveltekit } from '@sveltejs/kit/vite';
-import type { UserConfig } from 'vite';
+import { defineConfig } from 'vite';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+// import preprocess from 'svelte-preprocess';
 
-const config: UserConfig = {
-    plugins: [sveltekit()]
-};
-
-export default config;
+export default defineConfig({
+	build: {
+		outDir: 'build'
+	},
+	server: {
+		port: 5173
+	},
+	resolve: {
+		alias: {
+			$lib: "./src/lib",
+			types: "./src/rs_bindings.ts",
+		},
+	},
+	plugins: [
+		svelte({
+			// preprocess: [
+			// 	preprocess({}),
+			// ],
+		})
+	]
+});

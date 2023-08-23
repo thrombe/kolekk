@@ -10,10 +10,10 @@
 <script lang="ts">
     import type { AlbumListResult } from 'types';
     import Card from '$lib/Card.svelte';
-    import type { Unique } from '$lib/virtual';
+    import type { Unique } from '$lib/virtual.ts';
     import Explorer from '$lib/Explorer.svelte';
-    import { LastFm } from '$lib/searcher/lastfm';
-    import type { RFactory, RObject, RSearcher } from '$lib/searcher/searcher';
+    import { LastFm } from '$lib/searcher/lastfm.ts';
+    import type { RFactory, RObject, RSearcher } from '$lib/searcher/searcher.ts';
     import LastFmAlbum from '$lib/infobox/LastFmAlbum.svelte';
 
     let selected_item: Unique<RObject<AlbumListResult>, unknown>;

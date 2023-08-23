@@ -12,9 +12,9 @@
     import { onMount, tick } from 'svelte';
     import Card from '$lib/Card.svelte';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
-    import type { Unique } from '$lib/virtual';
-    import { TachiExtensions } from '$lib/searcher/tachi';
-    import type { RObject } from '$lib/searcher/searcher';
+    import type { Unique } from '$lib/virtual.ts';
+    import { TachiExtensions } from '$lib/searcher/tachi.ts';
+    import type { RObject } from '$lib/searcher/searcher.ts';
 
     const get_all_extensions = async () => {
         await $searcher.reload();

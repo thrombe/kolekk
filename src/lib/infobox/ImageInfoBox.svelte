@@ -1,13 +1,13 @@
 <script lang="ts">
     import InfoBox from '$lib/infobox/InfoBox.svelte';
     import TagBox from '$lib/TagBox.svelte';
-    import type { Unique } from '$lib/virtual';
+    import type { Unique } from '$lib/virtual.ts';
     import MetaBox from '$lib/infobox/MetaBox.svelte';
     import TagsBox from '$lib/infobox/TagsBox.svelte';
     import TitleBox from '$lib/infobox/TitleBox.svelte';
     import type { Image, Tag } from 'types';
-    import type { RObject, RSearcher } from '$lib/searcher/searcher';
-    import { get_path } from '$lib/commands';
+    import type { RObject, RSearcher } from '$lib/searcher/searcher.ts';
+    import { get_path } from '$lib/commands.ts';
 
     export let tag_searcher: RSearcher<Tag>;
     export let item: Unique<RObject<Image>, number>;

@@ -11,14 +11,14 @@
     import { invoke } from '@tauri-apps/api/tauri';
     import type { DragDropPaste, Image, Indexed, Path } from 'types';
     import DataListener from '$lib/DataListener.svelte';
-    import { files_to_bytearrays } from '$lib/data_listener';
+    import { files_to_bytearrays } from '$lib/data_listener.ts';
     import Card from '$lib/Card.svelte';
-    import type { Unique } from '$lib/virtual';
+    import type { Unique } from '$lib/virtual.ts';
     import ImageInfoBox from '$lib/infobox/ImageInfoBox.svelte';
     import ObjectExplorer from '$lib/ObjectExplorer.svelte';
-    import { new_db, type RObject } from '$lib/searcher/searcher';
-    import { get_path } from '$lib/commands';
-    import { new_factory } from '$lib/searcher/database';
+    import { new_db, type RObject } from '$lib/searcher/searcher.ts';
+    import { get_path } from '$lib/commands.ts';
+    import { new_factory } from '$lib/searcher/database.ts';
 
     let selected_item: Unique<RObject<Image>, number>;
 

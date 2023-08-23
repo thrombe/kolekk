@@ -1,9 +1,9 @@
 
 import type { Tag, SearchableEntry, MultiSearchResult, Extension, MangaSource, Manga, Chapter, AlbumListResult } from 'types';
-import { TagSearch, Db, new_db, db_obj_type, new_factory } from './database';
-import type { LastFm } from './lastfm';
-import type { TachiExtensions, TachiChapters, TachiSources, TachiMangaSearch, TachiChapterExplorer } from './tachi';
-import { Tmdb } from './tmdb';
+import { TagSearch, Db, new_db, db_obj_type, new_factory } from './database.ts';
+import type { LastFm } from './lastfm.ts';
+import type { TachiExtensions, TachiChapters, TachiSources, TachiMangaSearch, TachiChapterExplorer } from './tachi.ts';
+import { Tmdb } from './tmdb.ts';
 
 type ReturnType<Type> = Type extends (...args: never[]) => infer R ? R : never;
 

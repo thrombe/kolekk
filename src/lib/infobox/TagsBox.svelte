@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { RObject, RSearcher } from '$lib/searcher/searcher';
+    import type { RObject, RSearcher } from '$lib/searcher/searcher.ts';
     import type { Meta, Tag, Taggable } from 'types';
 
     export let item: Meta<Taggable<unknown>, unknown>;

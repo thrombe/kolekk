@@ -5,7 +5,7 @@
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
     import ImageCard from '$lib/ImageCard.svelte';
     import type { Chapter, Manga } from 'types';
-    import type { Unique } from '$lib/virtual';
+    import type { Unique } from '$lib/virtual.ts';
 
     let end_is_visible = true;
     let window_width = 100;

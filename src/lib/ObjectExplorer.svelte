@@ -10,9 +10,9 @@
     import type { Tag } from 'types';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
     import { tick } from 'svelte';
-    import type { Unique } from '$lib/virtual';
+    import type { Unique } from '$lib/virtual.ts';
     import TagSearchBox from '$lib/TagSearchBox.svelte';
-    import { TagSearch, type ForceDb, type RFactory, type RObject, type RSearcher } from './searcher/searcher';
+    import { TagSearch, type ForceDb, type RFactory, type RObject, type RSearcher } from './searcher/searcher.ts';
 
     export let fac: RFactory<ForceDb<T>>;
     export let searcher: Writable<RSearcher<ForceDb<T>>>;

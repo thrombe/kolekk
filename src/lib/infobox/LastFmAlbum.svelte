@@ -2,8 +2,8 @@
     import InfoBox from '$lib/infobox/InfoBox.svelte';
     import TitleBox from '$lib/infobox/TitleBox.svelte';
     import type { AlbumInfo, AlbumListResult, AlbumTrack, InfoQuery, LfmTag } from 'types';
-    import type { RObject } from '$lib/searcher/searcher';
-    import type { Unique } from '$lib/virtual';
+    import type { RObject } from '$lib/searcher/searcher.ts';
+    import type { Unique } from '$lib/virtual.ts';
     import { invoke } from '@tauri-apps/api';
     import { Innertube } from 'youtubei.js/web';
     import {
@@ -13,7 +13,7 @@
         type FetchOptions,
         type HttpVerb
     } from '@tauri-apps/api/http';
-    import { logg } from '$lib/commands';
+    import { logg } from '$lib/commands.ts';
     import type VideoInfo from 'youtubei.js/dist/src/parser/youtube/VideoInfo';
     import { onDestroy } from 'svelte';
 

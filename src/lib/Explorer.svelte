@@ -1,9 +1,9 @@
 <script lang="ts">
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
     import { tick } from 'svelte';
-    import type { Unique } from '$lib/virtual';
-    import type { Writable } from 'svelte/store';
-    import type { RFactory, RObject, RSearcher } from './searcher/searcher';
+    import type { Unique } from '$lib/virtual.ts';
+    import type { Writable } from 'svelte/store.ts';
+    import type { RFactory, RObject, RSearcher } from './searcher/searcher.ts';
 
     // OOF: extra prop to fix T as svelte does not recognise T properly here
     // just pass a variable with the required T type (undefined is fine too) and ignore it

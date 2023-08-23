@@ -8,13 +8,13 @@
 
 <script lang="ts">
     import DataListener from '$lib/DataListener.svelte';
-    import { files_to_bytearrays } from '$lib/data_listener';
+    import { files_to_bytearrays } from '$lib/data_listener.ts';
     import Observer from '$lib/Observer.svelte';
     import { listen, type UnlistenFn, type Event } from '@tauri-apps/api/event';
     import { invoke } from '@tauri-apps/api/tauri';
     import { tick } from 'svelte';
     import type { Bookmark, DragDropPaste, Indexed, Tag } from 'types';
-    import { new_db, type RObject } from '$lib/searcher/searcher';
+    import { new_db, type RObject } from '$lib/searcher/searcher.ts';
 
     interface TempTaggable<T> {
         data: T;

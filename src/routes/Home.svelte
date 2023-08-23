@@ -14,7 +14,7 @@
     <a href="/mal_fetch">Mal Fetch</a>
 </h>
 <h>
-    <a href="/hoard/reaction_images">Hoard em Images</a>
+    <a href="#/hoard/reaction_images">Hoard em Images</a>
 </h>
 <h>
     <a href="/hoard/bookmarks">Hoard em Bookmarks</a>
@@ -32,7 +32,7 @@
     <a href="/tachi/sources">Tachidesk sources</a>
 </h>
 <h>
-    <a href="/music/album">Search Music</a>
+    <a href="#/music/album">Search Music</a>
 </h>
 
 <style>

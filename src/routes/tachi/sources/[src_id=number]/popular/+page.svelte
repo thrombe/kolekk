@@ -13,9 +13,9 @@
     import { invoke } from '@tauri-apps/api/tauri';
     import { page } from '$app/stores';
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
-    import { TachiMangaSearch } from '$lib/searcher/tachi';
-    import type { Unique } from '$lib/virtual';
-    import type { RObject, RSearcher } from '$lib/searcher/searcher';
+    import { TachiMangaSearch } from '$lib/searcher/tachi.ts';
+    import type { Unique } from '$lib/virtual.ts';
+    import type { RObject, RSearcher } from '$lib/searcher/searcher.ts';
     import type { Manga } from 'types';
 
     $searcher_factory.source = $page.params.src_id;
