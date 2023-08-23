@@ -10,6 +10,8 @@ const sleep = (ms: number) => {
 };
 
 
+// TODO: use standard debouncing code
+// https://dev.to/jeremiahjacinth13/what-is-debouncing-1akk
 export interface ISlow<T> {
     with_query(q: string): Promise<T | null>;
 }
@@ -62,7 +64,7 @@ export function SavedSearch<T, S extends Constructor<{
         constructor(...args: any[]) {
             super(...args);
             this.search_results = new Array();
-            this.last_op = new Promise((resolve, reject) => resolve([]));
+            this.last_op = Promise.resolve([]);
         }
 
         override next_page = async () => {

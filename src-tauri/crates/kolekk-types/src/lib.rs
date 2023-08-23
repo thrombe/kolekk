@@ -960,6 +960,15 @@ pub mod objects {
         pub last_interaction: u64,
     }
 
+    // this item (T) is potentially already in db, and we have H context to figure out if it is in there or not
+    // this is useful in cases where data comes from some api, and it is saved in the db.
+    // and we need to know if item returned by the api is same as the one in db (if at all in the db)
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct Unique<T, H: Eq + PartialEq> {
+        pub data: T,
+        pub key: H,
+    }
+
     #[derive(
         Serialize, Deserialize, TS, Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash,
     )]

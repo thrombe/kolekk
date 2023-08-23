@@ -2,6 +2,8 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
+#![allow(unused_variables, dead_code)]
+// #![allow(unused_imports)]
 
 mod api;
 mod bad_error;
@@ -133,10 +135,11 @@ async fn setup(app_handle: &tauri::AppHandle) -> Result<(), Error> {
 
     app_handle
         .manage(TmdbClient::new(include_str!("../../cache/tmdb_v3_auth"), client.clone()).await?);
-    app_handle.manage(LastFmClient::new(
-        include_str!("../../cache/lastfm_api_key"),
-        client.clone(),
-    ));
+    app_handle.manage(
+        LastFmClient::new(include_str!("../../cache/lastfm_api_key"), client.clone())
+            .test()
+            .await,
+    );
     app_handle.manage(client.clone());
     app_handle.manage(clipboard::Clipboard::new()?);
 
