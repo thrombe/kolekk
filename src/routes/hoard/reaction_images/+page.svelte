@@ -94,10 +94,14 @@
 
     <ImageInfoBox
         slot="infobox"
+        let:tag_searcher
         {tag_searcher}
         item={selected_item}
+        let:info_width
         {info_width}
+        let:info_margin
         {info_margin}
+        let:show_tag_searchbox
         on_tag_add_button={show_tag_searchbox}
     />
 </ObjectExplorer>

@@ -8,7 +8,7 @@ import { Tmdb } from './tmdb';
 type ReturnType<Type> = Type extends (...args: never[]) => infer R ? R : never;
 
 
-export { TagSearch, Tmdb, Db, TachiExtensions, TachiSources, TachiMangaSearch, TachiChapterExplorer, new_db };
+export { TagSearch, Tmdb, Db, LastFm, TachiExtensions, TachiSources, TachiMangaSearch, TachiChapterExplorer, new_db };
 
 
 // this should onlybe used for the type parameter in the types below
@@ -104,5 +104,4 @@ export type RFactory<T> =
 
 export type RDbEntry<T> = T extends Tag ? Tag : SearchableEntry<T>;
 
-export type Keyed  = { get_key(): unknown };
-
+export type Keyed = { get_key(): unknown };

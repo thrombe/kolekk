@@ -32,7 +32,11 @@
             info_margin: number;
             info_width: number;
         };
-        infobox: {};
+        infobox: {
+            item: RObject<T>;
+            info_margin: number;
+            info_width: number;
+        };
     }
 
     let search_objects = async () => {
@@ -169,7 +173,11 @@
     </scrollable>
 
     {#if selected_item && show_item_info}
-        <slot name="infobox" />
+        <slot name="infobox"
+                item={selected_item.data}
+                {info_margin}
+                {info_width}
+        />
     {/if}
 </cl>
 

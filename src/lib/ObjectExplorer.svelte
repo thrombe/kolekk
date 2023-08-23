@@ -40,7 +40,12 @@
             info_width: number;
             show_tag_searchbox: () => Promise<void>;
         };
-        infobox: {};
+        infobox: {
+            tag_searcher: RSearcher<Tag>;
+            info_margin: number;
+            info_width: number;
+            show_tag_searchbox: () => Promise<void>;
+        };
     }
 
     let search_objects = async () => {
@@ -123,7 +128,7 @@
 
     let info_width = 0;
     let info_margin = 0;
-    let show_item_info = true;
+    let show_item_info = false;
     $: if (show_item_info) {
         info_width = 350;
         info_margin = 20;
@@ -251,7 +256,12 @@
     </scrollable>
 
     {#if selected_item && show_item_info}
-        <slot name="infobox" />
+        <slot name="infobox"
+                tag_searcher={$tag_searcher}
+                {info_margin}
+                {info_width}
+                {show_tag_searchbox}
+        />
     {/if}
 
     {#if tag_box_show}
