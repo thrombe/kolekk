@@ -77,19 +77,19 @@
             return;
         }
 
-        if (event.key == 'ArrowLeft') {
+        if (event.key == 'ArrowLeft' || event.key == "h") {
             if (selected - 1 >= 0) {
                 selected -= 1;
             }
-        } else if (event.key == 'ArrowRight') {
+        } else if (event.key == 'ArrowRight' || event.key == "l") {
             if (selected + 1 < items.length) {
                 selected += 1;
             }
-        } else if (event.key == 'ArrowUp') {
+        } else if (event.key == 'ArrowUp' || event.key == "k") {
             if (selected - columns >= 0) {
                 selected -= columns;
             }
-        } else if (event.key == 'ArrowDown') {
+        } else if (event.key == 'ArrowDown' || event.key == "j") {
             if (selected + 1 < items.length) {
                 selected += columns;
             }
