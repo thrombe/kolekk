@@ -157,6 +157,7 @@
                         _on_item_click(i);
                     }}
                     on:keydown={() => {}}
+                    style="width: {item_width}px; height: {item_height}px;"
                 >
                     <slot
                         {item_width}
@@ -173,6 +174,7 @@
                         _on_item_click(i);
                     }}
                     on:keydown={() => {}}
+                    style="width: {item_width}px; height: {item_height}px;"
                 >
                     <slot
                         {item_width}
@@ -201,6 +203,7 @@
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
+        align-content: flex-start;
 
         overflow: auto;
         width: 100%;
