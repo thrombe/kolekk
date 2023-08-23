@@ -1,13 +1,14 @@
 import { invoke } from "@tauri-apps/api";
 import type { Meta, Tag, Taggable, TypeFacet } from "types";
-import { Offset, SavedSearch } from "./mixins";
+import { Offset, SavedSearch, UniqueSearch } from "./mixins";
 import type { RObject, RDbEntry, ForceDb, Keyed } from "./searcher";
 
 
 
 // facet and T should match
 export function new_db<T>(facet: TypeFacet, q: string) {
-    const SS = SavedSearch<T, typeof Db<T>>(Db<T>);
+    const US = UniqueSearch<ForceDb<T>, typeof Db<T>>(Db<T>);
+    const SS = SavedSearch<ForceDb<T>, typeof US>(US);
     return new SS(facet, q);
 }
 export function new_factory<T>(facet: TypeFacet) {
@@ -66,6 +67,10 @@ export class Db<T> extends Offset<ForceDb<T>> {
         });
         await invoke("reload_reader");
     }
+
+    get_key(t: RObject<ForceDb<T>>) {
+        return t.id;
+    }
 }
 
 
@@ -77,7 +82,8 @@ export class TagSearch extends Offset<Tag> {
     }
 
     static new(q: string) {
-        const SS = SavedSearch<Tag, typeof TagSearch>(TagSearch);
+        const US = UniqueSearch<Tag, typeof TagSearch>(TagSearch);
+        const SS = SavedSearch<Tag, typeof US>(US);
         return new SS(q);
     }
 
@@ -108,6 +114,10 @@ export class TagSearch extends Offset<Tag> {
         return r;
     }
 
+    get_key(t: RObject<Tag>) {
+        return t.id;
+    }
+
     static obj_type() {
         return null as unknown as Meta<Tag, TypeFacet> & Keyed;
     }
@@ -136,3 +146,4 @@ export class TagSearch extends Offset<Tag> {
         await invoke("reload_reader");
     }
 }
+

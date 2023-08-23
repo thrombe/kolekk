@@ -1,8 +1,6 @@
 import type { RObject } from "./searcher";
 
 
-
-
 type Constructor<T> = new (...args: any[]) => T;
 
 const sleep = (ms: number) => {
@@ -120,6 +118,7 @@ export abstract class Paged<T> {
 
     // implementor must set has_next_page
     protected abstract search(page: number): Promise<RObject<T>[]>;
+    abstract get_key(t: RObject<T>): unknown;
 
     async next_page() {
         // TODO: if this function is called multiple times really quickly, this has_next_page check fails as previous calls are still awaiting for io
@@ -133,6 +132,18 @@ export abstract class Paged<T> {
 }
 
 
+export abstract class Unpaged<T> {
+    has_next_page: boolean = true;
+    query: string;
+    constructor(q: string) {
+        this.query = q;
+    }
+
+    abstract next_page(): Promise<RObject<T>[]>;
+    abstract get_key(t: RObject<T>): unknown;
+}
+
+
 export abstract class Offset<T> {
     curr_offset: number = 0;
     has_next_page: boolean = true;
@@ -143,6 +154,7 @@ export abstract class Offset<T> {
 
     // implementor must set has_next_page
     protected abstract search(page: number): Promise<RObject<T>[]>;
+    abstract get_key(t: RObject<T>): unknown;
 
     async next_page() {
         // TODO: if this function is called multiple times really quickly, this has_next_page check fails as previous calls are still awaiting for io
