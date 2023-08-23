@@ -4,11 +4,13 @@ import { TagSearch, Db, new_db, db_obj_type, new_factory } from './database';
 import type { LastFm } from './lastfm';
 import type { TachiExtensions, TachiChapters, TachiSources, TachiMangaSearch, TachiChapterExplorer } from './tachi';
 import { Tmdb } from './tmdb';
+import { SongTube, type MusicResponsiveListItem } from './yti_songs';
 
 type ReturnType<Type> = Type extends (...args: never[]) => infer R ? R : never;
 
 
-export { TagSearch, Tmdb, Db, LastFm, TachiExtensions, TachiSources, TachiMangaSearch, TachiChapterExplorer, new_db };
+export { TagSearch, Tmdb, Db, LastFm, SongTube, TachiExtensions, TachiSources, TachiMangaSearch, TachiChapterExplorer, new_db };
+export type { MusicResponsiveListItem };
 
 
 // this should onlybe used for the type parameter in the types below
@@ -42,6 +44,9 @@ export type RObject<T> =
     : T extends AlbumListResult
     ? ReturnType<typeof LastFm.obj_type>
 
+    : T extends MusicResponsiveListItem
+    ? ReturnType<typeof SongTube.obj_type>
+
     : ReturnType<typeof db_obj_type<T>>;
 
 
@@ -71,10 +76,13 @@ export type RSearcher<T> =
     : T extends AlbumListResult
     ? ReturnType<typeof LastFm.new>
 
-    : ReturnType<typeof new_db<T>>
+    : T extends MusicResponsiveListItem
+    ? ReturnType<typeof SongTube.new>
+
+    : ReturnType<typeof new_db<T>>;
 
 
-export type RFactory<T> = 
+export type RFactory<T> =
     // a hacky way to force match this
     T extends ForceDb<infer E>
     ? ReturnType<typeof new_factory<E>>
@@ -100,8 +108,12 @@ export type RFactory<T> =
     : T extends AlbumListResult
     ? ReturnType<typeof LastFm.factory>
 
-    : ReturnType<typeof new_factory<T>>
+    : T extends MusicResponsiveListItem
+    ? ReturnType<typeof SongTube.factory>
+
+    : ReturnType<typeof new_factory<T>>;
 
 export type RDbEntry<T> = T extends Tag ? Tag : SearchableEntry<T>;
 
 export type Keyed = { get_key(): unknown };
+

@@ -34,6 +34,9 @@
 <h>
     <a href="/music/album">Search Music</a>
 </h>
+<h>
+    <a href="/music/songs">Search Songs</a>
+</h>
 
 <style>
     h {
