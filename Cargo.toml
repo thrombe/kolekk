@@ -10,7 +10,8 @@ default-members = [
 ]
 
 # enable optimised compiling for libraries even in debug builds
-[profile.dev.package."*"]
+# [profile.dev.package."*"]
+[profile.dev.package."image"]
 opt-level = 3
 
 [profile.release]

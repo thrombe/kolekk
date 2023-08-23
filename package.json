@@ -3,6 +3,8 @@
     "version": "0.0.1",
     "private": true,
     "scripts": {
+        "tauri-dev": "cargo build --no-default-features && mv ./target/debug/src-tauri ./target/debug/kolekk && target/debug/kolekk",
+        "tauri-dev-build": "cargo build --no-default-features && mv ./target/debug/src-tauri ./target/debug/kolekk",
         "dev": "vite dev",
         "build": "vite build",
         "preview": "vite preview",
