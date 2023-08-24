@@ -5,6 +5,7 @@
     "scripts": {
         "tauri-dev": "cargo build --no-default-features && mv ./target/debug/src-tauri ./target/debug/kolekk && target/debug/kolekk",
         "tauri-dev-build": "cargo build --no-default-features && mv ./target/debug/src-tauri ./target/debug/kolekk",
+        "tauri-build-windows": "cargo tauri build --target x86_64-pc-windows-msvc",
         "dev": "vite dev",
         "build": "vite build",
         "preview": "vite preview",

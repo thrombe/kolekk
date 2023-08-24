@@ -17,3 +17,5 @@ target
 notes.md
 .vscode
 cache
+.xwin
+.xwin-cache

@@ -1,6 +1,4 @@
 .DS_Store
-node_modules
-/build
 /.svelte-kit
 /package
 .env
@@ -12,4 +10,10 @@ vite.config.ts.timestamp-*
 
 target/
 cache/
+build
+node_modules
+.xwin
+.xwin-cache
+
 src/rs_bindings.ts
+src/lib/test_commands.ts
