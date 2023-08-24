@@ -46,8 +46,8 @@
         let format = info.chooseFormat({ type: 'audio', quality: 'best', format: 'opus' });
         // console.log(format);
         let url = format?.decipher(yt.session.player);
-        await invoke('stop_song');
-        await invoke('play_song', { path: url });
+        await invoke('plugin:musiplayer|stop_song');
+        await invoke('plugin:musiplayer|play_song', { path: url });
     };
 
     const play_video = async (track: AlbumTrack) => {
@@ -81,7 +81,6 @@
 
     let yt: Innertube;
     const get_innertube = async () => {
-        console.log('yaaaaaaaaaaaaaaaaaaah');
         yt = await Innertube.create({
             fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
                 let url: string;
@@ -159,7 +158,7 @@
 
     let song_pos = 0;
     let progress = setInterval(async () => {
-        song_pos = await invoke('get_song_progress');
+        song_pos = await invoke('plugin:musiplayer|get_song_progress');
         song_pos *= 100;
         // console.log(song_pos);
     }, 1000);
@@ -167,7 +166,7 @@
         clearInterval(progress);
     });
     const set_progress = async () => {
-        await invoke('seek_perc', { t: song_pos/100 });
+        await invoke('plugin:musiplayer|seek_perc', { t: song_pos/100 });
     };
 </script>
 

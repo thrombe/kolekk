@@ -2,11 +2,11 @@
     import { invoke } from '@tauri-apps/api/tauri';
     import { playing, progress, paused } from './Player';
 
-    invoke('stop_song').then(() => {});
+    invoke('plugin:musiplayer|stop_song').then(() => {});
 
     $: {
         if ($playing != '') {
-            invoke('play_song', { path: $playing }).then(() => {
+            invoke('plugin:musiplayer|play_song', { path: $playing }).then(() => {
                 console.log('now playing song: ', $playing);
             });
             paused.set(false);
@@ -17,7 +17,7 @@
 
     // clearInterval
     setInterval(() => {
-        invoke('get_song_progress').then((value) => {
+        invoke('plugin:musiplayer|get_song_progress').then((value) => {
             let v = value as number;
             if (mouse_down === false) {
                 progress.set(v * 100);
@@ -27,13 +27,13 @@
 
     const set = () => {
         console.log($progress);
-        invoke('seek_perc', { t: $progress / 100.0 }).then(() => {
+        invoke('plugin:musiplayer|seek_perc', { t: $progress / 100.0 }).then(() => {
             console.log('seek complete');
         });
     };
 
     $: {
-        invoke('set_stat', { pause: $paused }).then(() => {
+        invoke('plugin:musiplayer|set_stat', { pause: $paused }).then(() => {
             console.log('stat updated');
         });
     }

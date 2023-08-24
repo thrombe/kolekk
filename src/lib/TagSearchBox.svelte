@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { Tag } from 'types';
     import TagBox from '$lib/TagBox.svelte';
-    import type { RObject, RSearcher } from './searcher/searcher';
+    import type { RObject, RSearcher } from './searcher/searcher.ts';
     import type { Writable } from 'svelte/store';
 
     export let tag_searcher: Writable<RSearcher<Tag>>;

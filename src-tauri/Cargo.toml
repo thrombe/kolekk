@@ -41,12 +41,15 @@ arboard = "3.2.0"
 [dependencies.musiplayer]
 # version = "0.1"
 path = "../../musimanager/musiplayer"
+# optional = true
 
 
 [features]
+# music = ["musiplayer"]
 # by default Tauri runs in production mode
 # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
 default = ["custom-protocol"]
+# default = ["custom-protocol", "music"]
 # this feature is used for production builds where `devPath` points to the filesystem
 # DO NOT remove this
 custom-protocol = ["tauri/custom-protocol"]

@@ -1,6 +1,29 @@
 use kolekk_types::{Filder, FilderKind};
+use tauri::{
+    plugin::{Builder, TauriPlugin},
+    Manager, Runtime,
+};
 
 pub struct Player(pub std::sync::Mutex<musiplayer::Player>);
+
+pub fn init<R: Runtime>() -> TauriPlugin<R> {
+    Builder::new("musiplayer")
+        .invoke_handler(tauri::generate_handler![
+            get_folder,
+            play_song,
+            get_song_progress,
+            seek_perc,
+            set_stat,
+            stop_song,
+        ])
+        .setup(|app_handle| {
+            app_handle.manage(Player(std::sync::Mutex::new(
+                musiplayer::Player::new().unwrap(),
+            )));
+            Ok(())
+        })
+        .build()
+}
 
 #[tauri::command]
 pub fn play_song(path: &str, player: tauri::State<'_, Player>) {

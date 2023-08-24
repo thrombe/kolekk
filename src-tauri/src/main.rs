@@ -15,12 +15,13 @@ mod logg;
 // mod orm;
 mod clipboard;
 mod images;
-mod player;
 mod tag;
+
+// #[cfg(feature = "music")]
+mod player;
 
 use bad_error::Error;
 use logg::init_logger;
-use player::Player;
 use tauri::Manager;
 
 pub use logg::{debug, error};
@@ -37,18 +38,17 @@ pub enum AppInitialisationStatus {
 }
 
 fn main() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    // #[cfg(feature = "music")]
+    let builder = builder.plugin(player::init());
+
+    builder
         .manage(std::sync::Mutex::new(
             AppInitialisationStatus::Uninitialised,
         ))
         .invoke_handler(tauri::generate_handler![
             initialise_app,
-            player::get_folder,
-            player::play_song,
-            player::get_song_progress,
-            player::seek_perc,
-            player::set_stat,
-            player::stop_song,
             bookmarks::get_bookmarks,
             bookmarks::search_bookmarks,
             images::get_images,
@@ -148,9 +148,6 @@ async fn setup(app_handle: &tauri::AppHandle) -> Result<(), Error> {
 
     images::thumbnails::init_thumbnailer(app_handle, &conf, db, client.clone()).await?;
 
-    app_handle.manage(Player(std::sync::Mutex::new(
-        musiplayer::Player::new().unwrap(),
-    )));
     app_handle.manage(conf);
     Ok(())
 }
