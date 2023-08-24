@@ -20,9 +20,6 @@
             ]
         },
         "allowImportingTsExtensions": true,
-        // "include": [
-        //     "src/**/*"
-        // ],
         "types": [
             "youtube"
         ],
