@@ -17,3 +17,4 @@ node_modules
 
 src/rs_bindings.ts
 src/lib/test_commands.ts
+tailwind-index.css
