@@ -31,6 +31,9 @@
     $: if (items) {
         edited = true;
     }
+    $: if (width) {
+        edited = true;
+    }
     let grid: HTMLElement;
 
     let root: HTMLElement;
@@ -96,6 +99,8 @@
         } else {
             await on_keydown(event, try_scroll_into_view);
         }
+        await tick();
+        await try_scroll_into_view();
 
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(event.key) > -1) {
             event.preventDefault();
@@ -124,7 +129,7 @@
         }
     };
     $: if (!(selected === undefined)) {
-        try_scroll_into_view();
+        // try_scroll_into_view();
     }
 
     $: if (_selected_item || items) {
@@ -143,6 +148,7 @@
     const _on_item_click = async (i: number) => {
         selected = i + start * columns;
         await tick();
+        await try_scroll_into_view();
         await on_item_click(items[selected]);
     };
 </script>
