@@ -44,7 +44,7 @@
         };
     }
 
-    let search_objects = async () => {
+    export let search_objects = async () => {
         $searcher = await fac.with_query(search_query);
         await next_page();
         await tick();

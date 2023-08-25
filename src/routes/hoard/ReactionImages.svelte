@@ -21,16 +21,24 @@
     import { new_factory } from '$lib/searcher/database.ts';
 
     let selected_item: Unique<RObject<Image>, number>;
+    let search_objects: () => Promise<void>;
 
     const file_drop = async (e: DragDropPaste<File>) => {
+        console.log(e);
         let images: Image[] = await invoke('get_images', { data: await files_to_bytearrays(e) });
         console.log(images);
-        $searcher.add_item(
+
+        if (images.length < 1) {
+            return;
+        }
+
+        await $searcher.add_item(
             ...images.map((img) => {
                 let searchable: Indexed[] = img.title ? [{ data: img.title, field: 'Text' }] : [];
                 return { data: img, searchable };
             })
         );
+        await search_objects();
     };
 
     const on_keydown = async (
@@ -66,6 +74,7 @@
     bind:search_query={$search_query}
     bind:selected_item_index={$selected}
     bind:selected_item
+    bind:search_objects
     item_width={150}
     item_height={170}
     on_item_click={copy_selected}
