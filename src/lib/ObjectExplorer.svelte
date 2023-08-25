@@ -35,10 +35,6 @@
             item_height: number;
             selected: boolean;
             root: HTMLElement;
-            tag_searcher: RSearcher<Tag>;
-            info_margin: number;
-            info_width: number;
-            show_tag_searchbox: () => Promise<void>;
         };
         infobox: {
             tag_searcher: RSearcher<Tag>;
@@ -197,32 +193,23 @@
     let try_scroll_into_view: () => Promise<void>;
 </script>
 
-<cl class="inputs">
+<div class='flex flex-col w-full h-full'>
+<cl class="flex flex-row h-9 px-4 max-w-96 my-3 gap-x-4 self-center">
     <input
         bind:value={search_query}
         on:input={search_objects}
         bind:this={search_input}
         on:keydown={on_enter}
+            placeholder="Search"
+        class='px-8 rounded-lg font-normal flex-grow bg-opacity-30 bg-teal-400 text-gray-400 text-xl'
     />
-    <button on:click={search_objects}>refresh</button>
-    <button
-        on:click={() => {
-            console.log($searcher, items)
-        }}
-    >
-        {end_is_visible}
-    </button>
-    <button
-        on:click={() => {
-            show_item_info = !show_item_info;
-        }}
-    >
-        show item info
-    </button>
+    <button on:click={search_objects}
+        class='w-30 px-2 h-full block text-center rounded-lg bg-opacity-30 bg-teal-400 text-gray-300 font-bold'
+    >refresh</button>
 </cl>
 
-<cl class="main" style="--info-width: {info_width}px; --info-margin: {info_margin}px;">
-    <scrollable>
+<cl class="flex flex-col flex-wrap flex-grow h-1 px-4" >
+    <scrollable class='h-full' style='width: calc(100% - {info_width}px)'>
         <VirtualScrollable
             bind:items
             gap={15}
@@ -247,21 +234,19 @@
                 {item_height}
                 {selected}
                 {root}
-                tag_searcher={$tag_searcher}
-                {info_margin}
-                {info_width}
-                {show_tag_searchbox}
             />
         </VirtualScrollable>
     </scrollable>
 
     {#if selected_item && show_item_info}
+        <div class='h-full' style='width: {info_width}px;'>
         <slot name="infobox"
                 tag_searcher={$tag_searcher}
                 {info_margin}
                 {info_width}
                 {show_tag_searchbox}
         />
+        </div>
     {/if}
 
     {#if tag_box_show}
@@ -278,36 +263,5 @@
     {/if}
 </cl>
 
-<style>
-    * {
-        --input-height: 33px;
-        --gap: 20px;
-        --top-margin: 15px;
-    }
+</div>
 
-    .inputs {
-        height: var(--input-height);
-    }
-
-    .main {
-        margin-left: var(--gap);
-        margin-right: var(--gap);
-        margin-top: var(--top-margin);
-        width: calc(100% - var(--gap) * 2);
-        height: calc(100% - var(--input-height) - var(--top-margin));
-
-        flex-direction: column;
-    }
-
-    cl {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        width: 100%;
-    }
-
-    scrollable {
-        width: calc(100% - var(--info-width));
-        height: 100%;
-    }
-</style>

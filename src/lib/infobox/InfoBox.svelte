@@ -25,10 +25,10 @@
     style="--border-radius: {border_radius}px;
         --width: {width - border_radius * 2}px;
         --height: {height - border_radius * 2}px;"
+    class='flex flex-col w-full h-full relative'
 >
-    <rel>
-        <abs>
-            <krop>
+        <abs class='absolute w-full h-full'>
+            <krop class='block overflow-hidden -z-10 blur-sm h-full w-full brightness-50'>
                 <ImageCard
                     width={width - border_radius * 2}
                     height={height - border_radius * 2}
@@ -37,54 +37,16 @@
                 />
             </krop>
         </abs>
-        <abs class="bg" />
-    </rel>
+        <abs class="bg absolute h-full w-full" />
 
-    <fg>
+    <fg class='z-10 h-full w-full overflow-y-scroll'>
         <slot {item} />
     </fg>
 </info-box>
 
 <style>
-    info-box {
-        width: 100%;
-        height: 100%;
-
-        display: flex;
-        flex-direction: column;
-    }
-
-    rel {
-        position: relative;
-    }
-
-    abs {
-        width: var(--width);
-        height: var(--height);
-        position: absolute;
-        top: 0px;
-        left: 0px;
-
-        border: var(--border-radius) solid;
-        border-color: #aa99aa;
-    }
-
-    krop {
-        display: block;
-        -webkit-filter: brightness(50%) blur(8px);
-        overflow: hidden;
-        z-index: -2;
-    }
-
     .bg {
         z-index: 1;
         background-color: #22222288;
-    }
-
-    fg {
-        z-index: 2;
-        width: var(--width);
-        height: var(--height);
-        margin: var(--border-radius);
     }
 </style>

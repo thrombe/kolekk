@@ -48,11 +48,6 @@
 </script>
 
 {#key margin || root}
-    <p use:observe />
+    <p use:observe class='z-10' />
 {/key}
 
-<style>
-    p {
-        z-index: 5;
-    }
-</style>

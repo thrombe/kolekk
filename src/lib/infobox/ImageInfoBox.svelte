@@ -16,7 +16,9 @@
     export let on_tag_add_button: (() => void) | (() => Promise<void>);
 </script>
 
-<info-box style="--info-width: {info_width}px; --info-margin: {info_margin}px;">
+<info-box 
+    class='block ml-auto my-auto h-full w-full border border-red-200'
+>
     <InfoBox
         {item}
         width={info_width - info_margin}
@@ -24,7 +26,7 @@
             return await get_path(item.data.data.data.path);
         }}
     >
-        <info>
+        <info class='flex flex-col gap-y-4 px-4 pt-4'>
             <TitleBox bind:title={item.data.data.data.title} />
             <MetaBox item={item.data} />
 
@@ -41,25 +43,3 @@
     </InfoBox>
 </info-box>
 
-<style>
-    info {
-        display: flex;
-        flex-direction: column;
-        row-gap: 15px;
-
-        --margin: 15px;
-        margin: var(--margin);
-        width: calc(100% - var(--margin) * 2);
-        height: calc(100% - var(--margin) * 2);
-    }
-
-    info-box {
-        display: block;
-        width: calc(var(--info-width) - var(--info-margin));
-        margin-left: auto;
-
-        height: calc(100% - 20px);
-        margin-top: auto;
-        margin-bottom: auto;
-    }
-</style>

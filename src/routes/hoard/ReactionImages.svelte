@@ -75,10 +75,6 @@
     let:item_height
     let:selected
     let:root
-    let:tag_searcher
-    let:info_margin
-    let:info_width
-    let:show_tag_searchbox
 >
     <Card
         get_img_source={async () => {
@@ -92,16 +88,18 @@
         {root}
     />
 
-    <ImageInfoBox
-        slot="infobox"
+    <div slot='infobox' class='pl-4 pb-4 h-full'
         let:tag_searcher
-        {tag_searcher}
-        item={selected_item}
         let:info_width
-        {info_width}
         let:info_margin
-        {info_margin}
         let:show_tag_searchbox
-        on_tag_add_button={show_tag_searchbox}
-    />
+    >
+        <ImageInfoBox
+            {tag_searcher}
+            item={selected_item}
+            {info_width}
+            {info_margin}
+            on_tag_add_button={show_tag_searchbox}
+        />
+    </div>
 </ObjectExplorer>

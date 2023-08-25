@@ -23,8 +23,8 @@
         scalable.style.scale = scale;
         scalable.style.setProperty('--bg-color', bg_color);
 
-        scalable.style.width = width.toString() + 'px';
-        scalable.style.height = height.toString() + 'px';
+        // scalable.style.width = width.toString() + 'px';
+        //scalable.style.height = height.toString() + 'px';
     }
 
     let thumbnail_size: ThumbnailSize;
@@ -54,40 +54,15 @@
     let visible = false;
 </script>
 
-<cl bind:this={scalable}>
+<cl bind:this={scalable} class='flex flex-col items-center overflow-hidden w-full h-full'>
     {#if lazy && hasAPI}
-        <rel>
-            <abs bind:this={abs}>
+        <rel class='relative z-10'>
+            <abs bind:this={abs} class='absolute'>
                 <Observer {root} margin={height} bind:visible />
             </abs>
         </rel>
     {/if}
 
-    <image-div style={'background-image: url(' + lazy_img_src + ');'} />
+    <image-div class='bg-center w-full h-full bg-cover' style={'background-image: url(' + lazy_img_src + ');'} />
 </cl>
 
-<style>
-    abs {
-        position: absolute;
-    }
-    rel {
-        position: relative;
-        z-index: 5;
-    }
-
-    image-div {
-        width: 100%;
-        height: 100%;
-        background-size: cover;
-        background-position: center;
-        background-color: var(--bg-color);
-    }
-
-    cl {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        overflow: hidden;
-    }
-
-</style>

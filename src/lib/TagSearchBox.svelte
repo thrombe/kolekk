@@ -27,7 +27,7 @@
     let key = 1;
 </script>
 
-<tag-box>
+<tag-box class='flex flex-col flex-wrap absolute backdrop-blur-sm'>
     <input
         bind:this={tag_search_input}
         bind:value={search_query}
@@ -39,7 +39,7 @@
         on:keydown={_on_keydown}
     />
     {#key key}
-        <tags>
+        <tags class='flex flex-row flex-wrap overflow-y-auto overscroll-contain'>
             {#each $tag_searcher.search_results as tag (tag.id)}
                 <TagBox
                     tag={tag.data}
@@ -56,11 +56,8 @@
 
 <style>
     tag-box {
-        display: flex;
-        flex-direction: column;
         --padding: 15px;
 
-        position: absolute;
         top: calc(var(--input-height) + var(--top-margin));
         left: var(--gap);
         width: calc(100% - var(--info-width) - var(--gap) * 2 - var(--padding) * 2);
@@ -71,7 +68,6 @@
         border: 1px solid;
         border-color: #cccccc;
         background-color: #443944cc;
-        -webkit-backdrop-filter: blur(3px);
     }
 
     tag-box input {
@@ -97,14 +93,7 @@
     }
 
     tags {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-
         column-gap: 7px;
         row-gap: 6px;
-
-        overflow-y: auto;
-        overscroll-behavior-block: contain;
     }
 </style>

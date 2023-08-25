@@ -15,45 +15,16 @@
     }
 </script>
 
-<tags>
-    <field>Tags: </field>
+<tags class='flex flex-row flex-wrap overscroll-contain gap-x-2 gap-y-2'>
+    <field class='break-all text-gray-100 font-thin'>Tags: </field>
     {#each tags as tag}
-        <tag>
+        <tag class='block'>
             <slot {tag} />
         </tag>
     {/each}
 
-    <bu on:click={add_button_callback} on:keydown={() => {}}>
+    <bu on:click={add_button_callback} on:keydown={() => {}} class='block'>
         <slot name="add_button" />
     </bu>
 </tags>
 
-<style>
-    field {
-        font-weight: 140;
-
-        font-size: 1.2rem;
-        word-wrap: break-all;
-        color: #cccccc;
-    }
-
-    tags {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-
-        column-gap: 7px;
-        row-gap: 6px;
-
-        overflow-y: auto;
-        overscroll-behavior-block: contain;
-    }
-
-    tag {
-        display: block;
-    }
-
-    bu {
-        display: block;
-    }
-</style>
