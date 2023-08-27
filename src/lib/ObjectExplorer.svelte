@@ -250,6 +250,7 @@
     {/if}
 
     {#if tag_box_show}
+        <div class="absolute z-10">
         <TagSearchBox
             tag_searcher={tag_searcher}
             bind:search_query={$tag_query}
@@ -260,6 +261,7 @@
             tag_highlight={searchbox_tag_highlight}
             on_tag_click={on_search_box_tag_click}
         />
+        </div>
     {/if}
 </cl>
 

@@ -27,7 +27,7 @@
     let key = 1;
 </script>
 
-<tag-box class='flex flex-col flex-wrap absolute backdrop-blur-sm'>
+<tag-box class='flex flex-col flex-wrap backdrop-blur-sm'>
     <input
         bind:this={tag_search_input}
         bind:value={search_query}
