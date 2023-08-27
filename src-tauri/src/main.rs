@@ -58,6 +58,7 @@ fn main() {
             images::save_images_from_uris,
             images::save_images_from_bytes,
             images::thumbnails::image_thumbnail,
+            images::thumbnails::whatever_thumbnail,
             images::thumbnails::get_thumbnail_size,
             tag::search_tags,
             tag::save_new_tag,

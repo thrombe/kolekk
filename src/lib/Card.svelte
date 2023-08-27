@@ -46,6 +46,7 @@
             {height}
             {bg_color}
             lazy={false}
+            dynamic_thumbnail={true}
             {root}
         />
 

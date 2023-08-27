@@ -111,6 +111,41 @@ pub mod thumbnails {
     }
 
     #[tauri::command]
+    pub async fn whatever_thumbnail(
+        db: State<'_, AppDatabase>,
+        thumbnailer: State<'_, Thumbnailer>,
+        client: State<'_, Client>,
+        uri: String,
+    ) -> Result<Option<PathBuf>, Error> {
+        dbg!(&uri);
+        // - [Tokio decide how many threads](https://github.com/tokio-rs/tokio/discussions/3858)
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        thumbnailer
+            .tx
+            .send(ThumbnailRequest::QuerySize {
+                uri: uri.clone(),
+                tx,
+            })
+            .infer_err()?;
+        let sizes = rx.await.infer_err()?;
+        match sizes {
+            Some(sizes) => {
+                if let Some(p) = sizes.iter().position(|s| match s {
+                    ThumbnailSizeStatus::Completed | ThumbnailSizeStatus::Original => true,
+                    _ => false,
+                }) {
+                    return thumbnailer
+                        .image_thumbnail(ThumbnailSize::slice()[p], uri)
+                        .await
+                        .map(Option::Some);
+                }
+            }
+            None => {}
+        }
+        Ok(None)
+    }
+
+    #[tauri::command]
     pub async fn image_thumbnail(
         db: State<'_, AppDatabase>,
         thumbnailer: State<'_, Thumbnailer>,
@@ -161,17 +196,28 @@ pub mod thumbnails {
 
     #[derive(Derivative)]
     #[derivative(Debug)]
-    pub struct ThumbnailRequest {
+    pub struct NewThumbnailRequest {
         size: ThumbnailSize,
         uri: String,
         #[derivative(Debug = "ignore")]
         tx: tokio::sync::oneshot::Sender<Result<PathBuf, Error>>,
     }
 
+    #[derive(Derivative)]
+    #[derivative(Debug)]
+    pub enum ThumbnailRequest {
+        NewThumbnail(NewThumbnailRequest),
+        QuerySize {
+            uri: String,
+            #[derivative(Debug = "ignore")]
+            tx: tokio::sync::oneshot::Sender<Option<Box<[ThumbnailSizeStatus]>>>,
+        },
+    }
+
     #[derive(Deserialize, Serialize)]
     pub enum ThumbnailStatus {
         #[serde(skip)]
-        Waiting(Vec<ThumbnailRequest>),
+        Waiting(Vec<NewThumbnailRequest>),
         Completed {
             tmb: Thumbnail,
             sizes: Box<[ThumbnailSizeStatus; 9]>,
@@ -369,7 +415,9 @@ pub mod thumbnails {
                             // it is okay to send first and then set cache, as this part is not really concurrent
                             while let Some(r) = v.pop() {
                                 // send the same request again, as the requested size might not be available yet
-                                request_tx.send(r).expect("dead channel");
+                                request_tx
+                                    .send(ThumbnailRequest::NewThumbnail(r))
+                                    .expect("dead channel");
                             }
                             let init_size = |size| {
                                 if tmb.get_appropriate_size(size).eq(&ThumbnailSize::Original) {
@@ -470,6 +518,28 @@ pub mod thumbnails {
             work_tx: &tokio::sync::mpsc::UnboundedSender<ThumbnailWorkResult>,
             client: &Client,
         ) {
+            match r {
+                ThumbnailRequest::NewThumbnail(r) => {
+                    Self::handle_new_tmb_requests(r, cache, dir, work_tx, client).await;
+                }
+                ThumbnailRequest::QuerySize { uri, tx } => {
+                    let t = cache.get_mut(&uri).map(|t| t.kinda_clone()).flatten();
+                    if let Some(ThumbnailStatus::Completed { sizes, .. }) = t {
+                        tx.send(Some(sizes)).expect("dead channel");
+                    } else {
+                        tx.send(None).expect("dead channel");
+                    }
+                }
+            }
+        }
+
+        async fn handle_new_tmb_requests(
+            r: NewThumbnailRequest,
+            cache: &mut LruCache<String, ThumbnailStatus>,
+            dir: &std::path::Path,
+            work_tx: &tokio::sync::mpsc::UnboundedSender<ThumbnailWorkResult>,
+            client: &Client,
+        ) {
             let uri = r.uri.clone();
             let t = cache.get_mut(&uri);
             match t {
@@ -552,10 +622,13 @@ pub mod thumbnails {
                     //     - sending some kinda Evicted error through the channels in the evicted items
                     //     - ignoring the ThumbnailWorkResult for the evicted items
                     //       - NOTE: make sure to delete any files that might have been created or undo anything that needs to be undone
-                    if let Some((k, v)) = cache.push(r.uri.clone(), ThumbnailStatus::Waiting(vec![r])) {
+                    if let Some((k, v)) =
+                        cache.push(r.uri.clone(), ThumbnailStatus::Waiting(vec![r]))
+                    {
                         match v {
                             ThumbnailStatus::Completed { tmb, sizes } => {
-                                let _ = std::fs::remove_dir_all(dir.join(tmb.uuid)).look(|e| dbg!(e));
+                                let _ =
+                                    std::fs::remove_dir_all(dir.join(tmb.uuid)).look(|e| dbg!(e));
                             }
                             ThumbnailStatus::Waiting(_) => (),
                         }
@@ -603,7 +676,10 @@ pub mod thumbnails {
         ) -> Result<PathBuf, Error> {
             let (tx, rx) = tokio::sync::oneshot::channel();
             self.tx
-                .send(ThumbnailRequest { size, uri, tx }.look(|e| dbg!(e)))
+                .send(
+                    ThumbnailRequest::NewThumbnail(NewThumbnailRequest { size, uri, tx })
+                        .look(|e| dbg!(e)),
+                )
                 .infer_err()?;
             rx.await.infer_err()?.look(|e| dbg!(e, size))
             // TODO: maybe some kinda timeout?

@@ -1161,6 +1161,20 @@ pub mod utility {
                 2101.. => Self::Original,
             }
         }
+
+        pub fn slice() -> &'static [Self; 9] {
+            &[
+                Self::W50,
+                Self::W100,
+                Self::W150,
+                Self::W200,
+                Self::W350,
+                Self::W500,
+                Self::W750,
+                Self::W1000,
+                Self::W1920,
+            ]
+        }
     }
 
     #[derive(Serialize, Deserialize, TS, Derivative, Clone)]

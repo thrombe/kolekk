@@ -30,9 +30,11 @@
         <abs class='absolute w-full h-full'>
             <krop class='block overflow-hidden -z-10 blur-sm h-full w-full brightness-50'>
                 <ImageCard
+                    whatever_thumbnail={false}
                     width={width - border_radius * 2}
                     height={height - border_radius * 2}
                     lazy={false}
+                    dynamic_thumbnail={false}
                     {img_source}
                 />
             </krop>
