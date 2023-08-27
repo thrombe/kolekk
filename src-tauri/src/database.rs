@@ -342,6 +342,10 @@ impl DbAble for Indexed {
             (Fields::Text, serde_json::Value::String(s)) => {
                 doc.add_text(db.get_field(Fields::Text), s);
             }
+            (Fields::Tag, serde_json::Value::Number(t_id)) => {
+                doc.add_u64(db.get_field(Fields::Tag), t_id.as_u64().bad_err("bad tag id")?);
+            }
+            // (Fields::Tag, serde_json::Value::String(tag)) => {}
             _ => {
                 return None.bad_err("invalid searchable entry");
             }

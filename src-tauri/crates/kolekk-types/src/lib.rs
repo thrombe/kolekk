@@ -1172,6 +1172,22 @@ pub mod utility {
     }
 
     #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct DdpInfo<F: Debug> {
+        pub files: Vec<F>,
+        pub image_uris: Vec<String>,
+        pub image_paths: Vec<PathBuf>,
+        pub dirs: Vec<PathBuf>,
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct DirFiles {
+        pub dir: Path,
+        pub dir_name: String,
+        // relative to the dir
+        pub files: Vec<PathBuf>,
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
     pub struct DragDropPaste<F: Debug> {
         // priority in the same order
         pub file_uris: Option<Vec<String>>, // "http://" "ftp://" "smb://" "/home/"

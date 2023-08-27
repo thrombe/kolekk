@@ -5,13 +5,13 @@ use std::{collections::HashSet, fmt::Debug, path::PathBuf, str::FromStr};
 
 use kolekk_types::{
     objects::Image,
-    utility::{BasePath, ByteArrayFile, DragDropPaste, Path},
+    utility::{BasePath, ByteArrayFile, DdpInfo, DirFiles, DragDropPaste, Path},
 };
 use reqwest::Client;
 use tauri::State;
 
 use crate::{
-    bad_error::{Error, InferBadError, Inspectable},
+    bad_error::{BadError, Error, InferBadError, Inspectable},
     config::AppConfig,
     database::AppDatabase,
     filesystem::{file_mdata, get_path, path_is_in_dir, Filable, FilableUri, FiledResult},
@@ -767,6 +767,282 @@ pub mod thumbnails {
             Ok(())
         }
     }
+}
+
+#[tauri::command]
+pub async fn get_ddp_info(
+    data: DragDropPaste<ByteArrayFile>,
+    client: State<'_, Client>,
+) -> Result<DdpInfo<ByteArrayFile>, Error> {
+    let potential_links: HashSet<&str> = data
+        .file_uris
+        .as_ref()
+        .map(|v| v.iter().map(String::as_str).collect())
+        .or_else(|| data.text.as_ref().map(|t| t.lines().collect()))
+        .or_else(|| data.text_html.as_ref().map(|h| todo!())) // parse all potential urls if the text does not exist
+        // .or(data.uri_list.as_ref().map(|u| todo!())) // donno if including this does any good
+        .unwrap_or_default();
+
+    let mut dirs = Vec::new();
+    let mut image_paths = Vec::new();
+    let mut image_uris = Vec::new();
+
+    let mut reqs = Vec::new();
+    let mut file_tasks = Vec::new();
+
+    for link in potential_links.iter().copied() {
+        let p = PathBuf::from(link);
+        if p.is_dir() {
+            dirs.push(p);
+        } else if p.is_file() {
+            let req = tokio::task::spawn_blocking(move || {
+                if tree_magic_mini::from_filepath(p.as_path())
+                    .look(|d| {
+                        dbg!(&d);
+                    })
+                    .map(|t| t.contains("image"))
+                    .unwrap_or(false)
+                {
+                    Some(p)
+                } else {
+                    None
+                }
+            });
+            file_tasks.push(req);
+        } else {
+            let link = link.to_owned();
+            let client = client.inner();
+            let req = async move {
+                let resp = client.get(&link).send().await.infer_err()?;
+                resp.headers()
+                    .look(|e| dbg!(e))
+                    .get(reqwest::header::CONTENT_TYPE)
+                    .bad_err("no content type in response")
+                    .look(|e| dbg!(e))?
+                    .to_str()
+                    .infer_err()?
+                    .contains("image")
+                    .then_some(())
+                    .bad_err("response type is not as required")
+                    .look(|e| dbg!(e))?; // bail out
+                Ok::<_, Error>(link)
+            };
+            reqs.push(req);
+        }
+    }
+    futures::future::join_all(reqs)
+        .await
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .for_each(|l| {
+            image_uris.push(l);
+        });
+    futures::future::join_all(file_tasks)
+        .await
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .flatten()
+        .for_each(|l| {
+            image_paths.push(l);
+        });
+
+    Ok(DdpInfo {
+        files: data.files.unwrap_or_default(),
+        image_uris,
+        image_paths,
+        dirs,
+    })
+}
+
+// adding entire dirs at once
+// - add all images from the dir path + add a tag with name of that dir
+// - recursively add images from the dir path + add a tag for each nested dir
+
+#[tauri::command]
+pub async fn get_image_paths_from_dirs(
+    paths: Vec<PathBuf>,
+    recursive: bool,
+) -> Result<Vec<DirFiles>, Error> {
+    let mut path_tasks = Vec::new();
+
+    for path in paths {
+        if !path.is_dir() {
+            return None.bad_err(format!("path {:?} is not a dir", &path));
+        }
+
+        let mut file_tasks = Vec::new();
+        for entry in walkdir::WalkDir::new(&path)
+            .min_depth(1)
+            .max_depth(if recursive { 1 << 10 } else { 1 })
+            .follow_links(true)
+        {
+            let e = entry.infer_err()?;
+            let p = e.into_path();
+            if !p.is_file() {
+                continue;
+            }
+
+            let stripped_path = p.strip_prefix(&path).unwrap().to_path_buf();
+            let req = tokio::task::spawn_blocking(move || {
+                if tree_magic_mini::from_filepath(&p)
+                    .look(|d| {
+                        dbg!(&d);
+                    })
+                    .map(|t| t.contains("image"))
+                    .unwrap_or(false)
+                {
+                    Some(stripped_path)
+                } else {
+                    None
+                }
+            });
+            file_tasks.push(req);
+        }
+
+        let task = async move {
+            let paths = futures::future::join_all(file_tasks)
+                .await
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .flatten()
+                .collect();
+
+            Ok::<_, Error>(DirFiles {
+                dir_name: path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string(),
+                dir: Path {
+                    base: BasePath::AbsolutePath,
+                    path,
+                },
+                files: paths,
+            })
+        };
+        path_tasks.push(task);
+    }
+
+    let res = futures::future::join_all(path_tasks)
+        .await
+        .into_iter()
+        .collect::<Result<_, Error>>()?;
+    Ok(res)
+}
+
+#[tauri::command]
+pub async fn save_images_from_paths(
+    paths: Vec<PathBuf>,
+    config: State<'_, AppConfig>,
+) -> Result<Vec<Image>, Error> {
+    let images_path = Path {
+        path: PathBuf::from("images"),
+        base: BasePath::AppDataDir,
+    };
+    let images_dir = get_path(&images_path, config.inner());
+
+    if !images_dir.exists() {
+        std::fs::create_dir(&images_dir).infer_err()?;
+    }
+
+    let mut images = Vec::new();
+    for path in paths {
+        if !path_is_in_dir(&path, &images_dir).unwrap_or(false) {
+            let file = path.as_path().save_in_dir(&images_path, config.inner())?;
+
+            // TODO: if file is already in database, then remove the file that was just saved
+
+            let mdata = file_mdata(get_path(&file.dest, config.inner()))?;
+            let img = Image {
+                src: file.src,
+                title: file.title,
+                path: file.dest,
+                chksum: mdata.chksum.into(),
+                size: mdata.size as _,
+            };
+
+            images.push(img);
+        }
+    }
+
+    Ok(images)
+}
+
+#[tauri::command]
+pub async fn save_images_from_uris(
+    links: Vec<String>,
+    config: State<'_, AppConfig>,
+    client: State<'_, Client>,
+) -> Result<Vec<Image>, Error> {
+    let images_path = Path {
+        path: PathBuf::from("images"),
+        base: BasePath::AppDataDir,
+    };
+    let images_dir = get_path(&images_path, config.inner());
+
+    if !images_dir.exists() {
+        std::fs::create_dir(&images_dir).infer_err()?;
+    }
+
+    futures::future::join_all(links.iter().map(|l| {
+        FilableUri {
+            title: None,
+            src: l.as_ref(),
+            client: client.inner(),
+            content_type_contains: "image",
+        }
+        .save_in_dir(&images_path, config.inner())
+    }))
+    .await
+    .into_iter()
+    .map(|file| {
+        let file = file?;
+        let mdata = file_mdata(get_path(&file.dest, config.inner()))?;
+        let img = Image {
+            src: file.src,
+            title: file.title,
+            path: file.dest,
+            chksum: mdata.chksum.into(),
+            size: mdata.size as _,
+        };
+        Ok(img)
+    })
+    .collect()
+}
+
+#[tauri::command]
+pub async fn save_images_from_bytes(
+    files: Vec<ByteArrayFile>,
+    config: State<'_, AppConfig>,
+    client: State<'_, Client>,
+) -> Result<Vec<Image>, Error> {
+    let images_path = Path {
+        path: PathBuf::from("images"),
+        base: BasePath::AppDataDir,
+    };
+    let images_dir = get_path(&images_path, config.inner());
+
+    if !images_dir.exists() {
+        std::fs::create_dir(&images_dir).infer_err()?;
+    }
+
+    files
+        .into_iter()
+        .map(|f| f.save_in_dir(&images_path, config.inner()))
+        .into_iter()
+        .map(|file| {
+            let file = file?;
+            let mdata = file_mdata(get_path(&file.dest, config.inner()))?;
+            let img = Image {
+                src: file.src,
+                title: file.title,
+                path: file.dest,
+                chksum: mdata.chksum.into(),
+                size: mdata.size as _,
+            };
+            Ok(img)
+        })
+        .collect()
 }
 
 #[tauri::command]

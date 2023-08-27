@@ -37,6 +37,8 @@ caches = "0.2.3"
 rayon = "1.7.0"
 derivative = "2.2.0"
 arboard = "3.2.0"
+tree_magic_mini = { version = "3.0.3", features = ["with-gpl-data"] }
+walkdir = "2.3.3"
 
 [dependencies.musiplayer]
 # version = "0.1"

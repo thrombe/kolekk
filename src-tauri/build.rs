@@ -26,7 +26,10 @@ use kolekk_types::{
         Bookmark, Content, Fields, Group, Image, Indexed, Meta, Notes, SearchableEntry, Tag,
         Taggable, TypeFacet,
     },
-    utility::{BasePath, ByteArrayFile, DragDropData, DragDropPaste, Path, Source, ThumbnailSize},
+    utility::{
+        BasePath, ByteArrayFile, DdpInfo, DirFiles, DragDropData, DragDropPaste, Path, Source,
+        ThumbnailSize,
+    },
     FilderKind, TS,
 };
 
@@ -82,6 +85,8 @@ fn main() {
         Indexed,
         DragDropPaste<()>,
         DragDropData<()>,
+        DdpInfo<()>,
+        DirFiles,
         ByteArrayFile,
         FilderKind,
     );
