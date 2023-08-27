@@ -2,7 +2,7 @@
     import { writable, type Writable } from 'svelte/store';
 
     let tag_fac = writable(TagSearch.factory());
-    let tag_searcher = writable(TagSearch.new(""));
+    export let tag_searcher = writable(TagSearch.new(""));
     let tag_query = writable('');
 </script>
 

@@ -145,5 +145,20 @@ export class TagSearch extends Offset<Tag> {
         }
         await invoke("reload_reader");
     }
+
+    async search_or_create_tag(name: string) {
+        let r = await invoke('search_tags', {
+            query: this.query,
+            limit: this.limit,
+            offset: 0,
+        }) as Array<RObject<Tag>>;
+        for (let t of r) {
+            if (t.data.name == name) {
+                return t.id;
+            }
+        }
+
+        return await this.add_tag({ object_type: 'main_tag', name });
+    }
 }
 
