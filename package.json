@@ -3,10 +3,11 @@
     "version": "0.0.1",
     "private": true,
     "scripts": {
-        "tauri-dev": "cargo build --no-default-features && mv ./target/debug/src-tauri ./target/debug/kolekk && target/debug/kolekk",
+        "tauri-dev": "npm run tauri-dev-build && target/debug/kolekk",
         "tauri-dev-build": "cargo build --no-default-features && mv ./target/debug/src-tauri ./target/debug/kolekk",
         "tauri-build-windows": "cargo tauri build --target x86_64-pc-windows-msvc",
         "tauri-build": "cargo tauri build",
+        "tauri-build-run": "npm run tauri-build && ./target/release/kolekk",
         "dev": "concurrently \"npm run dev:vite\" \"npm run dev:tailwind\"",
         "dev:vite": "vite dev",
         "dev:tailwind": "postcss tailwind.css -o tailwind-index.css -w",
