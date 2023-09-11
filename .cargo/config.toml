@@ -7,10 +7,10 @@
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
 # rustflags = ["-Clink-arg=-fuse-ld=lld", "-Zshare-generics=y"]
-# rustflags = ["-Clink-arg=-fuse-ld=lld"]
-# rustflags = ["-C", "link-arg=--ld-path=/nix/store/hx42kd4b822nd28zfbc4a1vnvr3akmfr-mold-1.11.0/bin/mold"]
+rustflags = ["-Clink-arg=-fuse-ld=lld"]
+# rustflags = ["-C", "link-arg=--ld-path=/nix/store/n3pmmg0lijw5n7dxh9pazwjadynsr3c2-mold-2.1.0/bin/mold"]
 # rustflags = ["-C", "link-arg=--ld-path=/nix/store/lyri4viji7lx2jwp5xy5fi1i1y0wx8z0-glibc-2.37-8-bin/bin/ldd"]
-# rustflags = ["-C", "link-arg=--ld-path=ldd"]
+# rustflags = ["-C", "link-arg=--ld-path=lld"]
 
 # NOTE: you must manually install https://github.com/michaeleisel/zld on mac. you can easily do this with the "brew" package manager:
 # `brew install michaeleisel/zld/zld`
