@@ -208,7 +208,7 @@
     >refresh</button>
 </cl>
 
-<cl class="flex flex-col flex-wrap flex-grow h-1 px-4" >
+<cl class="flex flex-col flex-wrap flex-grow h-1 mx-4 relative" >
     <scrollable class='h-full' style='width: calc(100% - {info_width}px)'>
         <VirtualScrollable
             bind:items
@@ -250,7 +250,7 @@
     {/if}
 
     {#if tag_box_show}
-        <div class="absolute z-10">
+        <div class="absolute z-10 h-full pb-4" style="width: calc(100% - {info_width}px)">
         <TagSearchBox
             tag_searcher={tag_searcher}
             bind:search_query={$tag_query}

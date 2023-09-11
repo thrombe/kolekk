@@ -27,7 +27,7 @@
     let key = 1;
 </script>
 
-<tag-box class='flex flex-col flex-wrap backdrop-blur-sm'>
+<tag-box class='flex flex-col backdrop-blur-sm max-h-full w-full p-4 gap-y-4 bg-gray-900 bg-opacity-70 rounded-lg border-2 border-gray-700'>
     <input
         bind:this={tag_search_input}
         bind:value={search_query}
@@ -37,9 +37,10 @@
             key += 1;
         }}
         on:keydown={_on_keydown}
+        class='px-8 py-1 h-10 rounded-lg font-normal flex-grow bg-opacity-50 bg-teal-400 text-gray-400 text-xl w-full'
     />
     {#key key}
-        <tags class='flex flex-row flex-wrap overflow-y-auto overscroll-contain'>
+        <tags class='flex flex-row flex-wrap overflow-y-auto overscroll-contain gap-2'>
             {#each $tag_searcher.search_results as tag (tag.id)}
                 <TagBox
                     tag={tag.data}
@@ -54,46 +55,3 @@
     {/key}
 </tag-box>
 
-<style>
-    tag-box {
-        --padding: 15px;
-
-        top: calc(var(--input-height) + var(--top-margin));
-        left: var(--gap);
-        width: calc(100% - var(--info-width) - var(--gap) * 2 - var(--padding) * 2);
-        height: calc(100% - var(--gap) - var(--input-height) - 5px - var(--padding) * 2);
-        padding: var(--padding);
-        row-gap: var(--padding);
-
-        border: 1px solid;
-        border-color: #cccccc;
-        background-color: #443944cc;
-    }
-
-    tag-box input {
-        margin-left: 7%;
-        margin-right: 7%;
-        height: var(--input-height);
-        border: 1px solid;
-        border-color: #666666;
-        background-color: #00000055;
-        border-radius: 9px;
-        padding-left: 20px;
-        padding-right: 20px;
-        font-size: 1rem;
-        color: #aaaaaa;
-        -webkit-backdrop-filter: blur(10px);
-    }
-    tag-box input:focus {
-        outline: none;
-        border-color: #999999;
-    }
-    tag-box input::-webkit-input-placeholder {
-        color: #777777;
-    }
-
-    tags {
-        column-gap: 7px;
-        row-gap: 6px;
-    }
-</style>
