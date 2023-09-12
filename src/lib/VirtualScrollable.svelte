@@ -153,9 +153,13 @@
     };
 </script>
 
-<cl on:scroll={on_update} bind:this={root} bind:clientWidth={width} bind:clientHeight={height} >
-    <pad style="height: {top_padding}px; width: 100%;" />
-    <gd style="--item-width: {item_width}px; --gap: {gap}px;" bind:this={grid}>
+<cl on:scroll={on_update} bind:this={root} bind:clientWidth={width} bind:clientHeight={height}
+    class='flex flex-row flex-wrap content-start overflow-y-auto w-full h-full' 
+>
+    <pad style="height: {top_padding}px;" class='w-full' />
+    <gd style="--item-width: {item_width}px;" bind:this={grid}
+        class='grid justify-evenly justify-items-center content-start gap-4 p-4 overflow-visible w-full'
+    >
         {#each visible as item, i (item.id)}
             {#if selected == i + start * columns || (i + start * columns == items.length - 1 && selected >= items.length)}
                 <sel bind:this={_selected_item}
@@ -194,10 +198,10 @@
             {/if}
         {/each}
     </gd>
-    <pad style="height: {bottom_padding}px; width: 100%;" />
+    <pad style="height: {bottom_padding}px;" class='w-full' />
 
     <!-- observer -->
-    <obs style="width: 100%; position: relative; top: {offset_observer ? -margin : 0}px;">
+    <obs style="top: {offset_observer ? -margin : 0}px;" class='w-full relative' >
         <Observer enter_screen={end_reached} bind:visible={end_is_visible} {root} {margin} />
     </obs>
 </cl>
@@ -205,28 +209,7 @@
 <svelte:window on:keydown={_on_keydown} />
 
 <style>
-    cl {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-content: flex-start;
-
-        overflow: auto;
-        width: 100%;
-        height: 100%;
-    }
-
     gd {
-        display: grid;
         grid-template-columns: repeat(auto-fit, minmax(var(--item-width), 1fr));
-        align-content: start;
-        justify-content: space-evenly;
-        justify-items: center;
-        row-gap: var(--gap);
-        column-gap: var(--gap);
-        padding: var(--gap);
-
-        overflow: visible;
-        width: calc(100% - var(--gap) * 0);
     }
 </style>
