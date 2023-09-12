@@ -148,7 +148,7 @@
 
     <div
         slot="infobox"
-        class="pl-4 pb-4 h-full"
+        class="pl-4 pb-4 h-full" 
         let:tag_searcher
         let:info_width
         let:info_margin

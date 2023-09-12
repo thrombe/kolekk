@@ -33,22 +33,16 @@
 </date>
 
 
-<style>
+<style lang='postcss'>
     field {
-        font-weight: 140;
+        @apply break-all text-gray-400 font-thin;
     }
 
     date {
-        font-size: 1rem;
-        font-weight: 150;
-        word-wrap: break-all;
-        color: #cccccc;
+        @apply break-all font-thin text-base text-gray-300;
     }
 
     facet {
-        text-align: right;
-        font-size: 0.8rem;
-        font-weight: 150;
-        color: #cccccc;
+        @apply break-all font-thin text-sm text-gray-300 text-right;
     }
 </style>

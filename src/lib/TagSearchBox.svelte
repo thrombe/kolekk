@@ -27,7 +27,7 @@
     let key = 1;
 </script>
 
-<tag-box class='flex flex-col backdrop-blur-sm max-h-full w-full p-4 gap-y-4 bg-gray-900 bg-opacity-70 rounded-lg border-2 border-gray-700'>
+<tag-box class='flex flex-col backdrop-blur-sm max-h-full w-full p-4 gap-y-4 bg-gray-900 bg-opacity-80 rounded-lg border-2 border-gray-700'>
     <input
         bind:this={tag_search_input}
         bind:value={search_query}
@@ -54,4 +54,3 @@
         </tags>
     {/key}
 </tag-box>
-

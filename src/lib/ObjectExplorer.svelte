@@ -250,7 +250,7 @@
     {/if}
 
     {#if tag_box_show}
-        <div class="absolute z-10 h-full pb-4" style="width: calc(100% - {info_width}px)">
+        <div class="absolute flex flex-col justify-center z-10 h-full pb-4" style="width: calc(100% - {info_width}px)">
         <TagSearchBox
             tag_searcher={tag_searcher}
             bind:search_query={$tag_query}
