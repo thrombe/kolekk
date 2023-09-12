@@ -14,6 +14,7 @@
     export let info_width: number;
     export let info_margin: number;
     export let on_tag_add_button: (() => void) | (() => Promise<void>);
+    export let on_tag_click: ((t: RObject<Tag>) => void) | ((t: RObject<Tag>) => Promise<void>);
 </script>
 
 <info-box 
@@ -36,7 +37,7 @@
                 add_button_callback={on_tag_add_button}
                 let:tag
             >
-                <TagBox tag={tag.data.name} highlight={false} />
+                <TagBox tag={tag.data.name} highlight={false} on_click={() => on_tag_click(tag)}/>
                 <div slot="add_button">
                     <TagBox tag={'+'} highlight={false} />
                 </div>

@@ -30,6 +30,7 @@
     import { get_path } from '$lib/commands.ts';
     import { new_factory } from '$lib/searcher/database.ts';
     import { tag_searcher } from '$lib/ObjectExplorer.svelte';
+    import { tick } from 'svelte';
 
     let selected_item: Unique<RObject<Image>, number>;
     let search_objects: () => Promise<void>;
@@ -119,6 +120,12 @@
     const copy_selected = async () => {
         await copy(selected_item.data.data.data);
     };
+
+    const on_tag_click = async (t: RObject<Tag>) => {
+        $search_query = t.data.name; 
+        await tick();
+        await search_objects();
+    };
 </script>
 
 <DataListener on_receive={file_drop} />
@@ -160,6 +167,7 @@
             {info_width}
             {info_margin}
             on_tag_add_button={show_tag_searchbox}
+            on_tag_click={on_tag_click}
         />
     </div>
 </ObjectExplorer>
