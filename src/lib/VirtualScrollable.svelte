@@ -7,12 +7,11 @@
     export let item_height: number;
     export let items: Array<Unique<T, unknown>>;
     export let selected: number;
-    export let gap: number;
 
     export let selected_item: Unique<T, unknown> | null = null;
     export let end_reached = async () => {};
     export let on_keydown = async (_: KeyboardEvent, _a: () => Promise<void>) => {};
-    export let on_item_click = async (t: Unique<T, unknown>) => {};
+    export let on_item_click = async (_: Unique<T, unknown>) => {};
     export let end_is_visible = true;
     export let keyboard_control = true;
 
@@ -157,8 +156,9 @@
     class='flex flex-row flex-wrap content-start overflow-y-auto w-full h-full' 
 >
     <pad style="height: {top_padding}px;" class='w-full' />
-    <gd style="--item-width: {item_width}px;" bind:this={grid}
+    <gd bind:this={grid}
         class='grid justify-evenly justify-items-center content-start gap-4 p-4 overflow-visible w-full'
+        style="grid-template-columns: repeat(auto-fit, minmax({item_width}px, 1fr));"
     >
         {#each visible as item, i (item.id)}
             {#if selected == i + start * columns || (i + start * columns == items.length - 1 && selected >= items.length)}
@@ -207,9 +207,3 @@
 </cl>
 
 <svelte:window on:keydown={_on_keydown} />
-
-<style>
-    gd {
-        grid-template-columns: repeat(auto-fit, minmax(var(--item-width), 1fr));
-    }
-</style>

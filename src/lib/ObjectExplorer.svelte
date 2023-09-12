@@ -215,7 +215,6 @@
     <scrollable class='h-full' style='width: calc(100% - {info_width}px)'>
         <VirtualScrollable
             bind:items
-            gap={15}
             {item_width}
             {item_height}
             {on_item_click}
