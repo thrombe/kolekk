@@ -58,7 +58,7 @@
 </script>
 
 <div class="h-full w-full rounded-lg overflow-hidden select-none
-    { selected ? 'border-gray-400 border-opacity-70 border-4' : '' }
+    { selected ? 'border-green-700 border-opacity-70 border-4 scale-110' : '' }
     "
 >
     <image-div bind:this={image_div} class='block bg-center w-full h-full bg-cover' style={'background-image: url(' + lazy_img_src + ');'} />
