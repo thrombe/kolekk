@@ -137,7 +137,8 @@
         if (ev.key == 'Enter') {
             if (
                 ev.ctrlKey &&
-                !$tag_searcher.search_results.map((t) => t.data.name).includes($tag_query)
+                $tag_query.trim() &&
+                !$tag_searcher.search_results.map((t) => t.data.name).includes($tag_query.trim())
             ) {
                 let tag: Tag = {
                     object_type: 'main_tag',
