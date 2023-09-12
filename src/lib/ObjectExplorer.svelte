@@ -167,6 +167,8 @@
                 $tag_query = '';
                 await new_tag_searcher();
             }
+        } else if (ev.key == 'Escape') {
+            tag_box_show = !tag_box_show;
         }
 
         // to make svelte detect updates to tags
