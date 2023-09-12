@@ -1,6 +1,7 @@
 <script lang="ts">
     import ImageCard from '$lib/ImageCard.svelte';
     import type { Unique } from '$lib/virtual.ts';
+    import Card from '../../routes/hoard/reaction_images/Card.svelte';
 
     export let item: Unique<unknown, unknown>;
     export let width: number;
@@ -20,28 +21,29 @@
 </script>
 
 <info-box
-    draggable="true"
     bind:clientHeight={height}
-    style="--border-radius: {border_radius}px;
-        --width: {width - border_radius * 2}px;
-        --height: {height - border_radius * 2}px;"
     class="flex flex-col w-full h-full relative"
 >
-    <abs class="absolute w-full h-full -z-10">
-        <krop class="block overflow-hidden blur-sm h-full w-full brightness-50">
-            <ImageCard
-                whatever_thumbnail={true}
-                width={width - border_radius * 2}
-                height={height - border_radius * 2}
-                lazy={false}
-                dynamic_thumbnail={true}
-                {img_source}
-            />
-        </krop>
+    <abs class="absolute w-full h-full -z-10 block brightness-75 blur-sm scale-105">
+        <!-- <Card
+            {get_img_source}
+            selected={false}
+            {item}
+            dynamic_thumbnail={true}
+            whatever_thumbnail={true}
+        /> -->
+        <ImageCard
+            whatever_thumbnail={true}
+            width={width - border_radius * 2}
+            height={height - border_radius * 2}
+            lazy={false}
+            dynamic_thumbnail={true}
+            {img_source}
+        />
     </abs>
-    <abs class="absolute -z-10 h-full w-full bg-black bg-opacity-30" />
+    <abs class="absolute -z-10 h-full w-full bg-black bg-opacity-20" />
 
-    <fg class="h-full w-full overflow-y-scroll">
+    <fg class="h-full w-full overflow-y-scroll select-none">
         <slot {item} />
     </fg>
 </info-box>

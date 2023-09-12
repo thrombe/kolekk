@@ -21,7 +21,8 @@
     } from 'types';
     import DataListener from '$lib/DataListener.svelte';
     import { files_to_bytearrays } from '$lib/data_listener.ts';
-    import Card from '$lib/Card.svelte';
+    // import Card from '$lib/Card.svelte';
+    import Card from "./reaction_images/Card.svelte";
     import type { Unique } from '$lib/virtual.ts';
     import ImageInfoBox from '$lib/infobox/ImageInfoBox.svelte';
     import ObjectExplorer from '$lib/ObjectExplorer.svelte';
@@ -134,21 +135,15 @@
     on_item_click={copy_selected}
     {on_keydown}
     let:item
-    let:item_width
-    let:item_height
     let:selected
-    let:root
 >
     <Card
         get_img_source={async () => {
             return await get_path(item.data.data.path);
         }}
-        title={''}
-        width={item_width}
-        height={item_height}
         {selected}
         {item}
-        {root}
+        dynamic_thumbnail={true}
     />
 
     <div

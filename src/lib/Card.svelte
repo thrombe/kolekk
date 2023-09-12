@@ -37,8 +37,8 @@
     let bg_color = '#282828';
 </script>
 
-<this-helps-position-the-title>
-    <cl bind:this={ele} draggable="true" on:click={on_click} on:keydown={() => {}}>
+<this-helps-position-the-title class='relative'>
+    <cl bind:this={ele} class='flex flex-col overflow-hidden items-center rounded-lg' draggable="true" on:click={on_click} on:keydown={() => {}}>
         <ImageCard
             scale={img_scale}
             {img_source}
@@ -51,8 +51,8 @@
         />
 
         {#if title && title.length > 0}
-            <title-box style={'height: ' + shade_height}>
-                <span style={'white-space: ' + wrap}>{title}</span>
+            <title-box class='absolute rounded-lg overflow-hidden' style={'height: ' + shade_height}>
+                <span class='font-medium text-ellipsis text-center' style={'white-space: ' + wrap}>{title}</span>
             </title-box>
         {/if}
 
@@ -61,17 +61,11 @@
 </this-helps-position-the-title>
 
 <style>
-    this-helps-position-the-title {
-        position: relative;
-    }
-
     title-box {
-        position: absolute;
         bottom: 0;
         width: calc(100% - 1 * var(--border));
         background-image: linear-gradient(to top, var(--color), var(--color-transparent));
         border-radius: var(--border-radius);
-        overflow: hidden;
     }
 
     title-box span {
@@ -80,9 +74,6 @@
         width: calc(100% - 6 * var(--border));
         padding-left: calc(2 * var(--border));
         padding-right: calc(2 * var(--border));
-        border-radius: var(--border-radius);
-        text-align: center;
-        text-overflow: ellipsis;
         overflow: hidden;
         font-size: 1.37ch;
         padding-bottom: 0.456ch;
@@ -91,14 +82,7 @@
     }
 
     cl {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
         color: var(--color);
-
         border: var(--border) solid;
-        border-radius: var(--border-radius);
-
-        overflow: hidden;
     }
 </style>

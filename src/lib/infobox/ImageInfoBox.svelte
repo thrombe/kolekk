@@ -17,7 +17,7 @@
 </script>
 
 <info-box 
-    class='block ml-auto my-auto h-full w-full border border-red-200'
+    class='block ml-auto my-auto h-full w-full overflow-hidden rounded-lg'
 >
     <InfoBox
         {item}
@@ -36,8 +36,10 @@
                 add_button_callback={on_tag_add_button}
                 let:tag
             >
-                <TagBox tag={tag.data} highlight={false} />
-                <button slot="add_button">+</button>
+                <TagBox tag={tag.data.name} highlight={false} />
+                <div slot="add_button">
+                    <TagBox tag={'+'} highlight={false} />
+                </div>
             </TagsBox>
         </info>
     </InfoBox>

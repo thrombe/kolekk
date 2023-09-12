@@ -37,13 +37,13 @@
             key += 1;
         }}
         on:keydown={_on_keydown}
-        class='px-8 py-1 h-10 rounded-lg font-normal flex-grow bg-opacity-50 bg-teal-400 text-gray-400 text-xl w-full'
+        class='px-8 py-1 h-10 rounded-lg font-normal flex-grow bg-opacity-40 bg-gray-600 text-gray-400 text-xl w-full'
     />
     {#key key}
         <tags class='flex flex-row flex-wrap overflow-y-auto overscroll-contain gap-2'>
             {#each $tag_searcher.search_results as tag (tag.id)}
                 <TagBox
-                    tag={tag.data}
+                    tag={tag.data.name}
                     highlight={tag_highlight(tag)}
                     on_click={async () => {
                         await on_tag_click(tag);

@@ -15,15 +15,13 @@
     }
 </script>
 
+<field class='break-all text-gray-400 font-thin'>Tags: </field>
 <tags class='flex flex-row flex-wrap overscroll-contain gap-x-2 gap-y-2'>
-    <field class='break-all text-gray-100 font-thin'>Tags: </field>
     {#each tags as tag}
-        <tag class='block'>
-            <slot {tag} />
-        </tag>
+        <slot {tag} />
     {/each}
 
-    <bu on:click={add_button_callback} on:keydown={() => {}} class='block'>
+    <bu on:click={add_button_callback} on:keydown={() => {}} >
         <slot name="add_button" />
     </bu>
 </tags>

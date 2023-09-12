@@ -1,35 +1,17 @@
 <script lang="ts">
     import type { Tag } from 'types';
 
-    export let tag: Tag;
+    export let tag: string;
     export let highlight: boolean;
 
     export let on_click: (() => void) | (() => Promise<void>) = () => {};
 </script>
 
-<tag draggable="true" class:highlight on:click={on_click} on:keydown={() => {}}>
-    {tag.name}
+<tag draggable="true" class:highlight on:click={on_click} on:keydown={() => {}}
+    class='block rounded-2xl font-thin text-sm px-4 py-2 text-gray-200
+        {highlight ? 'bg-green-600 bg-opacity-40' : 'bg-gray-400 bg-opacity-20'}
+    '
+>
+    {tag}
 </tag>
 
-<style>
-    tag {
-        display: block;
-        border: 1px solid;
-        border-color: #666666;
-        background-color: #00000055;
-        border-radius: 9px;
-        font-size: 1rem;
-        color: #aaaaaa;
-        -webkit-backdrop-filter: blur(10px);
-
-        padding-left: 12px;
-        padding-right: 12px;
-        padding-top: 3.5px;
-        padding-bottom: 3.5px;
-    }
-
-    .highlight {
-        border-color: #668866;
-        background-color: #00220055;
-    }
-</style>

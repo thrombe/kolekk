@@ -201,10 +201,10 @@
         bind:this={search_input}
         on:keydown={on_enter}
             placeholder="Search"
-        class='px-8 rounded-lg font-normal flex-grow bg-opacity-30 bg-teal-400 text-gray-400 text-xl'
+        class='px-8 rounded-lg font-normal flex-grow bg-opacity-20 bg-blue-800 text-gray-400 text-xl'
     />
     <button on:click={search_objects}
-        class='w-30 px-2 h-full block text-center rounded-lg bg-opacity-30 bg-teal-400 text-gray-300 font-bold'
+        class='w-30 px-2 h-full block text-center rounded-lg bg-opacity-20 bg-blue-800 text-gray-400 font-bold'
     >refresh</button>
 </cl>
 
