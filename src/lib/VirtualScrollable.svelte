@@ -224,9 +224,7 @@
         justify-items: center;
         row-gap: var(--gap);
         column-gap: var(--gap);
-        padding: 0px;
-        padding-top: var(--gap);
-        padding-bottom: var(--gap);
+        padding: var(--gap);
 
         overflow: visible;
         width: calc(100% - var(--gap) * 0);

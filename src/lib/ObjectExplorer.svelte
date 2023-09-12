@@ -211,7 +211,7 @@
     >refresh</button>
 </cl>
 
-<cl class="flex flex-col flex-wrap flex-grow h-1 mx-4 relative" >
+<cl class="flex flex-col flex-wrap flex-grow h-1 relative" >
     <scrollable class='h-full' style='width: calc(100% - {info_width}px)'>
         <VirtualScrollable
             bind:items
