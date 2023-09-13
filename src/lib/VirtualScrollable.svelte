@@ -48,10 +48,8 @@
         columns = st.getPropertyValue('grid-template-columns').split(' ').length;
         
         let s = Math.floor(root.scrollTop / item_height);
-        top_padding = s * item_height;
         let e = s + Math.ceil(root.clientHeight / item_height) + 1;
         let total_pos_req = Math.ceil(items.length / columns);
-        bottom_padding = Math.max(total_pos_req - e, 0) * item_height;
 
         if (total_pos_req * item_height > margin) {
             offset_observer = true;
@@ -59,6 +57,10 @@
             offset_observer = false;
         }
         // console.log('bottom padding', bottom_padding, e, total_pos_req, offset_observer);
+
+        s = Math.max(s-1, 0);
+        top_padding = s * item_height;
+        bottom_padding = Math.max(total_pos_req - e, 0) * item_height;
 
         if (start != s || end != e || edited) {
             start = s;
