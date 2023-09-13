@@ -17,7 +17,7 @@
     <a href="#/hoard/reaction_images">Hoard em Images</a>
 </h>
 <h>
-    <a href="/hoard/bookmarks">Hoard em Bookmarks</a>
+    <a href="#/hoard/bookmarks">Hoard em Bookmarks</a>
 </h>
 <h>
     <a href="/hoard/wallpapers">Hoard em Wallpapers</a>
