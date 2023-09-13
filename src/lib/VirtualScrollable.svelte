@@ -14,11 +14,11 @@
     export let on_item_click = async (_: Unique<T, unknown>) => {};
     export let end_is_visible = true;
     export let keyboard_control = true;
+    export let width: number;
+    export let height: number;
 
     type T = $$Generic;
 
-    let width: number;
-    let height: number;
     let columns = 1;
 
     $: margin = item_height * 2;
@@ -154,10 +154,10 @@
     };
 </script>
 
-<cl on:scroll={on_update} bind:this={root} bind:clientWidth={width} bind:clientHeight={height}
+<cl on:scroll={on_update} bind:this={root} bind:clientHeight={height}
     class='flex flex-row flex-wrap content-start overflow-y-auto w-full h-full' 
 >
-    <pad style="height: {top_padding}px;" class='w-full' />
+    <pad style="height: {top_padding}px;" bind:clientWidth={width} class='w-full mx-4' />
     <gd bind:this={grid}
         class='grid justify-evenly justify-items-center content-start gap-4 p-4 overflow-visible w-full'
         style="grid-template-columns: repeat(auto-fit, minmax({item_width}px, 1fr));"

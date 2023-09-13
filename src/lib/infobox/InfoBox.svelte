@@ -4,7 +4,6 @@
     import Card from '../../routes/hoard/reaction_images/Card.svelte';
 
     export let item: Unique<unknown, unknown>;
-    export let width: number;
     export let get_img_source = async (): Promise<string> => {
         return '';
     };
@@ -17,7 +16,6 @@
     }
 
     let height = 100;
-    let border_radius = 1;
 </script>
 
 <info-box
@@ -34,8 +32,6 @@
         /> -->
         <ImageCard
             whatever_thumbnail={true}
-            width={width - border_radius * 2}
-            height={height - border_radius * 2}
             lazy={false}
             dynamic_thumbnail={true}
             {img_source}

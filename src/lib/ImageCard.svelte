@@ -4,8 +4,6 @@
     import Observer from './Observer.svelte';
     const hasAPI = 'IntersectionObserver' in window;
 
-    export let width: number;
-    export let height: number;
     export let lazy: boolean;
     export let dynamic_thumbnail: boolean;
 
@@ -14,6 +12,9 @@
     export let scale = '100%';
     export let root: HTMLElement | null = null;
     export let whatever_thumbnail: boolean = false;
+
+    let width: number;
+    let height: number;
 
     let abs: HTMLElement;
     $: if (abs) {
@@ -32,6 +33,9 @@
     let thumbnail_size: ThumbnailSize;
     $: try_update_thumbnail_size(visible, lazy, width);
     let try_update_thumbnail_size = async (visible: boolean, lazy: boolean, width: number) => {
+        if (!width) {
+            return;
+        }
         if (!visible && lazy && hasAPI) {
             return;
         }
@@ -78,6 +82,6 @@
         </rel>
     {/if}
 
-    <image-div class='bg-center w-full h-full bg-cover' style={'background-image: url(' + lazy_img_src + ');'} />
+    <image-div class='bg-center w-full h-full bg-cover' bind:clientHeight={height} bind:clientWidth={width} style={'background-image: url(' + lazy_img_src + ');'} />
 </cl>
 

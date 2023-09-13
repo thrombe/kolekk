@@ -11,18 +11,15 @@
 
     export let tag_searcher: RSearcher<Tag>;
     export let item: Unique<RObject<Image>, number>;
-    export let info_width: number;
-    export let info_margin: number;
     export let on_tag_add_button: (() => void) | (() => Promise<void>);
     export let on_tag_click: ((t: RObject<Tag>) => void) | ((t: RObject<Tag>) => Promise<void>);
 </script>
 
 <info-box 
-    class='block ml-auto my-auto h-full w-full overflow-hidden rounded-lg'
+    class='block h-full w-full overflow-hidden rounded-lg'
 >
     <InfoBox
         {item}
-        width={info_width - info_margin}
         get_img_source={async () => {
             return await get_path(item.data.data.data.path);
         }}

@@ -26,6 +26,9 @@
         e: KeyboardEvent,
         scroll_selected_into_view: () => Promise<void>
     ) => Promise<void>;
+    export let width: number = 200;
+    export let height: number = 200;
+    export let info_box_width: number = 400;
 
     type T = $$Generic;
     interface $$Slots {
@@ -38,7 +41,6 @@
         };
         infobox: {
             tag_searcher: RSearcher<Tag>;
-            info_margin: number;
             info_width: number;
             show_tag_searchbox: () => Promise<void>;
         };
@@ -123,14 +125,11 @@
     };
 
     let info_width = 0;
-    let info_margin = 0;
     let show_item_info = false;
     $: if (show_item_info) {
-        info_width = 350;
-        info_margin = 20;
+        info_width = info_box_width;
     } else {
         info_width = 0;
-        info_margin = 0;
     }
 
     const tag_box_input_handle = async (ev: KeyboardEvent) => {
@@ -224,6 +223,8 @@
             on_keydown={_on_keydown}
             bind:end_is_visible
             bind:selected_item
+            bind:width
+            bind:height
             let:item_width
             let:item_height
             let:root
@@ -244,7 +245,6 @@
         <div class='h-full' style='width: {info_width}px;'>
         <slot name="infobox"
                 tag_searcher={$tag_searcher}
-                {info_margin}
                 {info_width}
                 {show_tag_searchbox}
         />
@@ -252,7 +252,7 @@
     {/if}
 
     {#if tag_box_show}
-        <div class="absolute flex flex-col justify-center z-10 h-full pb-4" style="width: calc(100% - {info_width}px)">
+        <div class="absolute flex flex-col justify-start z-10 h-full pb-4 px-4" style="width: calc(100% - {info_width}px)">
         <TagSearchBox
             tag_searcher={tag_searcher}
             bind:search_query={$tag_query}

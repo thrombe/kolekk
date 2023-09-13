@@ -157,15 +157,11 @@
         slot="infobox"
         class="pr-4 pb-4 h-full" 
         let:tag_searcher
-        let:info_width
-        let:info_margin
         let:show_tag_searchbox
     >
         <ImageInfoBox
             {tag_searcher}
             item={selected_item}
-            {info_width}
-            {info_margin}
             on_tag_add_button={show_tag_searchbox}
             on_tag_click={on_tag_click}
         />
