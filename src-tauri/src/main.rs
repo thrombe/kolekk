@@ -94,6 +94,7 @@ fn main() {
             database::get_path,
             database::reload_reader,
             clipboard::copy_image_to_clipboard,
+            clipboard::copy_text,
             logg_string,
             logg_jsml,
         ])

@@ -20,6 +20,14 @@ pub async fn copy_image_to_clipboard(
     clp.copy_image_to_clipboard(img_path, conf.inner())
 }
 
+#[tauri::command]
+pub async fn copy_text(
+    clp: State<'_, Clipboard>,
+    text: String,
+) -> Result<(), Error> {
+    clp.copy_text(text)
+}
+
 pub struct Clipboard {
     inner: Mutex<arboard::Clipboard>,
 }
@@ -30,6 +38,11 @@ impl Clipboard {
             inner: Mutex::new(arboard::Clipboard::new().infer_err()?),
         };
         Ok(clp)
+    }
+
+    pub fn copy_text(&self, text: String) -> Result<(), Error> {
+        self.inner.lock().infer_err()?.set_text(text).infer_err()?;
+        Ok(())
     }
 
     pub fn copy_image_to_clipboard(&self, img_path: Path, conf: &AppConfig) -> Result<(), Error> {
