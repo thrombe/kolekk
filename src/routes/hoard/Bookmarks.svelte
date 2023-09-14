@@ -58,6 +58,10 @@
         event: KeyboardEvent,
         scroll_selected_into_view: () => Promise<void>
     ) => {
+        if (event.key == 'Enter') {
+            await invoke('copy_text', { text: selected_item.data.data.data.url });
+            console.log(selected_item.data.data.data.title, selected_item.data.data.data.title);
+        }
     };
 
     const on_tag_click = async (t: RObject<Tag>) => {
