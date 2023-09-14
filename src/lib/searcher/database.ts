@@ -124,11 +124,13 @@ export class TagSearch extends Offset<Tag> {
 
     async add_tag(tag: Tag) {
         let id: number = await invoke('save_new_tag', { tag });
+        await invoke("reload_reader");
         return id;
     }
 
     async add_tag_to_object(id: number, tag_id: number) {
         await invoke('add_tag_to_object', { id, tagId: tag_id });
+        await invoke("reload_reader");
     }
 
     async get_tags_from_ids(...ids: number[]) {
@@ -137,6 +139,7 @@ export class TagSearch extends Offset<Tag> {
 
     async remove_tag_from_object(id: number, tag_id: number) {
         await invoke('remove_tag_from_object', { id, tagId: tag_id });
+        await invoke("reload_reader");
     }
 
     async add_item(...items: RDbEntry<Tag>[]) {
