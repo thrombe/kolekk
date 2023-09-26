@@ -11,6 +11,8 @@
     import type { RObject } from '$lib/searcher/searcher';
     import type { Unique } from '$lib/virtual';
     import { tick } from 'svelte';
+    import Toasts from '$lib/toast/Toasts.svelte';
+    import { toaster } from '$lib/toast/Toasts.svelte';
 
     let fac = writable(new_factory<Bookmark>('Bookmark'));
     let searcher = writable(new_db<Bookmark>('Bookmark', ''));
@@ -61,6 +63,11 @@
         if (event.key == 'Enter') {
             await invoke('copy_text', { text: selected_item.data.data.data.url });
             console.log(selected_item.data.data.data.title, selected_item.data.data.data.title);
+            await toaster.toast({
+                message: "url copied",
+                classes: "whitespace-nowrap block bg-blue-400 rounded-lg p-2 text-sm",
+                timeout: 1000,
+            });
         }
     };
 
@@ -117,4 +124,7 @@
         />
     </div>
 </ObjectExplorer>
+
+<Toasts
+/>
 
