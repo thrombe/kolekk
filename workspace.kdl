@@ -1,6 +1,3 @@
-
-// default_shell "cached-nix-shell"
-
 layout {
     // 'base' swap layout is exactly whatever you define in the actual layout stuff
     // first one takes precidence
@@ -29,7 +26,8 @@ layout {
     }
 
     pane_template name="nix" {
-        command "cached-nix-shell"
+        command "nix"
+        args "develop"
     }
 
 
@@ -48,35 +46,35 @@ layout {
     tab name="helix" focus=true {
         pane stacked=true {
             nix name="helix" {
-                args "--command" "hx ."
+                args "develop" "-c" "hx" "."
             }
             nix name="nvim" {
-                args "--command" "nvim -c 'Telescope git_files'"
+                args "develop" "-c" "nvim" "-c" "Telescope git_files"
             }
         }
     }
-    tab name="zsh"{
+    tab name="shell"{
         pane stacked=true {
-            pane name="zsh"
             nix name="nix-shell"
+            pane name="zsh"
         }
     }
-    tab name="server/build" {
+    tab name="commands" {
         pane stacked=true {
             nix start_suspended=true name="bun dev server" {
-                args "--command" "bun run dev"
+                args "develop" "-c" "bun" "run" "dev"
             }
             nix start_suspended=true name="tauri build dev" {
-                args "--command" "bun run tauri-dev-build"
+                args "develop" "-c" "bun" "run" "tauri-dev-build"
             }
             pane start_suspended=true name="run dev binary" {
                 command "./target/debug/kolekk"
             }
             nix start_suspended=true name="tauri build" {
-                args "--command" "bun run tauri-build"
+                args "develop" "-c" "bun" "run" "tauri-build"
             }
             nix start_suspended=true name="run release binary" {
-                args "--command" "./target/release/kolekk"
+                args "develop" "-c" "./target/release/kolekk"
             }
         }
     }
