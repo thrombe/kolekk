@@ -1,0 +1,95 @@
+
+// default_shell "cached-nix-shell"
+
+layout {
+    // 'base' swap layout is exactly whatever you define in the actual layout stuff
+    // first one takes precidence
+    swap_tiled_layout name="stack" min_panes=2 {
+        tab {
+            pane stacked=true {
+                pane
+                pane
+            }
+        }
+    }
+    swap_tiled_layout name="no stack" min_panes=2 {
+        tab {
+            pane
+        }
+    }
+
+    default_tab_template {
+        pane size=1 borderless=true {
+            plugin location="zellij:tab-bar"
+        }
+        children
+        pane size=1 borderless=true {
+            plugin location="zellij:status-bar"
+        }
+    }
+
+    pane_template name="nix" {
+        command "cached-nix-shell"
+    }
+
+
+    cwd "~/0Git/kolekk" 
+
+    tab name="git / broot" stacked=true {
+        pane stacked=true {
+            pane start_suspended=true name="gitui" {
+                command "gitui"
+            }
+            pane start_suspended=true name="broot" {
+                command "broot"
+            }
+        }
+    }
+    tab name="helix" focus=true {
+        pane stacked=true {
+            nix name="helix" {
+                args "--command" "hx ."
+            }
+            nix name="nvim" {
+                args "--command" "nvim -c 'Telescope git_files'"
+            }
+        }
+    }
+    tab name="zsh"{
+        pane stacked=true {
+            pane name="zsh"
+            nix name="nix-shell"
+        }
+    }
+    tab name="server/build" {
+        pane stacked=true {
+            nix start_suspended=true name="bun dev server" {
+                args "--command" "bun run dev"
+            }
+            nix start_suspended=true name="tauri build dev" {
+                args "--command" "bun run tauri-dev-build"
+            }
+            pane start_suspended=true name="run dev binary" {
+                command "./target/debug/kolekk"
+            }
+            nix start_suspended=true name="tauri build" {
+                args "--command" "bun run tauri-build"
+            }
+            nix start_suspended=true name="run release binary" {
+                args "--command" "./target/release/kolekk"
+            }
+        }
+    }
+    tab name="logs" cwd="~/.config/com.thrombe.kolekk/logs/" {
+        pane stacked=true {
+            pane start_suspended=true name="kolekk logs" {
+                command "nvim"
+                args "log.log"
+            }
+            pane start_suspended=true name="tachidesk logs" {
+                command "nvim"
+                args "tachidesk.log"
+            }
+        }
+    }
+}
