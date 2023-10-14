@@ -16,6 +16,7 @@
     export let keyboard_control = true;
     export let width: number;
     export let height: number;
+    export let gap: string;
 
     type T = $$Generic;
 
@@ -159,7 +160,7 @@
 >
     <pad style="height: {top_padding}px;" bind:clientWidth={width} class='w-full mx-4' />
     <gd bind:this={grid}
-        class='grid justify-evenly justify-items-center content-start gap-4 p-4 overflow-visible w-full'
+        class='grid justify-evenly justify-items-center content-start {gap} p-4 overflow-visible w-full'
         style="grid-template-columns: repeat(auto-fit, minmax({item_width}px, 1fr));"
     >
         {#each visible as item, i (item.id)}

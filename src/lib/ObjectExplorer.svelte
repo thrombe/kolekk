@@ -29,6 +29,7 @@
     export let width: number = 200;
     export let height: number = 200;
     export let info_box_width: number = 400;
+    export let gap: string = 'gap-4';
 
     type T = $$Generic;
     interface $$Slots {
@@ -225,6 +226,7 @@
             bind:selected_item
             bind:width
             bind:height
+            bind:gap
             let:item_width
             let:item_height
             let:root
