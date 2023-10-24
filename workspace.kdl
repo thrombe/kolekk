@@ -25,13 +25,6 @@ layout {
         }
     }
 
-    pane_template name="nix" {
-        command "nix"
-        args "develop"
-    }
-
-
-    cwd "~/0Git/kolekk" 
 
     tab name="git / broot" stacked=true {
         pane stacked=true {
@@ -45,36 +38,38 @@ layout {
     }
     tab name="helix" focus=true {
         pane stacked=true {
-            nix name="helix" {
-                args "develop" "-c" "hx" "."
+            pane name="helix" {
+                command "hx"
+                args "."
             }
-            nix name="nvim" {
-                args "develop" "-c" "nvim" "-c" "Telescope git_files"
+            pane name="nvim" {
+                command "nvim"
+                args "-c" "Telescope git_files"
             }
         }
     }
     tab name="shell"{
-        pane stacked=true {
-            nix name="nix-shell"
-            pane name="zsh"
-        }
+        pane name="zsh"
     }
     tab name="commands" {
         pane stacked=true {
-            nix start_suspended=true name="bun dev server" {
-                args "develop" "-c" "bun" "run" "dev"
+            pane start_suspended=true name="bun dev server" {
+                command "bun"
+                args "run" "dev"
             }
-            nix start_suspended=true name="tauri build dev" {
-                args "develop" "-c" "bun" "run" "tauri-dev-build"
+            pane start_suspended=true name="tauri build dev" {
+                command "bun"
+                args "run" "tauri-dev-build"
             }
             pane start_suspended=true name="run dev binary" {
                 command "./target/debug/kolekk"
             }
-            nix start_suspended=true name="tauri build" {
-                args "develop" "-c" "bun" "run" "tauri-build"
+            pane start_suspended=true name="tauri build" {
+                command "bun"
+                args "run" "tauri-build"
             }
-            nix start_suspended=true name="run release binary" {
-                args "develop" "-c" "./target/release/kolekk"
+            pane start_suspended=true name="run release binary" {
+                command "./target/release/kolekk"
             }
         }
     }
