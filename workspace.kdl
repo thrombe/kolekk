@@ -42,7 +42,7 @@ layout {
                 command "hx"
                 args "."
             }
-            pane name="nvim" {
+            pane start_suspended=true name="nvim" {
                 command "nvim"
                 args "-c" "Telescope git_files"
             }
