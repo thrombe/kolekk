@@ -40,8 +40,8 @@
     },
     "type": "module",
     "dependencies": {
-        "@tauri-apps/api": "^1.2.0",
-        "@tauri-apps/cli": "^1.2.3",
+        "@tauri-apps/api": "^1.2",
+        "@tauri-apps/cli": "^1.2",
         "@types/youtube": "^0.0.47",
         "svelte-spa-router": "^3.3.0",
         "youtubei.js": "^6.0.0"
