@@ -45,6 +45,8 @@ walkdir = "2.3.3"
 path = "../../musimanager/musiplayer"
 # optional = true
 
+[profile.dev.package."image"]
+opt-level = 3
 
 [features]
 # music = ["musiplayer"]

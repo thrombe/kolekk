@@ -37,3 +37,7 @@ rustflags = [
   "-Lnative=/home/issac/daata/distrobox-home/.xwin/sdk/lib/um/x86_64",
   "-Lnative=/home/issac/daata/distrobox-home/.xwin/sdk/lib/ucrt/x86_64",
 ]
+
+
+[profile.rust-analyzer]
+inherits = "dev"

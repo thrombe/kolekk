@@ -1316,5 +1316,109 @@ pub mod lastfm {
             };
             Ok(track)
         }
+
+        // TODO: getSimilar -> parse<Similar> -> SimilarArtists / SimilarTracks -> Vec<_>
+        // TODO: chart.* api
+        // TODO: geo.* api
+        // TODO: tag.*
+        // TODO: *.topTags
+        // TODO: artist.(topTracks|topAlbums)
     }
+}
+
+pub mod omdb {
+    // https://www.omdbapi.com/
+    // to get imdb ratings
+
+    use kolekk_types::TS;
+    use serde::{Deserialize, Serialize};
+    use tauri::api::http::Client;
+
+    use crate::bad_error::Error;
+
+    const BASE_URL: &str = "http://www.omdbapi.com/";
+
+    #[derive(Debug, Clone)]
+    pub struct OmdbClient {
+        api_key: String,
+        client: Client,
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct ImdbSearchResult {
+        #[serde(rename = "Title")]
+        pub title: Option<String>,
+        #[serde(rename = "imdnRating")]
+        pub imdb_rating: Option<String>,
+        #[serde(rename = "imdbID")]
+        pub imdb_id: Option<String>,
+        #[serde(rename = "imdbVotes")]
+        pub imdb_votes: Option<String>,
+        #[serde(rename = "Type")]
+        pub ttype: Option<String>,
+        #[serde(rename = "totalSeasons")]
+        pub total_seasons: Option<String>,
+        #[serde(rename = "Poster")]
+        pub poster: Option<String>,
+    }
+
+    impl OmdbClient {
+        pub async fn new(api_key: impl Into<String>) -> Result<Self, Error> {
+            todo!()
+        }
+
+        pub async fn get_from_imdb_id(&self, imdb_id: String) -> Result<ImdbSearchResult, Error> {
+            // http://www.omdbapi.com/?apikey=[yourkey]&i=[imdb_key]
+            todo!()
+        }
+    }
+}
+
+pub mod mal {
+    // https://myanimelist.net/apiconfig/references/api/v2
+
+    use kolekk_types::TS;
+    use serde::{Deserialize, Serialize};
+    use tauri::api::http::Client;
+
+    const BASE_URL: &str = "https://api.myanimelist.net/v2";
+
+    #[derive(Debug, Clone)]
+    pub struct MalClient<A> {
+        api_key: String,
+        client: Client,
+        auth: A,
+    }
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    struct ClientAuth(String);
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    struct MainAuth(String);
+    // pub enum Auth {
+    //     ClientAuth,
+    //     MainAuth {
+    //         key: String,
+    //     }
+    // }
+
+    trait Auth {
+        fn auth_header(&self) -> (String, String);
+    }
+
+    impl Auth for ClientAuth {
+        fn auth_header(&self) -> (String, String) {
+            ("X-MAL-CLIENT-ID".into(), self.0.clone())
+        }
+    }
+
+    impl Auth for MainAuth {
+        fn auth_header(&self) -> (String, String) {
+            ("Authorization".into(), self.0.clone())
+        }
+    }
+
+    impl<A> MalClient<A> {}
+
+    impl MalClient<MainAuth> {}
+
+    impl MalClient<ClientAuth> {}
 }

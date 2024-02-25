@@ -402,7 +402,12 @@ where
             Occur::Should,
             Box::new(BooleanQuery::new(
                 query
+                    // TODO: replace this with tantivy's query parser
+                    // TODO: add functionality to search links (needs a non default token parser i think)
                     .split_whitespace()
+                    .flat_map(|t| t.split('_')) // for some reason - '_' and '-' in queries tank query results
+                    .flat_map(|t| t.split('-'))
+                    .filter(|t| !t.is_empty())
                     .flat_map(|t| {
                         [
                             (
@@ -420,7 +425,7 @@ where
                                         Term::from_field_text(db.get_field(Fields::Text), t),
                                         IndexRecordOption::Basic,
                                     )) as _,
-                                    2.0,
+                                    1.0,
                                 )) as _,
                             ),
                         ]
@@ -482,6 +487,9 @@ where
 
     let phrase_query_terms = query
         .split_whitespace()
+        .flat_map(|t| t.split('_')) // for some reason - '_' and '-' in queries tank query results
+        .flat_map(|t| t.split('-'))
+        .filter(|t| !t.is_empty())
         .map(|t| Term::from_field_text(db.get_field(Fields::Text), t))
         .collect::<Vec<_>>();
     let title_query = if phrase_query_terms.len() < 2 {
@@ -515,6 +523,9 @@ where
             Box::new(BooleanQuery::new(
                 query
                     .split_whitespace()
+                    .flat_map(|t| t.split('_')) // for some reason - '_' and '-' in queries tank query results
+                    .flat_map(|t| t.split('-'))
+                    .filter(|t| !t.is_empty())
                     .flat_map(|t| {
                         [
                             (
@@ -532,7 +543,7 @@ where
                                         Term::from_field_text(db.get_field(Fields::Text), t),
                                         IndexRecordOption::Basic,
                                     )) as _,
-                                    2.0,
+                                    1.0,
                                 )) as _,
                             ),
                         ]
@@ -580,6 +591,8 @@ where
         // TODO: implement these as methods of Fields and ObjectType
         query
             .split_whitespace()
+            .flat_map(|t| t.split('_')) // for some reason - '_' and '-' in queries tank query results
+            .flat_map(|t| t.split('-'))
             .flat_map(|t| {
                 [
                     (
@@ -597,7 +610,7 @@ where
                                 Term::from_field_text(db.get_field(Fields::Text), t),
                                 IndexRecordOption::Basic,
                             )) as _,
-                            2.0,
+                            1.0,
                         )) as _,
                     ),
                 ]

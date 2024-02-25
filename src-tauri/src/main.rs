@@ -17,7 +17,7 @@ mod clipboard;
 mod images;
 mod tag;
 
-// #[cfg(feature = "music")]
+#[cfg(feature = "music")]
 mod player;
 
 use bad_error::Error;
@@ -40,7 +40,7 @@ pub enum AppInitialisationStatus {
 fn main() {
     let builder = tauri::Builder::default();
 
-    // #[cfg(feature = "music")]
+    #[cfg(feature = "music")]
     let builder = builder.plugin(player::init());
 
     builder
@@ -100,6 +100,15 @@ fn main() {
         ])
         .setup(|app| {
             app.handle().manage(app.handle());
+            // app.windows().look(|e| println!("{:?}", e)).into_keys().look(|e| println!("{:?}", e));
+            // app.get_window("main")
+            // .bad_err("no window found")?
+            // .eval("import { invoke } from '@tauri-apps/api/tauri'; invoke('initialise_app')")
+            // .eval("window.__TAURI__.invoke('initialise_app')")
+            // .eval("window.location.replace('http://my-oauth-login-page.com')")
+            // .eval("setInterval(() => {console.log('sasas')}, 100)")
+            // .look(|e| println!("{:?}", e))
+            // .infer_err()?;
             Ok(())
         })
         .run(tauri::generate_context!())

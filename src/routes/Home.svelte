@@ -1,7 +1,12 @@
 <script lang="ts" context="module">
     import { invoke } from '@tauri-apps/api/tauri';
 
-    invoke('initialise_app');
+    // window.location.hash = '#/loading';
+
+    invoke('initialise_app').then(() => {
+        // window.location.hash = '#/hoard/bookmarks/';
+        // window.location.hash = '#/hoard/reaction_images/';
+    });
 </script>
 
 <script lang="ts">
