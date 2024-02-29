@@ -11,8 +11,8 @@
 <style>
     info-title {
         display: block;
-        font-size: 1.7rem;
-        font-weight: 130;
+        font-size: 1.8rem;
+        font-weight: 200;
         word-wrap: break-all;
         color: #cccccc;
     }

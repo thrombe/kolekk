@@ -35,14 +35,14 @@
 
 <style lang='postcss'>
     field {
-        @apply break-all text-gray-400 font-thin;
+        @apply break-all text-gray-400 font-light;
     }
 
     date {
-        @apply break-all font-thin text-base text-gray-300;
+        @apply break-all font-light text-base text-gray-300;
     }
 
     facet {
-        @apply break-all font-thin text-sm text-gray-300 text-right;
+        @apply break-all font-light text-sm text-gray-300 text-right;
     }
 </style>

@@ -15,7 +15,7 @@
     }
 </script>
 
-<field class='break-all text-gray-400 font-thin'>Tags: </field>
+<field class='break-all text-gray-400 font-light'>Tags: </field>
 <tags class='flex flex-row flex-wrap overscroll-contain gap-x-2 gap-y-2'>
     {#each tags as tag}
         <slot {tag} />
