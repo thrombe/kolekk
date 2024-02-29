@@ -2,12 +2,12 @@
 use crate::{dbg, debug, error};
 
 use kolekk_types::objects::{Fields, Id, Indexed, Meta, SearchableEntry, Tag, TypeFacet};
-use tantivy::{collector::TopDocs, query::TermQuery, schema::IndexRecordOption, Document, Term};
+use tantivy::{collector::TopDocs, query::{BooleanQuery, Occur, TermQuery}, schema::IndexRecordOption, Document, Term};
 use tauri::State;
 
 use crate::{
     bad_error::{BadError, Error, InferBadError, Inspectable},
-    database::{AppDatabase, DbAble, TagSearchScoreTweaker},
+    database::{AppDatabase, DbAble, FacetFrom, TagSearchScoreTweaker},
 };
 
 #[tauri::command]
@@ -69,7 +69,16 @@ pub async fn get_tags_from_ids(
         .map(|t| {
             let td = searcher
                 .search(
-                    &TermQuery::new(t, IndexRecordOption::Basic),
+                    &BooleanQuery::new(vec![
+                        (Occur::Must, Box::new(TermQuery::new(t, IndexRecordOption::Basic)) as _),
+                        (
+                            Occur::Must,
+                            Box::new(TermQuery::new(
+                                Term::from_facet(db.get_field(Fields::Type), &TypeFacet::Tag.facet()),
+                                IndexRecordOption::Basic,
+                            )) as _,
+                        ),
+                    ]),
                     &TopDocs::with_limit(1),
                 )
                 .look(|e| dbg!(e))
