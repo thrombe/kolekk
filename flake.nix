@@ -17,16 +17,28 @@
       };
 
       manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
-    in {
-      # TODO: 'cargo build' won't build this
-      packages.default = unstable.rustPlatform.buildRustPackage {
-        pname = manifest.name;
-        version = manifest.version;
-        cargoLock.lockFile = ./Cargo.lock;
-        src = pkgs.lib.cleanSource ./.;
 
-        # - [nix flake rust and pkgconfig](https://discourse.nixos.org/t/nix-and-rust-how-to-use-pkgconfig/17465/3)
-        buildInputs = with pkgs; [
+      fhs = pkgs.buildFHSEnv {
+        name = "fhs-shell";
+        targetPkgs = p: (all-pkgs p) ++ custom-commands;
+        runScript = "${pkgs.zsh}/bin/zsh";
+        profile = ''
+        '';
+      };
+      run-dev = pkgs.buildFHSEnv {
+        name = "run-dev";
+        targetPkgs = all-pkgs;
+        runScript = ''
+          #!/usr/bin/env bash
+          # run the thing
+        '';
+      };
+      custom-commands = [
+        run-dev
+      ];
+
+      packages = pkgs:
+        with pkgs; [
           openssl
           glib
           gdk-pixbuf
@@ -37,7 +49,8 @@
           webkitgtk
           libsoup
         ];
-        nativeBuildInputs = with pkgs; [
+      nativeBuildPackages = pkgs:
+        with pkgs; [
           pkg-config
 
           nodejs_20
@@ -47,12 +60,20 @@
           # - [RPATH, or why lld doesn't work on NixOS](https://matklad.github.io/2022/03/14/rpath-or-why-lld-doesnt-work-on-nixos.html)
           llvmPackages.bintools
           llvmPackages_15.clang
-
-          # - [Using mold as linker prevents - NixOS Discourse](https://discourse.nixos.org/t/using-mold-as-linker-prevents-libraries-from-being-found/18530/5)
-          # mold won't work without a wrapper to set correct RPATH
-          # mold
-          # unstable.mold
+          unstable.mold-wrapped
         ];
+      all-pkgs = p: (packages p) ++ (nativeBuildPackages p);
+    in {
+      # TODO: 'cargo build' won't build this
+      packages.default = unstable.rustPlatform.buildRustPackage {
+        pname = manifest.name;
+        version = manifest.version;
+        cargoLock.lockFile = ./Cargo.lock;
+        src = pkgs.lib.cleanSource ./.;
+
+        # - [nix flake rust and pkgconfig](https://discourse.nixos.org/t/nix-and-rust-how-to-use-pkgconfig/17465/3)
+        buildInputs = packages pkgs;
+        nativeBuildInputs = nativeBuildPackages pkgs;
       };
 
       devShells.default = pkgs.mkShell {
@@ -80,6 +101,8 @@
             nodePackages_latest.typescript-language-server
             tailwindcss-language-server
           ]
+          ++ [fhs]
+          ++ custom-commands
           ++ self.packages."${system}".default.nativeBuildInputs
           ++ self.packages."${system}".default.buildInputs;
 
