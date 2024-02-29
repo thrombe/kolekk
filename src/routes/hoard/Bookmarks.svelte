@@ -64,15 +64,15 @@
             await invoke('copy_text', { text: selected_item.data.data.data.url });
             console.log(selected_item.data.data.data.title, selected_item.data.data.data.title);
             await toaster.toast({
-                message: "url copied",
-                classes: "whitespace-nowrap block bg-blue-400 rounded-lg p-2 text-sm",
-                timeout: 1000,
+                message: 'url copied',
+                classes: 'whitespace-nowrap block bg-blue-400 rounded-lg p-2 text-sm',
+                timeout: 1000
             });
         }
     };
 
     const on_tag_click = async (t: RObject<Tag>) => {
-        $search_query = t.data.name; 
+        $search_query = t.data.name;
         await tick();
         await search_objects();
     };
@@ -106,26 +106,16 @@
     let:item
     let:selected
 >
-    <BookmarkCard
-        {selected}
-        {item}
-    />
+    <BookmarkCard {selected} {item} />
 
-    <div
-        slot="infobox"
-        class="pr-4 pb-4 h-full" 
-        let:tag_searcher
-        let:show_tag_searchbox
-    >
+    <div slot="infobox" class="pr-4 pb-4 h-full" let:tag_searcher let:show_tag_searchbox>
         <BookmarkInfoBox
             {tag_searcher}
             item={selected_item}
             on_tag_add_button={show_tag_searchbox}
-            on_tag_click={on_tag_click}
+            {on_tag_click}
         />
     </div>
 </ObjectExplorer>
 
-<Toasts
-/>
-
+<Toasts />
