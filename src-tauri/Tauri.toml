@@ -48,7 +48,10 @@ scope = ["**"]
 [tauri.allowlist.protocol]
 all = true
 asset = true
-assetScope = ["**"]
+# TODO: huh?
+# - [Configuration | Tauri Apps](https://tauri.app/v1/api/config/#fsallowlistscope.requireliteralleadingdot)
+# requireLiteralLeadingDot = false
+assetScope = ["**", "**/.*/**"]
 
 [tauri.security]
 # https://tauri.app/v1/api/config/#csp

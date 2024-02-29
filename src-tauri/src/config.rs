@@ -16,8 +16,7 @@ pub struct AppConfig {
 impl AppConfig {
     pub fn new(path_res: &PathResolver) -> Self {
         AppConfig {
-            // app_data_dir: path_res.app_data_dir().unwrap(), // https://github.com/tauri-apps/tauri/issues/6158
-            app_data_dir: tauri::api::path::home_dir().unwrap().join("kolekk"),
+            app_data_dir: path_res.app_data_dir().unwrap(),
             app_config_dir: path_res.app_config_dir().unwrap(),
             app_cache_dir: path_res.app_cache_dir().unwrap(),
             app_log_dir: path_res.app_log_dir().unwrap(),
