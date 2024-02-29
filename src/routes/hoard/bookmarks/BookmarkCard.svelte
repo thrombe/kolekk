@@ -8,7 +8,7 @@
     export let selected: boolean;
 
     const dragstart = (e: DragEvent, url: string) => {
-        e.dataTransfer?.setData('covau/ignore', 'covau/ignore');
+        e.dataTransfer?.setData('kolekk/ignore', 'kolekk/ignore');
         e.dataTransfer?.setData('text', url);
     };
 </script>
