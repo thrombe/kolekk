@@ -6,6 +6,11 @@
 
     export let item: RObject<Bookmark>;
     export let selected: boolean;
+
+    const dragstart = (e: DragEvent, url: string) => {
+        e.dataTransfer?.setData('covau/ignore', 'covau/ignore');
+        e.dataTransfer?.setData("text", url);
+    };
 </script>
 
 <div class='flex flex-col w-full h-full px-2 py-[2px] rounded-lg gap-y-[2px] bg-opacity-40 
@@ -22,7 +27,7 @@
     </txt>
 
     <div class='flex flex-row overflow-auto gap-x-2'>
-        <div class='tag'>
+        <div class='tag' draggable={true} on:dragstart={(e) => dragstart(e, item.data.data.url)}>
             <div>{item.data.data.url}</div>
         </div>
 
