@@ -9,9 +9,9 @@
 </script>
 
 <div class='flex flex-col w-full h-full px-2 py-[2px] rounded-lg gap-y-[2px] bg-opacity-40 
-    {selected ? 'bg-gray-400 text-gray-300' : 'bg-gray-700 text-gray-400'}'
+    {selected ? 'bg-gray-500 text-gray-300' : 'bg-gray-700 text-gray-400'}'
 >
-    <txt class='text-[0.85rem]'>
+    <txt class='text-[0.95rem] font-medium'>
         {item.data.data.title ?? ''}
     </txt>
     <!-- <txt class='text-[0.68rem] text-gray-400'>
@@ -39,7 +39,7 @@
 
 <style lang="postcss">
     .tag {
-        @apply block rounded-t-xl font-thin text-[0.65rem] px-2 py-[0.09rem] text-gray-400 bg-gray-400 bg-opacity-20 h-4 whitespace-nowrap;
+        @apply block rounded-t-xl font-normal text-[0.75rem] px-2 py-[0.09rem] text-gray-400 bg-gray-400 bg-opacity-20 h-5 whitespace-nowrap;
     }
     txt {
         @apply whitespace-nowrap overflow-hidden overflow-ellipsis;

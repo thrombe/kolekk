@@ -99,7 +99,7 @@
     bind:height
     gap={'gap-1'}
     item_width={width}
-    item_height={50}
+    item_height={60}
     info_box_width={500}
     on_item_click={async () => {}}
     {on_keydown}
