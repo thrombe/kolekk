@@ -23,7 +23,7 @@
 
     <div class='flex flex-row overflow-auto gap-x-2'>
         <div class='tag'>
-            <a href={item.data.data.url} target='_blank'>{item.data.data.url}</a>
+            <div>{item.data.data.url}</div>
         </div>
 
         {#await $tag_searcher.get_tags_from_ids(...item.data.tags)}
