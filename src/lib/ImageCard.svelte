@@ -30,7 +30,7 @@
         //scalable.style.height = height.toString() + 'px';
     }
 
-    let thumbnail_size: ThumbnailSize;
+    let thumbnail_size: ThumbnailSize = 'original';
     $: try_update_thumbnail_size(visible, lazy, width);
     let try_update_thumbnail_size = async (visible: boolean, lazy: boolean, width: number) => {
         if (!width) {
@@ -82,6 +82,10 @@
         </rel>
     {/if}
 
-    <image-div class='bg-center w-full h-full bg-cover' bind:clientHeight={height} bind:clientWidth={width} style={'background-image: url(' + lazy_img_src + ');'} />
+    <!--
+    TODO: binding width and height crashes kolekk. idk if this component is even needed anymore. too much unused code in this repo. meh.
+    <image-div class='bg-center w-full h-full bg-cover' bind:clientWidth={width} bind:clientHeight={height} style={'background-image: url(' + lazy_img_src + ');'} />
+    -->
+    <image-div class='bg-center w-full h-full bg-cover' style={'background-image: url(' + lazy_img_src + ');'} />
 </cl>
 

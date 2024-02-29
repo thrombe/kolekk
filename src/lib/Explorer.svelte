@@ -2,7 +2,7 @@
     import VirtualScrollable from '$lib/VirtualScrollable.svelte';
     import { tick } from 'svelte';
     import type { Unique } from '$lib/virtual.ts';
-    import type { Writable } from 'svelte/store.ts';
+    import type { Writable } from 'svelte/store';
     import type { RFactory, RObject, RSearcher } from './searcher/searcher.ts';
 
     // OOF: extra prop to fix T as svelte does not recognise T properly here

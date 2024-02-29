@@ -12,18 +12,21 @@
 <script lang="ts">
 </script>
 
+<!--
 <h>
     <a href="/musi">Local Music Player</a>
 </h>
 <h>
     <a href="/mal_fetch">Mal Fetch</a>
 </h>
+-->
 <h>
     <a href="#/hoard/reaction_images">Hoard em Images</a>
 </h>
 <h>
     <a href="#/hoard/bookmarks">Hoard em Bookmarks</a>
 </h>
+<!--
 <h>
     <a href="/hoard/wallpapers">Hoard em Wallpapers</a>
 </h>
@@ -36,6 +39,7 @@
 <h>
     <a href="/tachi/sources">Tachidesk sources</a>
 </h>
+-->
 <h>
     <a href="#/music/album">Search Music</a>
 </h>

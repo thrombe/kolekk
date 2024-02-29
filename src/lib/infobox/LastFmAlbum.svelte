@@ -173,7 +173,6 @@
 <info-box style="--info-width: {info_width}px; --info-margin: {info_margin}px;">
     <InfoBox
         {item}
-        width={info_width - info_margin}
         get_img_source={async () => {
             return item.data.image[item.data.image.length - 1].url;
         }}
