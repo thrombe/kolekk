@@ -19,7 +19,7 @@ use tantivy::{
     collector::{ScoreSegmentTweaker, ScoreTweaker, TopDocs},
     directory::{ManagedDirectory, MmapDirectory},
     fastfield::Column,
-    query::{AllQuery, BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, PhraseQuery, TermQuery},
+    query::{AllQuery, BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, PhraseQuery, QueryParser, TermQuery},
     schema::{Facet, FacetOptions, Field, IndexRecordOption, FAST, INDEXED, STORED, TEXT},
     DocAddress, Document, Index, IndexReader, IndexWriter, SegmentReader, Term,
 };
@@ -35,6 +35,52 @@ pub fn new_temp_facet() -> String {
     let id = uuid::Uuid::new_v4();
     let uuid = format!("/temp/{}", id.hyphenated());
     uuid
+}
+
+#[tauri::command]
+pub async fn delete_from_id(
+    db: State<'_, AppDatabase>,
+    id: u64,
+) -> Result<serde_json::Map<String, serde_json::Value>, Error> {
+    let t = delete_item(db.inner(), id)?;
+    
+    let mut writer = db.index_writer.write().infer_err()?;
+    let _opstamp = writer.commit().infer_err()?;
+
+    Ok(t)
+}
+
+#[tauri::command]
+pub async fn exact_search(
+    db: State<'_, AppDatabase>,
+    query: String,
+    facet: TypeFacet,
+) -> Result<Option<Meta<serde_json::Map<String, serde_json::Value>, TypeFacet>>, Error> {
+    let res = _exact_search(
+        db.inner(),
+        facet,
+        query,
+        10,
+        0,
+    )?;
+    dbg!(&res);
+    Ok(res.first().map(Clone::clone))
+}
+#[tauri::command]
+pub async fn exact_search_taggable(
+    db: State<'_, AppDatabase>,
+    query: String,
+    facet: TypeFacet,
+) -> Result<Option<Meta<Taggable<serde_json::Map<String, serde_json::Value>>, TypeFacet>>, Error> {
+    let res = _exact_search(
+        db.inner(),
+        facet,
+        query,
+        10,
+        0,
+    )?;
+    dbg!(&res);
+    Ok(res.first().map(Clone::clone))
 }
 
 #[tauri::command]
@@ -78,6 +124,37 @@ pub async fn enter_searchable(
     drop(writer);
     let _opstamp = db.index_writer.write().infer_err()?.commit().infer_err()?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn enter_searchable_item(
+    db: State<'_, AppDatabase>,
+    data: SearchableEntry<serde_json::Map<String, serde_json::Value>>,
+    facet: TypeFacet,
+) -> Result<u32, Error> {
+    let ctime = db.now_time().infer_err()?;
+    let writer = db.index_writer.read().infer_err()?;
+
+    let id = db.new_id();
+    let mut doc = Document::new();
+    let v = Meta {
+        id,
+        facet: facet.clone(),
+        data: Taggable {
+            data,
+            tags: vec![],
+        },
+        ctime,
+        last_update: ctime,
+        last_interaction: ctime,
+    };
+    v.add(db.inner(), &mut doc).look(|e| dbg!(e))?;
+
+    let _opstamp = writer.add_document(doc).look(|e| dbg!(e)).infer_err()?;
+
+    drop(writer);
+    let _opstamp = db.index_writer.write().infer_err()?.commit().infer_err()?;
+    Ok(id)
 }
 
 #[tauri::command]
@@ -449,6 +526,83 @@ where
             DbAble::take(db, &mut doc).look(|e| dbg!(score, e))
         })
         .collect::<Result<Vec<_>, _>>()
+}
+
+pub fn delete_item<T>(
+    db: &AppDatabase,
+    id: u64,
+) -> Result<T, Error>
+where
+    T: DbAble + Debug,
+{
+    let term = Term::from_field_u64(db.get_field(Fields::Id), id);
+
+    let searcher = db.get_searcher();
+    let mut deleted = searcher
+        .search(
+            &TermQuery::new(term.clone(), IndexRecordOption::Basic),
+            &TopDocs::with_limit(10),
+        )
+        .infer_err()?
+        .into_iter()
+        .map(|(score, address)| {
+            let mut doc = searcher.doc(address).infer_err()?;
+            DbAble::take(db, &mut doc).look(|e| dbg!(score, e))
+        })
+        .collect::<Result<Vec<T>, _>>()?;
+
+    if deleted.len() != 1 {
+        return Err(anyhow::anyhow!("id does not match exactly 1 item")).infer_err();
+    }
+
+    let w = db.index_writer.read().infer_err()?;
+    w.delete_term(term.clone());
+
+    Ok(deleted.pop().unwrap())
+}
+
+pub fn _exact_search<T>(
+    db: &AppDatabase,
+    ob_type: TypeFacet,
+    query: impl AsRef<str>,
+    limit: usize,
+    offset: usize,
+) -> Result<Vec<T>, Error>
+where
+    T: DbAble + Debug,
+{
+    let searcher = db.get_searcher();
+    let query = query.as_ref();
+
+    let obj_type_query = Box::new(TermQuery::new(
+        Term::from_facet(db.get_field(Fields::Type), &ob_type.facet()),
+        IndexRecordOption::Basic,
+    ));
+
+    let qp = QueryParser::for_index(&db.index, vec![db.get_field(Fields::Text)]);
+    // - [Questions about how to implement exact text match search. · Issue #2270 · quickwit-oss/tantivy · GitHub](https://github.com/quickwit-oss/tantivy/issues/2270)
+    let exact_query = qp.parse_query(&format!("\"{}\"", query)).infer_err()?;
+
+    let search_query = Box::new(BooleanQuery::new(vec![
+        (Occur::Should, exact_query),
+    ]));
+
+    searcher
+        .search(
+            &BooleanQuery::new(vec![
+                (Occur::Must, obj_type_query),
+                (Occur::Must, search_query),
+            ]),
+            &TopDocs::with_limit(limit)
+                .and_offset(offset),
+        )
+        .infer_err()?
+        .into_iter()
+        .map(move |(_score, address)| {
+            let mut doc = searcher.doc(address).infer_err()?;
+            DbAble::take(db, &mut doc).look(|e| dbg!((_score, e)))
+        })
+        .collect()
 }
 
 // TODO: most recent interations | total interactions
@@ -957,6 +1111,7 @@ impl AppDatabase {
         Ok(*doc_address)
     }
 
+    // TODO: getting docs using this for updating them and rewriting is not safe at all :/
     pub fn get_doc(&self, id: Id) -> Result<Document, Error> {
         let searcher = self.get_searcher();
         let doc = searcher.doc(self.get_doc_address(id)?).infer_err()?;

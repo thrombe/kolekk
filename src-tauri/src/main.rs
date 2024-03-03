@@ -43,7 +43,7 @@ fn main() {
     #[cfg(feature = "music")]
     let builder = builder.plugin(player::init());
 
-    builder
+    let app = builder
         .manage(std::sync::Mutex::new(
             AppInitialisationStatus::Uninitialised,
         ))
@@ -85,7 +85,11 @@ fn main() {
             api::commands::lfm_get_track_info,
             api::commands::lfm_get_album_info,
             api::commands::lfm_get_artist_info,
+            database::exact_search,
+            database::exact_search_taggable,
+            database::delete_from_id,
             database::enter_searchable,
+            database::enter_searchable_item,
             database::search_jsml_object,
             database::add_tag_to_object,
             database::remove_tag_from_object,
@@ -111,8 +115,10 @@ fn main() {
             // .infer_err()?;
             Ok(())
         })
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    app.run(|_app_handle, e| {});
 }
 
 #[tauri::command]
