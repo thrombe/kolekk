@@ -5,7 +5,7 @@ use std::{collections::HashSet, str::FromStr};
 
 use futures::{future::OptionFuture, stream::FuturesUnordered, StreamExt};
 use kolekk_types::{
-    objects::{Bookmark, TypeFacet},
+    objects::{Bookmark, Meta, Taggable, Tagged, TypeFacet, WithContext},
     utility::{ByteArrayFile, DragDropPaste},
 };
 use reqwest::Client;
@@ -41,6 +41,177 @@ pub async fn get_bookmarks(
 ) -> Result<Vec<Bookmark>, Error> {
     let bks = bookmarks_from_ddp(data, client.inner()).await;
     Ok(bks)
+}
+
+
+#[tauri::command]
+pub async fn bookmarks_from_html(html: String, client: State<'_, Client>) -> Result<Vec<Bookmark>, Error> {
+    let client = client.inner();
+
+    let res = get_urls_from_hrefs(&html)
+        .into_iter()
+        .map(|s| s.trim_matches(&['.', ' '][..]))
+        .map(ToOwned::to_owned)
+        .map(|u| async { bookmark_from_url(u, client).await.ok() })
+        .collect::<FuturesUnordered<_>>() // TODO: this still only runs on a single thread. source: https://youtu.be/ThjvMReOXYM?t=4767 use tokio::task::spawn
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .flatten()
+        .collect();
+    Ok(res)
+}
+
+#[tauri::command]
+pub async fn get_tagged_bookmarks_from_text(
+    text: String,
+    client: State<'_, Client>,
+) -> Result<
+    (
+        Vec<Tagged<Bookmark>>,
+        Vec<WithContext<Tagged<String>, String>>,
+    ),
+    Error,
+> {
+    let mut bks = vec![];
+    let client = client.inner();
+    let (pot_bks, mut errored) = tagged_strings_from_text(text);
+
+    let results = pot_bks
+        .into_iter()
+        .map(|bk| async {
+            match bookmark_from_markdown_url(&bk.data) {
+                Some(u) => (
+                    Some(Tagged {
+                        tags: bk.tags,
+                        data: u,
+                    }),
+                    None,
+                ),
+                None => match bookmark_from_url(bk.data.clone(), client).await {
+                    Ok(b) => (
+                        Some(Tagged {
+                            tags: bk.tags,
+                            data: b,
+                        }),
+                        None,
+                    ),
+                    Err(e) => (
+                        None,
+                        Some(WithContext {
+                            data: bk,
+                            context: e.to_string(),
+                        }),
+                    ),
+                },
+            }
+        })
+        .collect::<FuturesUnordered<_>>() // TODO: this still only runs on a single thread. source: https://youtu.be/ThjvMReOXYM?t=4767 use tokio::task::spawn
+        .collect::<Vec<_>>()
+        .await;
+
+    for res in results.into_iter() {
+        match res {
+            (Some(bk), None) => {
+                bks.push(bk);
+            }
+            (None, Some(err)) => {
+                errored.push(err);
+            }
+            (None, None) | (Some(_), Some(_)) => unreachable!(),
+        }
+    }
+
+    Ok((bks, errored))
+}
+
+/*
+# tag
+  - tag + tag / tag
+    # tag
+      - [link title](link url)
+        - https://somelink
+      https://somelink
+*/
+pub fn tagged_strings_from_text(text: impl AsRef<str>) -> (Vec<Tagged<String>>, Vec<WithContext<Tagged<String>, String>>) {
+    let text = text.as_ref();
+    let mut tags = Vec::<(_, Vec<String>)>::new();
+    let mut potential_bks = vec![];
+    let mut donno = vec![];
+
+    let get_tags = |tag: &str| {
+        let new_tags = tag
+            .split('+')
+            .flat_map(|t| t.trim().split('/'))
+            .map(|t| t.trim())
+            .filter(|t| !t.is_empty())
+            .map(ToOwned::to_owned)
+            .collect();
+        new_tags
+    };
+
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        let mut indent = 0;
+        for c in line.chars() {
+            if c == ' ' {
+                indent += 1;
+            } else {
+                break;
+            }
+        }
+        while !tags.is_empty() && tags.last().unwrap().0 >= indent {
+            let _ = tags.pop();
+        }
+
+        let line = &line[indent..];
+        match (
+            line.starts_with('#'),
+            line.starts_with("- "),
+            line.trim_start_matches(['-', ' ']).starts_with("http://")
+                || line.trim_start_matches(['-', ' ']).starts_with("https://"),
+            line.starts_with("- ["),
+        ) {
+            (true, _, _, _) | (false, true, false, false) => {
+                let tag = line.trim_start_matches(['#', ' ', '-']).trim_end();
+                tags.push((indent, get_tags(tag)));
+            }
+            (false, _, true, _) | (false, _, false, true) => {
+                potential_bks.push(Tagged {
+                    tags: tags.iter().flat_map(|(_, v)| v).cloned().collect(),
+                    data: line.to_owned(),
+                });
+            }
+            (false, false, false, false) => {
+                // donno what this is :/
+                // passing it in potential (for context in frontend), but making it non-parsable uri
+
+                donno.push(WithContext {
+                    context: "don't know how to parse this line".to_owned(),
+                    data: Tagged {
+                    tags: tags.iter().flat_map(|(_, v)| v).cloned().collect(),
+                    data: line.trim().to_owned(),
+                }});
+            }
+        }
+
+        // if line[indent..].starts_with('#') {
+        //     let tag = line[indent..]
+        //         .trim_start_matches(['#', ' '])
+        //         .trim_end();
+        //     tags.push((indent, get_tags(tag)));
+        // } else if line[indent..].starts_with("- ") {
+        //     if line[indent..].starts_with("- [") || line[indent..].starts_with("- http") {
+        //         potential_bks.push(Tagged {
+        //             tags: tags.iter().flat_map(|(_, v)| v).cloned().collect(),
+        //             data: line[indent..].to_owned(),
+        //         });
+        //     } else {
+        //         let tag = line[indent + 2..].trim();
+        //         tags.push((indent, get_tags(tag)));
+        //     }
+        // }
+    }
+    (potential_bks, donno)
 }
 
 pub async fn bookmarks_from_ddp(

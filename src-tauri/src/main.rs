@@ -49,6 +49,8 @@ fn main() {
         ))
         .invoke_handler(tauri::generate_handler![
             initialise_app,
+            bookmarks::get_tagged_bookmarks_from_text,
+            bookmarks::bookmarks_from_html,
             bookmarks::get_bookmarks,
             bookmarks::search_bookmarks,
             images::get_images,

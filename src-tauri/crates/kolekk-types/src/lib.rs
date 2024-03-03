@@ -951,6 +951,18 @@ pub mod objects {
     }
 
     #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct WithContext<T, C> {
+        pub data: T,
+        pub context: C,
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    pub struct Tagged<T> {
+        pub data: T,
+        pub tags: Vec<String>,
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
     pub struct Meta<T, F> {
         pub id: Id,
         pub facet: F,

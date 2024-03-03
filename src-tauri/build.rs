@@ -24,7 +24,7 @@ use kolekk_types::{
     },
     objects::{
         Bookmark, Content, Fields, Group, Image, Indexed, Meta, Notes, SearchableEntry, Tag,
-        Taggable, TypeFacet,
+        Taggable, Tagged, TypeFacet, WithContext,
     },
     utility::{
         BasePath, ByteArrayFile, DdpInfo, DirFiles, DragDropData, DragDropPaste, Path, Source,
@@ -75,6 +75,8 @@ fn main() {
         Group,
         Meta<(), ()>,
         Taggable<()>,
+        Tagged<()>,
+        WithContext<(), ()>,
         Fields,
         TypeFacet,
         Path,
