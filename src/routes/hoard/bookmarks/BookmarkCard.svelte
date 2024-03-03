@@ -34,7 +34,7 @@
 
         {#await $tag_searcher.get_tags_from_ids(...item.data.tags) then tags}
             {#each tags as tag (tag.id)}
-                <div class="tag">
+                <div class="tag select-none">
                     {tag.data.name}
                 </div>
             {/each}
@@ -44,9 +44,9 @@
 
 <style lang="postcss">
     .tag {
-        @apply block rounded-t-xl font-normal text-[0.75rem] px-2 py-[0.09rem] text-gray-400 bg-gray-400 bg-opacity-20 h-5 whitespace-nowrap;
+        @apply block rounded-t-xl font-normal text-[0.75rem] px-2 py-[0.09rem] text-gray-400 bg-gray-400 bg-opacity-20 h-5 whitespace-nowrap cursor-default;
     }
     txt {
-        @apply whitespace-nowrap overflow-hidden overflow-ellipsis;
+        @apply whitespace-nowrap overflow-hidden overflow-ellipsis cursor-default select-none;
     }
 </style>
