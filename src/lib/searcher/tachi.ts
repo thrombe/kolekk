@@ -68,7 +68,7 @@ export class TachiExtensions extends Db<Extension> {
     async reload() {
         let exts = await TachiClient.get_all_extensions();
         await invoke('delete_facet_objects', { facet: extension_facet });
-        await super.add_item(
+        await super.add_items(
             ...exts.map((e) => {
                 let searchable: Indexed[] = [{ data: e.name, field: 'Text' }];
                 return { data: e, searchable };
@@ -99,7 +99,7 @@ export class TachiSources extends Db<MangaSource> {
     async reload() {
         let exts = await TachiClient.get_sources();
         await invoke('delete_facet_objects', { facet: source_facet });
-        await super.add_item(
+        await super.add_items(
             ...exts.map((e) => {
                 let searchable: Indexed[] = [{ data: e.name, field: 'Text' }];
                 return { data: e, searchable };
@@ -236,7 +236,7 @@ export class TachiChapters extends Db<Chapter> {
     async reload() {
         let r = await this.get_chapters();
         await invoke('delete_facet_objects', { facet: this.facet });
-        await super.add_item(
+        await super.add_items(
             ...r.map((e) => {
                 let searchable: Indexed[] = [{ data: e.name, field: 'Text' }];
                 return { data: e, searchable };

@@ -92,7 +92,7 @@
             return;
         }
 
-        await $searcher.add_item(...dirs.flat(), ...imgs);
+        await $searcher.add_items(...dirs.flat(), ...imgs);
         console.log("added items :}")
         await search_objects();
     };

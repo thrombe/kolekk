@@ -35,7 +35,7 @@
     };
 
     const save_bookmarks = async (bks: [Bookmark]) => {
-        await $searcher.add_item(
+        await $searcher.add_items(
             ...bks.map((e) => {
                 let searchable: Indexed[] = e.title ? [{ data: e.title, field: 'Text' }] : [];
                 return { data: e, searchable };

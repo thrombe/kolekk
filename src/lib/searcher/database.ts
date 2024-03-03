@@ -60,7 +60,7 @@ export class Db<T> extends Offset<ForceDb<T>> {
 
     // TODO: edit this command to enter 1 item at a time
     // TODO: remove TagSearcher::add_tag
-    async add_item(...items: RDbEntry<T>[]) {
+    async add_items(...items: RDbEntry<T>[]) {
         await invoke('enter_searchable', {
             facet: this.facet,
             data: items,
@@ -68,8 +68,27 @@ export class Db<T> extends Offset<ForceDb<T>> {
         await invoke("reload_reader");
     }
 
+    async add_item(item: RDbEntry<T>) {
+        let id: number = await invoke('enter_searchable_item', {
+            facet: this.facet,
+            data: item,
+        });
+        await invoke("reload_reader");
+        return id;
+    }
+
     get_key(t: RObject<ForceDb<T>>) {
         return t.id;
+    }
+
+    async exact_search(query: string) {
+        let r = await invoke('exact_search', { query, facet: this.facet }) as RObject<ForceDb<T>> | null;
+        return r;
+    }
+
+    async exact_search_taggable(query: string) {
+        let r = await invoke('exact_search_taggable', { query, facet: this.facet }) as RObject<ForceDb<T>> | null;
+        return r;
     }
 }
 

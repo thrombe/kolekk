@@ -1,9 +1,9 @@
 <script lang="ts" context="module">
     import DataListener from '$lib/DataListener.svelte';
-    import ObjectExplorer from '$lib/ObjectExplorer.svelte';
+    import ObjectExplorer, { tag_searcher } from '$lib/ObjectExplorer.svelte';
     import { new_db, new_factory } from '$lib/searcher/database';
     import { writable } from 'svelte/store';
-    import type { Bookmark, DragDropPaste, Indexed, Tag } from 'types';
+    import type { Bookmark, DragDropPaste, Indexed, Tag, Tagged, WithContext } from 'types';
     import BookmarkCard from './bookmarks/BookmarkCard.svelte';
     import BookmarkInfoBox from './bookmarks/BookmarkInfoBox.svelte';
     import { invoke } from '@tauri-apps/api';
@@ -11,8 +11,7 @@
     import type { RObject } from '$lib/searcher/searcher';
     import type { Unique } from '$lib/virtual';
     import { tick } from 'svelte';
-    import Toasts from '$lib/toast/Toasts.svelte';
-    import { toaster } from '$lib/toast/Toasts.svelte';
+    import Toasts, { toast } from '$lib/toast/Toasts.svelte';
 
     let fac = writable(new_factory<Bookmark>('Bookmark'));
     let searcher = writable(new_db<Bookmark>('Bookmark', ''));
@@ -25,32 +24,104 @@
     let search_objects: () => Promise<void>;
 
     const bookmark_drop = async (e: DragDropPaste<File>) => {
+        // await invoke('delete_facet_objects', { facet: 'Bookmark' });
+        // return;
+
         console.log(e);
-        console.log(e.text_html);
         if (e.kolekk_text?.filter((e) => e.type == 'kolekk/ignore').length) {
             return;
         }
-        let bks: [Bookmark] = await invoke('get_bookmarks', { data: await files_to_bytearrays(e) });
-        await save_bookmarks(bks);
-        await search_objects();
+        let ddp = await files_to_bytearrays(e);
 
-        return;
-        console.log(bks, new_bookmarks);
-        new_bookmarks = bks.map((t) => {
-            return { data: t, tags: [] };
-        });
+        let bks: Array<Tagged<Bookmark>>;
+
+        if (ddp.text) {
+            let res: [Tagged<Bookmark>[], WithContext<Tagged<string>, string>[]] = await invoke(
+                'get_tagged_bookmarks_from_text',
+                { text: ddp.text }
+            );
+            console.log(res[0], res[1]);
+            bks = res[0];
+            let errored = res[1];
+
+            if (errored.length > 0) {
+                await toast(`${errored.length} lines could not be parsed into bookmarks`, 'error');
+                console.log(errored);
+            }
+        } else if (ddp.text_html) {
+            let res: [Bookmark] = await invoke('bookmarks_from_html', { html: ddp.text_html });
+            bks = res.map((bk) => ({ data: bk, tags: [] }));
+        } else {
+            await toast('cannot work with pasted/dropped content', 'error');
+            return;
+        }
+
+        // - go through each bookmark
+        // - get all tag ids (add new tags if needed)
+        // - check if an url already exists in db
+        // - add bookmark if not already added
+        // - add tags to bookmark not currently added to the bookmark
+        for (let bk of bks) {
+            let tags = await Promise.all(bk.tags
+                .map(t => $tag_searcher.search_or_create_tag(t)))
+            let bookmark = await $searcher.exact_search_taggable(bk.data.url);
+
+            let id: number;
+            if (bookmark) {
+                id = bookmark.id;
+                let present = new Set(bookmark.data.tags);
+                tags = tags.filter(t => !present.has(t))
+            } else {
+                let searchable: Indexed[] = bk.data.title ? [{ data: bk.data.title, field: 'Text' }] : [];
+                searchable.push({ data: bk.data.url, field: 'Text' });
+                id = await $searcher.add_item({
+                    data: bk.data,
+                    searchable,
+                });
+            }
+            console.log(tags);
+            // await Promise.all(tags.map(t => $tag_searcher.add_tag_to_object(id, t)));
+            for (let t of tags) {
+                await $tag_searcher.add_tag_to_object(id, t);
+            }
+        }
+        // TODO: manual commits
+
+        await search_objects();
+        await toast(`${bks.length} bookmarks added`, 'info');
     };
 
-    interface TempTaggable<T> {
-        data: T;
-        tags: Array<string>;
-    }
-    let new_bookmarks = new Array<TempTaggable<Bookmark>>();
+    let new_bookmarks = new Array<Tagged<Bookmark>>();
 
-    const save_bookmarks = async (bks: [Bookmark]) => {
-        await $searcher.add_item(
+    // TODO: use exact_search(url) to implement adding tags to bookmarks in bulk
+    const add_tag_to_bookmarks = async (tag: RObject<Tag>, bks: [Bookmark]) => {
+        // for (let bk of bks) {
+        //     // let res: RObject<Bookmark> = await invoke('exact_search_taggable', { query: bk.url, facet: 'Bookmark' });
+        //     let res = await $searcher.exact_search_taggable(bk.url);
+        //     console.log(bk);
+        //     console.log(res);
+        //     if (!res) {
+        //         continue;
+        //     }
+        //     let deleted = await invoke('delete_from_id', { id: res.id });
+        //     console.log(deleted);
+        // }
+    };
+
+    const save_bookmarks = async (bks: Bookmark[]) => {
+        let bookmarks = [];
+        for (let bk of bks) {
+            let res = await $searcher.exact_search_taggable(bk.url);
+            if (!res) {
+                bookmarks.push(bk);
+            } else {
+                // $tag_searcher.add_tag_to_object();
+            }
+        }
+        await $searcher.add_items(
             ...bks.map((e) => {
                 let searchable: Indexed[] = e.title ? [{ data: e.title, field: 'Text' }] : [];
+                searchable.push({ data: e.url, field: 'Text' });
                 return { data: e, searchable };
             })
         );
@@ -63,11 +134,7 @@
         if (event.key == 'Enter') {
             await invoke('copy_text', { text: selected_item.data.data.data.url });
             console.log(selected_item.data.data.data.title, selected_item.data.data.data.title);
-            await toaster.toast({
-                message: 'url copied',
-                classes: 'whitespace-nowrap block bg-blue-400 rounded-lg p-2 text-sm',
-                timeout: 1000
-            });
+            await toast('url copied', 'info');
         }
     };
 
@@ -101,7 +168,9 @@
     item_width={width}
     item_height={60}
     info_box_width={500}
-    on_item_click={async () => {}}
+    on_item_click={async () => {
+        console.log(selected_item);
+    }}
     {on_keydown}
     let:item
     let:selected
