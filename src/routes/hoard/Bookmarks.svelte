@@ -20,11 +20,14 @@
 </script>
 
 <script lang="ts">
+    invoke('refresh_bookmark_sources')
+    
     let selected_item: Unique<RObject<Bookmark>, number>;
     let search_objects: () => Promise<void>;
 
     const bookmark_drop = async (e: DragDropPaste<File>) => {
         // await invoke('delete_facet_objects', { facet: 'Bookmark' });
+        // await invoke('delete_facet_objects', { facet: 'BookmarkSource' });
         // return;
 
         console.log(e);

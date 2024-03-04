@@ -28,7 +28,7 @@ use tokio::{fs::File, io::AsyncReadExt};
 use crate::{
     bad_error::{Error, InferBadError, Inspectable},
     config::AppConfig,
-    database::{AppDatabase, AutoDbAble, DbAble, FacetFrom, IntoRObject, ObjectSearchScoreTweaker},
+    database::{add_or_search_tag, AppDatabase, AutoDbAble, DbAble, FacetFrom, IntoRObject, ObjectSearchScoreTweaker},
     filesystem::get_path,
 };
 
@@ -58,7 +58,6 @@ pub async fn refresh_bookmark_sources(
         .collect();
     let sources = sources.infer_err()?;
 
-    let time = db.now_time()?;
     for source in sources {
         let mdata = fs::metadata(get_path(&source.data.path, config.inner())).infer_err()?;
         if source.data.mtime == mdata.mtime() {
@@ -66,11 +65,13 @@ pub async fn refresh_bookmark_sources(
         }
 
         {
-            let writer = db.index_writer.write().infer_err()?;
+            let mut writer = db.index_writer.write().infer_err()?;
             writer.delete_term(Term::from_field_u64(
                 db.get_field(Fields::SourceId),
                 source.id as _,
             ));
+            writer.commit().infer_err()?;
+            db.index_reader.reload().infer_err()?;
         }
         add_bookmark_source(
             db.clone(),
@@ -147,8 +148,12 @@ pub async fn add_bookmark_source(
     source.add(db, &mut doc)?;
 
     for bk in res.0 {
+        // TODO: tags are duplicated as searcher cannot find tags that are added in this same commit
+        let tags: Result<Vec<_>, _> = bk.tags.iter().cloned().map(|t| add_or_search_tag(db, t)).collect();
+        let tags = tags?;
         // TODO: BAD: OOF: IntoRObject trait implementations lock the writer. which is bad. write better code
-        let bk = bk.into_robject(db)?;
+        let mut bk = bk.into_robject(db)?;
+        bk.data.data.tags = tags.into_iter().map(|t| t.id).collect();
         let id = bk.id;
         let mut doc = Document::new();
         bk.add(db, &mut doc)?;

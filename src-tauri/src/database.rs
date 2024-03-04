@@ -1131,7 +1131,7 @@ pub async fn init_database(app_handle: &AppHandle, conf: &AppConfig) -> Result<(
 pub struct AppDatabase {
     // sql: DatabaseConnection,
     index: Index,
-    index_reader: IndexReader,
+    pub index_reader: IndexReader,
     pub index_writer: RwLock<IndexWriter>, // TODO: make commits explicit (don't commit in add_object functions. commit should be called when needed explicitly)
     fields: HashMap<Fields, Field>,
     id_gen: AtomicU32,
