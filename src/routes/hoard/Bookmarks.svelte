@@ -3,7 +3,7 @@
     import ObjectExplorer, { tag_searcher } from '$lib/ObjectExplorer.svelte';
     import { new_db, new_factory } from '$lib/searcher/database';
     import { writable } from 'svelte/store';
-    import type { Bookmark, DragDropPaste, Indexed, Tag, Tagged, WithContext } from 'types';
+    import type { Bookmark, DragDropPaste, Indexed, Path, Tag, Tagged, WithContext } from 'types';
     import BookmarkCard from './bookmarks/BookmarkCard.svelte';
     import BookmarkInfoBox from './bookmarks/BookmarkInfoBox.svelte';
     import { invoke } from '@tauri-apps/api';
@@ -51,6 +51,13 @@
         } else if (ddp.text_html) {
             let res: [Bookmark] = await invoke('bookmarks_from_html', { html: ddp.text_html });
             bks = res.map((bk) => ({ data: bk, tags: [] }));
+        } else if (ddp.file_uris) {
+            for (let p of ddp.file_uris) {
+                let path: Path = { base: 'AbsolutePath', path: p };
+                let parts = p.split('/');
+                await invoke('add_bookmark_source', { title: parts[parts.length - 1], path });
+            }
+            return;
         } else {
             await toast('cannot work with pasted/dropped content', 'error');
             return;
