@@ -459,23 +459,15 @@ pub mod api {
         #[derive(Serialize, Deserialize, Debug, Clone)]
         #[serde(untagged)]
         pub enum AlbumTracks {
-            Tracks {
-                track: Vec<AlbumTrack>,
-            },
-            Track {
-                track: AlbumTrack,
-            },
+            Tracks { track: Vec<AlbumTrack> },
+            Track { track: AlbumTrack },
         }
 
         #[derive(Serialize, Deserialize, Debug, Clone)]
         #[serde(untagged)]
         pub enum Tags {
-            Tags {
-                tag: Vec<LfmTag>,
-            },
-            Tag {
-                tag: LfmTag,
-            },
+            Tags { tag: Vec<LfmTag> },
+            Tag { tag: LfmTag },
             None(String),
         }
 
@@ -891,6 +883,16 @@ pub mod objects {
         pub title: Option<String>,
         pub url: String,
         pub description: Option<String>,
+        pub source: Option<Id>,
+    }
+
+    #[derive(Serialize, Deserialize, TS, Debug, Clone)]
+    #[serde(tag = "object_type")]
+    pub struct BookmarkSource {
+        pub title: String,
+        pub path: Path,
+        pub last_checked: u64,
+        pub mtime: i64,
     }
 
     #[derive(Serialize, Deserialize, TS, Debug, Clone)]
@@ -985,11 +987,12 @@ pub mod objects {
         Serialize, Deserialize, TS, Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash,
     )]
     pub enum Fields {
-        Id,    // unique id
-        Type,  // facet
-        Text,  // any indexed text
-        Ctime, // sort by this if same score
-        Mtime, // sort by this if same score
+        Id,     // unique id
+        Type,   // facet
+        SourceId, // id for source of this data
+        Text,   // any indexed text
+        Ctime,  // sort by this if same score
+        Mtime,  // sort by this if same score
         LastInteraction,
         Chksum, // to check if file or some data is already in db or no
         Tag,
@@ -1002,6 +1005,7 @@ pub mod objects {
             match self {
                 Self::Id => "id",
                 Self::Type => "type",
+                Self::SourceId => "source",
                 Self::Text => "text",
                 Self::Ctime => "ctime",
                 Self::Mtime => "mtime",
@@ -1023,6 +1027,7 @@ pub mod objects {
     pub enum TypeFacet {
         Image,
         Bookmark,
+        BookmarkSource,
         Tag,
         Group,
         Content,
@@ -1034,7 +1039,8 @@ pub mod objects {
         fn as_ref(&self) -> &str {
             match self {
                 Self::Image => "/image",
-                Self::Bookmark => "/bookmark",
+                Self::Bookmark => "/bookmarks/bookmark",
+                Self::BookmarkSource => "/bookmarks/source",
                 Self::Tag => "/tag",
                 Self::Group => "/group",
                 Self::Content => "/content",
@@ -1049,7 +1055,8 @@ pub mod objects {
         fn try_from(value: &str) -> Result<Self, Self::Error> {
             let t = match value {
                 "/image" => Self::Image,
-                "/bookmark" => Self::Bookmark,
+                "/bookmarks/bookmark" => Self::Bookmark,
+                "/bookmarks/source" => Self::BookmarkSource,
                 "/tag" => Self::Tag,
                 "/group" => Self::Group,
                 "/content" => Self::Content,
@@ -1064,7 +1071,8 @@ pub mod objects {
         fn try_from(value: String) -> Result<Self, Self::Error> {
             let t = match value.as_ref() {
                 "/image" => Self::Image,
-                "/bookmark" => Self::Bookmark,
+                "/bookmarks/bookmark" => Self::Bookmark,
+                "/bookmarks/source" => Self::BookmarkSource,
                 "/tag" => Self::Tag,
                 "/group" => Self::Group,
                 "/content" => Self::Content,

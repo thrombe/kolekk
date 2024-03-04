@@ -62,7 +62,14 @@ pub async fn save_new_tag(db: State<'_, AppDatabase>, tag: Tag) -> Result<Id, Er
 pub async fn get_tags_from_ids(
     ids: Vec<u32>,
     db: State<'_, AppDatabase>,
-) -> Result<Vec<Meta<serde_json::Map<String, serde_json::Value>, TypeFacet>>, Error> {
+) -> Result<Vec<Meta<Tag, TypeFacet>>, Error> {
+    _get_tags_from_ids(ids, db.inner())
+}
+
+pub fn _get_tags_from_ids<T: DbAble + std::fmt::Debug>(
+    ids: Vec<u32>,
+    db: &AppDatabase,
+) -> Result<Vec<T>, Error> {
     let searcher = db.get_searcher();
     ids.into_iter()
         .map(|id| Term::from_field_u64(db.get_field(Fields::Id), id as _))
@@ -89,7 +96,7 @@ pub async fn get_tags_from_ids(
         .filter_map(|e: Result<_, Error>| e.ok())
         .map(|address| {
             let mut doc = searcher.doc(address).look(|e| dbg!(e)).infer_err()?;
-            let t = DbAble::take(db.inner(), &mut doc).look(|e| dbg!(e))?;
+            let t = DbAble::take(db, &mut doc).look(|e| dbg!(e))?;
             Ok(t)
         })
         .collect()

@@ -1,20 +1,165 @@
 #[allow(unused_imports)]
 use crate::{dbg, debug, error};
 
-use std::{collections::HashSet, str::FromStr};
+use std::{
+    collections::HashSet, os::unix::fs::MetadataExt, path::PathBuf, str::FromStr, time::Duration,
+};
 
 use futures::{future::OptionFuture, stream::FuturesUnordered, StreamExt};
 use kolekk_types::{
-    objects::{Bookmark, Meta, Taggable, Tagged, TypeFacet, WithContext},
+    objects::{
+        Bookmark, BookmarkSource, Fields, Indexed, Meta, SearchableEntry, Taggable, Tagged,
+        TypeFacet, WithContext,
+    },
     utility::{ByteArrayFile, DragDropPaste},
 };
 use reqwest::Client;
+use serde_json::Value;
+use tantivy::{
+    collector::TopDocs,
+    query::{Occur, TermQuery},
+    schema::IndexRecordOption,
+    Document, Term,
+};
 use tauri::{http::Uri, State};
+use tokio::{fs::File, io::AsyncReadExt};
 
 use crate::{
     bad_error::{Error, InferBadError, Inspectable},
-    database::{AppDatabase, ObjectSearchScoreTweaker},
+    config::AppConfig,
+    database::{AppDatabase, AutoDbAble, DbAble, FacetFrom, IntoRObject, ObjectSearchScoreTweaker},
+    filesystem::get_path,
 };
+
+#[tauri::command]
+pub async fn refresh_bookmark_sources(
+    db: State<'_, AppDatabase>,
+    config: State<'_, AppConfig>,
+    client: State<'_, Client>,
+) -> Result<(), Error> {
+    let dbi = db.inner();
+    let searcher = db.get_searcher();
+    let obj_type_query = TermQuery::new(
+        Term::from_facet(
+            db.get_field(Fields::Type),
+            &TypeFacet::BookmarkSource.facet(),
+        ),
+        IndexRecordOption::Basic,
+    );
+    let sources: Result<Vec<Meta<BookmarkSource, TypeFacet>>, _> = searcher
+        .search(&obj_type_query, &TopDocs::with_limit(10000))
+        .infer_err()?
+        .into_iter()
+        .map(move |(_score, address)| {
+            let mut doc = searcher.doc(address).infer_err()?;
+            DbAble::take(dbi, &mut doc).look(|e| dbg!((_score, e)))
+        })
+        .collect();
+    let sources = sources.infer_err()?;
+
+    let time = db.now_time()?;
+    for source in sources {
+        {
+            let writer = db.index_writer.write().infer_err()?;
+            writer.delete_term(Term::from_field_u64(
+                db.get_field(Fields::SourceId),
+                source.id as _,
+            ));
+        }
+        add_bookmark_source(
+            db.clone(),
+            config.clone(),
+            client.clone(),
+            source.data.title,
+            source.data.path,
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn add_bookmark_source(
+    db: State<'_, AppDatabase>,
+    config: State<'_, AppConfig>,
+    client: State<'_, Client>,
+    title: String,
+    path: kolekk_types::utility::Path,
+) -> Result<u32, Error> {
+    let db = db.inner();
+    let pb = get_path(&path, config.inner());
+
+    let mut file = File::open(&pb).await.infer_err()?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).await.infer_err()?;
+    let mdata = file.metadata().await.infer_err()?;
+    let source_id = db.new_id();
+    let time = db.now_time().infer_err()?;
+    let source = Meta {
+        data: SearchableEntry {
+            searchable: vec![
+                Indexed {
+                    field: Fields::Text,
+                    data: title.clone().into(),
+                },
+                Indexed {
+                    field: Fields::Text,
+                    data: pb.to_string_lossy().to_string().into(),
+                },
+            ],
+            data: BookmarkSource {
+                title: title.clone(),
+                path,
+                last_checked: time,
+                mtime: mdata.mtime(),
+            },
+        },
+        facet: TypeFacet::BookmarkSource,
+        ctime: time,
+        last_update: time,
+        last_interaction: time,
+        id: source_id,
+    };
+
+    let mut res = _get_tagged_bookmarks_from_text(&contents, client.inner())
+        .await
+        .infer_err()?;
+    for bk in res.0.iter_mut() {
+        bk.data.source = Some(source_id);
+        bk.tags.push(title.clone());
+    }
+
+    {
+        let mut writer = db.index_writer.write().infer_err()?;
+        let _opstamp = writer.delete_term(Term::from_field_u64(
+            db.get_field(Fields::Id),
+            source_id as _,
+        ));
+    }
+    let mut doc = Document::new();
+    source.add(db, &mut doc)?;
+
+    for bk in res.0 {
+        // TODO: BAD: OOF: IntoRObject trait implementations lock the writer. which is bad. write better code
+        let bk = bk.into_robject(db)?;
+        let id = bk.id;
+        let mut doc = Document::new();
+        bk.add(db, &mut doc)?;
+
+        {
+            let mut writer = db.index_writer.write().infer_err()?;
+            let _opstamp = writer.delete_term(Term::from_field_u64(db.get_field(Fields::Id), id as _));
+            writer.add_document(doc).infer_err()?;
+        }
+    }
+
+    let mut writer = db.index_writer.write().infer_err()?;
+    let _opstamp = writer.add_document(doc).infer_err()?;
+    let _opstamp = writer.commit().infer_err()?;
+
+    Ok(source_id)
+}
 
 #[tauri::command]
 pub async fn search_bookmarks(
@@ -43,9 +188,11 @@ pub async fn get_bookmarks(
     Ok(bks)
 }
 
-
 #[tauri::command]
-pub async fn bookmarks_from_html(html: String, client: State<'_, Client>) -> Result<Vec<Bookmark>, Error> {
+pub async fn bookmarks_from_html(
+    html: String,
+    client: State<'_, Client>,
+) -> Result<Vec<Bookmark>, Error> {
     let client = client.inner();
 
     let res = get_urls_from_hrefs(&html)
@@ -62,19 +209,25 @@ pub async fn bookmarks_from_html(html: String, client: State<'_, Client>) -> Res
     Ok(res)
 }
 
+type BookmarkFromTextResult = (
+    Vec<Tagged<Bookmark>>,
+    Vec<WithContext<Tagged<String>, String>>,
+);
+
 #[tauri::command]
 pub async fn get_tagged_bookmarks_from_text(
     text: String,
     client: State<'_, Client>,
-) -> Result<
-    (
-        Vec<Tagged<Bookmark>>,
-        Vec<WithContext<Tagged<String>, String>>,
-    ),
-    Error,
-> {
+) -> Result<BookmarkFromTextResult, Error> {
+    _get_tagged_bookmarks_from_text(text, client.inner()).await
+}
+
+pub async fn _get_tagged_bookmarks_from_text(
+    text: impl AsRef<str>,
+    client: &Client,
+) -> Result<BookmarkFromTextResult, Error> {
+    let text = text.as_ref();
     let mut bks = vec![];
-    let client = client.inner();
     let (pot_bks, mut errored) = tagged_strings_from_text(text);
 
     let results = pot_bks
@@ -133,7 +286,12 @@ pub async fn get_tagged_bookmarks_from_text(
         - https://somelink
       https://somelink
 */
-pub fn tagged_strings_from_text(text: impl AsRef<str>) -> (Vec<Tagged<String>>, Vec<WithContext<Tagged<String>, String>>) {
+pub fn tagged_strings_from_text(
+    text: impl AsRef<str>,
+) -> (
+    Vec<Tagged<String>>,
+    Vec<WithContext<Tagged<String>, String>>,
+) {
     let text = text.as_ref();
     let mut tags = Vec::<(_, Vec<String>)>::new();
     let mut potential_bks = vec![];
@@ -188,9 +346,10 @@ pub fn tagged_strings_from_text(text: impl AsRef<str>) -> (Vec<Tagged<String>>, 
                 donno.push(WithContext {
                     context: "don't know how to parse this line".to_owned(),
                     data: Tagged {
-                    tags: tags.iter().flat_map(|(_, v)| v).cloned().collect(),
-                    data: line.trim().to_owned(),
-                }});
+                        tags: tags.iter().flat_map(|(_, v)| v).cloned().collect(),
+                        data: line.trim().to_owned(),
+                    },
+                });
             }
         }
 
@@ -289,6 +448,7 @@ pub fn bookmark_from_markdown_url(u: impl AsRef<str>) -> Option<Bookmark> {
                     url: url.into(),
                     title: Some(u[title_start + 1..title_end].into()),
                     description: None,
+                    source: None,
                 };
                 return Some(b);
             }
@@ -334,6 +494,7 @@ pub async fn bookmark_from_url(u: String, client: &Client) -> Result<Bookmark, E
         url: u,
         title: title.await.unwrap_or_default(),
         description: None,
+        source: None,
     };
     Ok(b)
 }

@@ -23,8 +23,8 @@ use kolekk_types::{
         },
     },
     objects::{
-        Bookmark, Content, Fields, Group, Image, Indexed, Meta, Notes, SearchableEntry, Tag,
-        Taggable, Tagged, TypeFacet, WithContext,
+        Bookmark, BookmarkSource, Content, Fields, Group, Image, Indexed, Meta, Notes,
+        SearchableEntry, Tag, Taggable, Tagged, TypeFacet, WithContext,
     },
     utility::{
         BasePath, ByteArrayFile, DdpInfo, DirFiles, DragDropData, DragDropPaste, Path, Source,
@@ -69,6 +69,7 @@ fn main() {
     export!(
         Image,
         Bookmark,
+        BookmarkSource,
         Content,
         Notes,
         Tag,

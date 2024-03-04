@@ -53,6 +53,8 @@ fn main() {
             bookmarks::bookmarks_from_html,
             bookmarks::get_bookmarks,
             bookmarks::search_bookmarks,
+            bookmarks::add_bookmark_source,
+            bookmarks::refresh_bookmark_sources,
             images::get_images,
             images::get_ddp_info,
             images::get_image_paths_from_dirs,

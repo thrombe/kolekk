@@ -2,7 +2,7 @@
 use crate::{dbg, debug, error};
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{hash_map::RandomState, HashMap, HashSet},
     fmt::Debug,
     ops::Deref,
     sync::{atomic::AtomicU32, Arc, RwLock},
@@ -10,16 +10,21 @@ use std::{
 
 use kolekk_types::{
     objects::{
-        Bookmark, Fields, Id, Image, Indexed, Meta, SearchableEntry, Tag, Taggable, TypeFacet,
+        Bookmark, BookmarkSource, Fields, Id, Image, Indexed, Meta, SearchableEntry, Tag, Taggable,
+        Tagged, TypeFacet,
     },
     utility::Path,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde_json::Value;
 use tantivy::{
     collector::{ScoreSegmentTweaker, ScoreTweaker, TopDocs},
     directory::{ManagedDirectory, MmapDirectory},
     fastfield::Column,
-    query::{AllQuery, BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, PhraseQuery, QueryParser, TermQuery},
+    query::{
+        AllQuery, BooleanQuery, BoostQuery, FuzzyTermQuery, Occur, PhraseQuery, QueryParser,
+        TermQuery,
+    },
     schema::{Facet, FacetOptions, Field, IndexRecordOption, FAST, INDEXED, STORED, TEXT},
     DocAddress, Document, Index, IndexReader, IndexWriter, SegmentReader, Term,
 };
@@ -28,6 +33,7 @@ use tauri::{AppHandle, Manager, State, WindowEvent};
 use crate::{
     bad_error::{BadError, Error, InferBadError, Inspectable},
     config::AppConfig,
+    tag::_get_tags_from_ids,
 };
 
 #[tauri::command]
@@ -43,7 +49,7 @@ pub async fn delete_from_id(
     id: u64,
 ) -> Result<serde_json::Map<String, serde_json::Value>, Error> {
     let t = delete_item(db.inner(), id)?;
-    
+
     let mut writer = db.index_writer.write().infer_err()?;
     let _opstamp = writer.commit().infer_err()?;
 
@@ -55,14 +61,8 @@ pub async fn exact_search(
     db: State<'_, AppDatabase>,
     query: String,
     facet: TypeFacet,
-) -> Result<Option<Meta<serde_json::Map<String, serde_json::Value>, TypeFacet>>, Error> {
-    let res = _exact_search(
-        db.inner(),
-        facet,
-        query,
-        10,
-        0,
-    )?;
+) -> Result<Option<JsmlObject>, Error> {
+    let res = _exact_search(db.inner(), facet, query, 10, 0)?;
     dbg!(&res);
     Ok(res.first().map(Clone::clone))
 }
@@ -71,14 +71,8 @@ pub async fn exact_search_taggable(
     db: State<'_, AppDatabase>,
     query: String,
     facet: TypeFacet,
-) -> Result<Option<Meta<Taggable<serde_json::Map<String, serde_json::Value>>, TypeFacet>>, Error> {
-    let res = _exact_search(
-        db.inner(),
-        facet,
-        query,
-        10,
-        0,
-    )?;
+) -> Result<Option<JsmlObject>, Error> {
+    let res = _exact_search(db.inner(), facet, query, 10, 0)?;
     dbg!(&res);
     Ok(res.first().map(Clone::clone))
 }
@@ -140,10 +134,7 @@ pub async fn enter_searchable_item(
     let v = Meta {
         id,
         facet: facet.clone(),
-        data: Taggable {
-            data,
-            tags: vec![],
-        },
+        data: Taggable { data, tags: vec![] },
         ctime,
         last_update: ctime,
         last_interaction: ctime,
@@ -157,6 +148,8 @@ pub async fn enter_searchable_item(
     Ok(id)
 }
 
+type JsmlObject = Meta<Taggable<serde_json::Map<String, serde_json::Value>>, TypeFacet>;
+
 #[tauri::command]
 pub async fn search_jsml_object(
     db: State<'_, AppDatabase>,
@@ -164,7 +157,7 @@ pub async fn search_jsml_object(
     facet: TypeFacet,
     limit: usize,
     offset: usize,
-) -> Result<Vec<Meta<Taggable<serde_json::Map<String, serde_json::Value>>, TypeFacet>>, Error> {
+) -> Result<Vec<JsmlObject>, Error> {
     tagged_search(
         db.inner(),
         facet,
@@ -222,6 +215,85 @@ pub fn get_path(config: State<'_, AppConfig>, path: Path) -> std::path::PathBuf 
     crate::filesystem::get_path(&path, config.inner())
 }
 
+pub type RObject<T> = Meta<SearchableEntry<Taggable<T>>, TypeFacet>;
+pub trait IntoRObject {
+    type R;
+    type Ctx;
+
+    fn into_robject(self, ctx: &Self::Ctx) -> Result<Self::R, Error>;
+}
+impl IntoRObject for Bookmark {
+    type R = RObject<Bookmark>;
+    type Ctx = AppDatabase;
+
+    fn into_robject(self, db: &Self::Ctx) -> Result<Self::R, Error> {
+        let res = _exact_search::<Self::R>(db, TypeFacet::Bookmark, &self.url, 10, 0)?
+            .first()
+            .cloned();
+        if let Some(res) = res {
+            return Ok(res);
+        }
+
+        let time = db.now_time()?;
+        let bk_id = db.new_id();
+        let mut searchable = vec![Indexed {
+            field: Fields::Text,
+            data: self.url.clone().into(),
+        }];
+        let _ = self.source.map(|s| {
+            searchable.push(Indexed {
+                field: Fields::SourceId,
+                data: s.into(),
+            })
+        });
+        let _ = self
+            .title
+            .as_ref()
+            .map(ToOwned::to_owned)
+            .map(|t| Indexed {
+                field: Fields::Text,
+                data: t.into(),
+            })
+            .map(|t| searchable.push(t));
+        let bk = Meta {
+            data: SearchableEntry {
+                searchable,
+                data: Taggable {
+                    data: self,
+                    tags: vec![],
+                },
+            },
+            facet: TypeFacet::Bookmark,
+            ctime: time,
+            last_update: time,
+            last_interaction: time,
+            id: bk_id,
+        };
+
+        Ok(bk)
+    }
+}
+impl IntoRObject for Tagged<Bookmark> {
+    type R = RObject<Bookmark>;
+    type Ctx = AppDatabase;
+
+    fn into_robject(self, db: &Self::Ctx) -> Result<Self::R, Error> {
+        let tags = self.tags;
+        let mut r = self.data.into_robject(db)?;
+        let mut s = HashSet::<_, RandomState>::from_iter(r.data.data.tags.iter().cloned());
+
+        for tag in tags {
+            let t = add_or_search_tag(db, tag)?;
+            if !s.contains(&t.id) {
+                r.data.data.tags.push(t.id);
+                s.insert(t.id);
+            }
+        }
+
+        Ok(r)
+    }
+}
+
 // NOTE:
 // calling DbAble::take for Meta<Taggable<Map<_, _>>> returns different stuff than
 // calling DbAble::take for Meta<Taggable<SearchableEntry<Map<_, _>>>>
@@ -263,6 +335,7 @@ where
 }
 impl AutoDbAble for Image {}
 impl AutoDbAble for Bookmark {}
+impl AutoDbAble for BookmarkSource {}
 impl AutoDbAble for Tag {}
 impl AutoDbAble for serde_json::Map<String, serde_json::Value> {}
 impl AutoDbAble for tantivy::schema::Value {}
@@ -357,6 +430,67 @@ impl<T: DbAble> DbAble for Taggable<T> {
     }
 }
 
+pub fn add_or_search_tag(db: &AppDatabase, tag: String) -> Result<Meta<Tag, TypeFacet>, Error> {
+    let t = _exact_search::<Meta<Tag, TypeFacet>>(db, TypeFacet::Tag, &tag, 10, 0)?
+        .first()
+        .cloned();
+    if let Some(t) = t {
+        return Ok(t);
+    }
+
+    let id = db.new_id();
+
+    let time = db.now_time()?;
+    let t = Meta {
+        id,
+        facet: TypeFacet::Tag,
+        data: Tag::Main { name: tag },
+        ctime: time,
+        last_update: time,
+        last_interaction: time,
+    };
+    let mut d = Document::new();
+    t.clone().add(db, &mut d)?;
+    // TODO: OOF: BAD: very bad. don't lock writer here
+    let writer = db.index_writer.write().infer_err()?;
+    writer.add_document(d).infer_err()?;
+
+    Ok(t)
+}
+
+impl<T: DbAble> DbAble for Tagged<T> {
+    fn add(self, db: &AppDatabase, doc: &mut Document) -> Result<(), Error> {
+        for tag in self.tags {
+            let t = add_or_search_tag(db, tag)?;
+            doc.add_u64(db.get_field(Fields::Tag), t.id as _);
+        }
+
+        Ok(())
+    }
+
+    fn take(db: &AppDatabase, doc: &mut Document) -> Result<Self, Error> {
+        let tags = doc
+            .get_all(db.get_field(Fields::Tag))
+            .map(|e| e.as_u64().map(|e| e as _))
+            .collect::<Option<Vec<_>>>()
+            .bad_err("bad tags")?;
+
+        let tags = _get_tags_from_ids::<Tag>(tags, db)?
+            .into_iter()
+            .map(|t| match t {
+                Tag::Main { name } => name,
+                Tag::Alias { name, .. } => name,
+            })
+            .collect();
+
+        let t = Self {
+            tags,
+            data: DbAble::take(db, &mut *doc)?,
+        };
+        Ok(t)
+    }
+}
+
 impl<T> DbAble for T
 where
     T: AutoDbAble,
@@ -396,10 +530,20 @@ impl<T: DbAble> DbAble for SearchableEntry<T> {
             searchable: doc
                 .get_all(db.get_field(Fields::Text))
                 .filter_map(|e| e.as_text().map(String::from))
+                .map(Value::from)
                 .map(|v| Indexed {
                     field: Fields::Text,
-                    data: serde_json::Value::String(v),
+                    data: v,
                 })
+                .chain(
+                    doc.get_all(db.get_field(Fields::SourceId))
+                        .filter_map(|e| e.as_u64())
+                        .map(Value::from)
+                        .map(|v| Indexed {
+                            field: Fields::SourceId,
+                            data: v,
+                        }),
+                )
                 .collect::<Vec<_>>(),
         };
         Ok(s)
@@ -416,14 +560,21 @@ impl DbAble for Indexed {
             // (kolekk_types::objects::Fields::Chksum, serde_json::Value::Array(a)) if let Some(a) = a.into_iter().map(|e|
             //     e.as_u64().filter(|&e| e <= u8::MAX as _).map(|e| e as u8)
             // ).try_collect::<Vec<_>>() => {}
+            (Fields::SourceId, serde_json::Value::Number(n)) => {
+                doc.add_u64(db.get_field(Fields::SourceId), n.as_u64().unwrap())
+            }
             (Fields::Text, serde_json::Value::String(s)) => {
                 doc.add_text(db.get_field(Fields::Text), s);
             }
             (Fields::Tag, serde_json::Value::Number(t_id)) => {
-                doc.add_u64(db.get_field(Fields::Tag), t_id.as_u64().bad_err("bad tag id")?);
+                doc.add_u64(
+                    db.get_field(Fields::Tag),
+                    t_id.as_u64().bad_err("bad tag id")?,
+                );
             }
             // (Fields::Tag, serde_json::Value::String(tag)) => {}
-            _ => {
+            r => {
+                dbg!(r);
                 return None.bad_err("invalid searchable entry");
             }
         }
@@ -528,10 +679,7 @@ where
         .collect::<Result<Vec<_>, _>>()
 }
 
-pub fn delete_item<T>(
-    db: &AppDatabase,
-    id: u64,
-) -> Result<T, Error>
+pub fn delete_item<T>(db: &AppDatabase, id: u64) -> Result<T, Error>
 where
     T: DbAble + Debug,
 {
@@ -583,9 +731,7 @@ where
     // - [Questions about how to implement exact text match search. · Issue #2270 · quickwit-oss/tantivy · GitHub](https://github.com/quickwit-oss/tantivy/issues/2270)
     let exact_query = qp.parse_query(&format!("\"{}\"", query)).infer_err()?;
 
-    let search_query = Box::new(BooleanQuery::new(vec![
-        (Occur::Should, exact_query),
-    ]));
+    let search_query = Box::new(BooleanQuery::new(vec![(Occur::Should, exact_query)]));
 
     searcher
         .search(
@@ -593,8 +739,7 @@ where
                 (Occur::Must, obj_type_query),
                 (Occur::Must, search_query),
             ]),
-            &TopDocs::with_limit(limit)
-                .and_offset(offset),
+            &TopDocs::with_limit(limit).and_offset(offset),
         )
         .infer_err()?
         .into_iter()
@@ -1042,6 +1187,8 @@ impl AppDatabase {
 
         let id = schema_builder.add_u64_field(&Fields::Id, STORED | FAST | INDEXED);
         let _ = fields.insert(Fields::Id, id);
+        let source = schema_builder.add_u64_field(&Fields::SourceId, STORED | FAST | INDEXED);
+        let _ = fields.insert(Fields::SourceId, source);
         let object_type =
             schema_builder.add_facet_field(&Fields::Type, FacetOptions::default().set_stored());
         let _ = fields.insert(Fields::Type, object_type);
