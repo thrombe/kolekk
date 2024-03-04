@@ -2,7 +2,8 @@
 use crate::{dbg, debug, error};
 
 use std::{
-    collections::HashSet, os::unix::fs::MetadataExt, path::PathBuf, str::FromStr, time::Duration,
+    collections::HashSet, fs, os::unix::fs::MetadataExt, path::PathBuf, str::FromStr,
+    time::Duration,
 };
 
 use futures::{future::OptionFuture, stream::FuturesUnordered, StreamExt};
@@ -59,6 +60,11 @@ pub async fn refresh_bookmark_sources(
 
     let time = db.now_time()?;
     for source in sources {
+        let mdata = fs::metadata(get_path(&source.data.path, config.inner())).infer_err()?;
+        if source.data.mtime == mdata.mtime() {
+            continue;
+        }
+
         {
             let writer = db.index_writer.write().infer_err()?;
             writer.delete_term(Term::from_field_u64(
@@ -149,7 +155,8 @@ pub async fn add_bookmark_source(
 
         {
             let mut writer = db.index_writer.write().infer_err()?;
-            let _opstamp = writer.delete_term(Term::from_field_u64(db.get_field(Fields::Id), id as _));
+            let _opstamp =
+                writer.delete_term(Term::from_field_u64(db.get_field(Fields::Id), id as _));
             writer.add_document(doc).infer_err()?;
         }
     }
